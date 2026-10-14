@@ -1,0 +1,56 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { RiskReport } from "./report-schema";
+import { riskReportSchema } from "./report-schema";
+import type { NormalizedSearchInput } from "./normalize-search-input";
+import { REPORT_VERSION } from "./constants";
+
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export async function getCachedReport(
+  supabase: SupabaseClient,
+  fingerprint: string,
+): Promise<RiskReport | null> {
+  const { data } = await supabase
+    .from("search_cache")
+    .select("report, expires_at")
+    .eq("fingerprint", fingerprint)
+    .maybeSingle();
+
+  if (!data) return null;
+  if (new Date(data.expires_at) < new Date()) return null;
+
+  const parsed = riskReportSchema.safeParse(data.report);
+  if (!parsed.success) return null;
+  if (parsed.data.reportVersion !== REPORT_VERSION) return null;
+
+  return parsed.data;
+}
+
+export async function setCachedReport(
+  supabase: SupabaseClient,
+  fingerprint: string,
+  queryInput: NormalizedSearchInput,
+  report: RiskReport,
+): Promise<void> {
+  const expiresAt = new Date(Date.now() + CACHE_TTL_MS).toISOString();
+  const { error } = await supabase.from("search_cache").upsert({
+    fingerprint,
+    query_input: queryInput,
+    report,
+    expires_at: expiresAt,
+  });
+  if (error) {
+    throw new Error(`search_cache upsert failed: ${error.message}`);
+  }
+}
+
+export async function logSearchEvent(
+  supabase: SupabaseClient,
+  fingerprint: string,
+  cacheHit: boolean,
+): Promise<void> {
+  await supabase.from("search_events").insert({
+    fingerprint,
+    cache_hit: cacheHit,
+  });
+}

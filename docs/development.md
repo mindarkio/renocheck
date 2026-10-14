@@ -1,0 +1,107 @@
+# 本地開發
+
+## 需求
+
+- Node.js 20+
+- pnpm 10+
+
+## 首次設定
+
+```bash
+pnpm install
+cp .env.example .env.local
+# 填入 Supabase anon + service_role（勿 commit .env.local）
+```
+
+**必須同時有 `NEXT_PUBLIC_SUPABASE_URL` 同 `SUPABASE_SERVICE_ROLE_KEY`**（只填 anon + service role、漏 URL 會令 admin client 係 `null`，`/api/report/...` 503）。可用 `curl -s localhost:3000/api/health` 睇 `supabaseAdmin: true/false`。
+
+`search_cache` 開咗 RLS 但 **冇 anon policy** 係刻意設計；server 用 **service role 會 bypass RLS**，唔係 RLS 擋你。若 URL + service role 齊仍 404，先查 migration 有冇 push、cache upsert 有冇 error log。
+
+**LLM：** 設 `GOOGLE_GENERATIVE_AI_API_KEY`（或 `GOOGLE_GENERATIVE_AI_KEY`）；預設 **`gemini-3.5-flash`**（較 `gemini-flash-latest` 通常更快）。請刪 `.env.local` 內已停用的 `gemini-2.0-flash` 或慢的 `gemini-flash-latest`，除非刻意覆寫 `GEMINI_MODEL`。`GET /api/health` → `llmProvider`。
+
+Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm db:link`）。
+
+## 指令
+
+| 指令 | 說明 |
+|------|------|
+| `pnpm dev` | 開發伺服器（預設 http://localhost:3000） |
+| `pnpm build` | 正式建置 |
+| `pnpm start` | 跑正式建置 |
+| `pnpm lint` | ESLint |
+| `pnpm test` | Vitest（`src/lib/**/*.test.ts`） |
+| `pnpm test:watch` | 監聽模式 |
+
+## 健康檢查
+
+```bash
+curl -s http://localhost:3000/api/health
+```
+
+## 搜尋 API
+
+```bash
+curl -s -X POST http://localhost:3000/api/search \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"91234567"}'
+```
+
+契約見 `docs/MVP.md` §6。Track 2 **檢索設計**（query pack、可靠來源定義、評估集）見 [`design/search-evidence.md`](design/search-evidence.md)——實作大改前先跑評估。冷查詢 **必須** Supabase + Serp + LLM 全部成功才會出報告；**無 heuristic 降級**，失敗時 API 返 `503` 及 `error` code（如 `llm_failed`），前端顯示「報告未能顯示」。
+
+評估 Serp 寫法：`pnpm eval:search-evidence`（見 `docs/design/search-evidence-fixtures.md`）。報告質量：`pnpm eval:report-quality`（golden，CI 友好）；`pnpm eval:report-quality --live`（讀 [`report-quality-live.json`](../scripts/fixtures/report-quality-live.json)，需 **`pnpm dev`** + `.env.local`，`refresh: true`）。發布前人工 10 條：[`docs/checklists/report-quality-human-signoff.md`](checklists/report-quality-human-signoff.md)。
+
+名冊對照：`pnpm mwc:spot-check`（P2-C0，唔食 Serp quota）。單案 Serp/L1：`pnpm tsx scripts/diagnose-retrieval-case.ts <fixture-id>`。
+
+### Retrieval KPI 記錄（內部，建議每週）
+
+| 週次 | 日期 | `eval:search-evidence` Prod mustInclude | gold URL 備註 |
+|------|------|----------------------------------------|---------------|
+| — | — | — | 例：`1/2`；良心／源始 |
+
+觸發：連兩周 Prod &lt;1/2 → 查 DEC-0002 調 retrieval（唔開 L0→LLM）。
+
+### MWC 與 fixture（P2-C0，2026-10-13）
+
+`mwc_contractors` 約 **15558** 行。`pnpm mwc:spot-check` 結果摘要：
+
+| Fixture | 名冊 hit |
+|---------|----------|
+| 良心裝修顧問、源始（國際）、虛構 | **否**（`mwc:false` 屬預期，非 lookup bug） |
+| 輝煌設計工程、偉景工程、深德(香港)工程 | 是 |
+
+**電話 smoke（名冊路徑）：** `92805455` → 輝煌設計工程有限公司；預期 `searchLabelUsed` = 該登記名、`nameAlignment` = `match`（僅電話輸入時）。
+
+### Smoke（電話 / BR / 公司名）
+
+`pnpm dev` 運行中，用 `refresh: true` 略過 cache；報告應含 `reportVersion` `2.2.0`、`evaluation`（雙軌骨架，DEC-0007）、`entity.searchLabelUsed`、`signals.boundHitCount`、`signals.retrievalEvidence`（檢索層 SSOT，DEC-0006）、`signals.contractChecklist`（即使零討論）。
+
+**Release gold（DEC-0009）：** `docs/design/release-gold-set.md`；發版前 `pnpm eval:report-quality --live --gate`（blocking 8 條）。
+
+**網搜供應商（DEC-0008）：** 優先 **Serper**（`SERPER_API_KEY`）；無則 **SerpAPI**（`SERPAPI_KEY`）。可設 `SERP_PROVIDER=serper|serpapi` 強制。切換後請跑 `pnpm eval:search-evidence` 對照召回（唔保證與 SerpAPI 逐條相同）。
+
+**源始／品牌 host retry：** Q1+Q2 後若 L1 `bound=0` 且為 源始 品牌，會多跑 `buildBrandHostForumQuery`（+1 次查詢）。`SERP_GL`/`SERP_HL` 預設 `hk`/`zh-HK`。
+
+```bash
+# 電話（名冊 hit：輝煌 92805455）
+curl -s -X POST http://localhost:3000/api/search \
+  -H 'Content-Type: application/json' \
+  -d '{"phone":"92805455","refresh":true}'
+
+# 公司名
+curl -s -X POST http://localhost:3000/api/search \
+  -H 'Content-Type: application/json' \
+  -d '{"companyName":"良心裝修顧問有限公司","refresh":true}'
+
+# BR（若有名冊資料）
+curl -s -X POST http://localhost:3000/api/search \
+  -H 'Content-Type: application/json' \
+  -d '{"br":"MWC","refresh":true}'
+```
+
+對照 terminal：`search_evidence`（`raw_hits` / `llm_hits`）、`search_timing`。名冊未 import 時 MWC 路徑僅能測「user_only」。
+
+每次冷查詢預設 **3 次 Serp**（Q1 × `SERP_PAGE_COUNT` 頁，預設 2；Q2 loose × `SERP_Q2_PAGES` 頁，預設 1 — DEC-0003）。`SERP_PAGE_COUNT=2` 且 `SERP_Q2_PAGES=2` 時最多 4 次。Q2 為 **無引號短 entity**；eval 舊欄 Q2 仍為引號全名。送 LLM 前 L1 + `SERP_LLM_HIT_CAP`（15）；`serpHitCount` = raw 合併數。`refresh: true` 略過 cache。`pnpm eval:search-evidence`：**Prod** = API；Q1/Q2 對照用 `EVAL_SERP_PAGES`。冷查詢後 terminal 可睇 `search_timing`（mwc/serp/llm ms）、`search_evidence`（raw vs llm hits；`l1_no_match_sample_hosts` = L1 全滅時前 3 個 host）。Serp 韌性（DEC-0005）：`serp_page_failed` / `serp_partial`（部分頁失敗仍繼續）；`serp_query_failed`（整條 Q1 或 Q2 全頁失敗）；API `error` 為 `serp_failed` vs `llm_failed` 時前端文案不同（見 `SearchForm`）。
+
+## UI
+
+設計 token 與原則見 [`ui-principles.md`](ui-principles.md)。

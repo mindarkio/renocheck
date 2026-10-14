@@ -1,0 +1,25 @@
+---
+description: Pipeline reliability and RiskReport as user-verifiable SSOT (not launch-only)
+alwaysApply: true
+---
+
+# Pipeline SSOT
+
+Read `docs/design/pipeline-ssot.md` before pipeline, grading, retrieval, or report-schema work.
+
+## North star
+
+**`RiskReport` from `POST /api/search` is the user-facing single source of truth** — entity scope, evidence, and grades must align in API, UI, and cache. Success ≠ deployable; success = **reliable enough to reference** with traceable bounds.
+
+## Non-negotiables
+
+- **Policy A:** no unfiltered Serp (L0) to LLM without DEC.
+- **Deterministic layer:** `risk-report-calibration.ts` + schema own grade/themes/confidence; LLM does not override caps.
+- **Honesty:** zero highlights → no A/B/D–F scare; no 「無風險／暫無風險」on zero evidence.
+
+## Gaps to flag (do not paper over)
+
+- Highlights empty but `boundHitCount > 0` → user still lacks per-URL SSOT until evidence is on the report (DEC).
+- `boundHitCount === 0` on gold dispute fixtures → retrieval/L1 issue, not “all clear.”
+
+New work that only improves copy without evidence traceability: state tradeoff vs SSOT goal before implementing.

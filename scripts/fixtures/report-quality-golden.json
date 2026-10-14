@@ -1,0 +1,209 @@
+{
+  "version": 1,
+  "description": "Golden RiskReport shapes for pnpm eval:report-quality (no live API).",
+  "reports": [
+    {
+      "id": "zero-discussion-open-checklist",
+      "report": {
+        "reportVersion": "2.3.1",
+        "entity": {
+          "displayName": "測試裝修有限公司",
+          "matchType": "company_name",
+          "queryEcho": "測試裝修有限公司",
+          "searchLabelUsed": "測試裝修有限公司",
+          "nameAlignment": "user_only"
+        },
+        "grade": "C",
+        "confidence": "low",
+        "evaluation": {
+          "overallGrade": "C",
+          "displayGradeZh": "C",
+          "riskBandZh": "中性",
+          "confidence": "low",
+          "dataSaturation": "unindexed",
+          "complianceTrack": {
+            "isMwcRegistered": false,
+            "licenseStatus": "not_found"
+          },
+          "reputationTrack": {
+            "disputeLevel": "none_detected",
+            "recentDisputeCount": 0
+          }
+        },
+        "summaryZh": "根據本次可檢索的公開來源，未檢出與查詢對象相關的裝修糾紛討論摘要。",
+        "official": { "mwcMatched": false },
+        "signals": {
+          "discussionCount": 0,
+          "themes": ["未檢出相關討論"],
+          "serpHitCount": 12,
+          "boundHitCount": 0,
+          "retrievalEvidence": [],
+          "actionableClauses": [],
+          "contractChecklist": [
+            "工程範圍、物料品牌與單價是否寫清？",
+            "付款期數是否與工程進度掛鈎？",
+            "保養期、延誤責任與終止合約條款是否明確？"
+          ]
+        },
+        "disclaimerVersion": "1.0.0",
+        "generatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      "expect": {
+        "nameAlignment": "user_only",
+        "minBoundHits": 0,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C"
+      }
+    },
+    {
+      "id": "mwc-authoritative-label",
+      "report": {
+        "reportVersion": "2.3.1",
+        "entity": {
+          "displayName": "名冊甲公司有限公司",
+          "matchType": "phone",
+          "queryEcho": "91234567",
+          "searchLabelUsed": "名冊甲公司有限公司",
+          "nameAlignment": "match",
+          "normalizedPhone": "91234567"
+        },
+        "grade": "C",
+        "confidence": "low",
+        "evaluation": {
+          "overallGrade": "C",
+          "displayGradeZh": "C",
+          "riskBandZh": "中性",
+          "confidence": "low",
+          "dataSaturation": "moderate",
+          "complianceTrack": {
+            "isMwcRegistered": true,
+            "licenseStatus": "active"
+          },
+          "reputationTrack": {
+            "disputeLevel": "none_detected",
+            "recentDisputeCount": 0
+          }
+        },
+        "summaryZh": "名冊有登記；公開討論摘要有限，請自行核實。",
+        "official": {
+          "mwcMatched": true,
+          "details": {
+            "companyName": "名冊甲公司有限公司",
+            "registrationNo": "MWC999"
+          }
+        },
+        "signals": {
+          "discussionCount": 0,
+          "themes": [],
+          "highlights": [],
+          "serpHitCount": 5,
+          "boundHitCount": 1,
+          "retrievalEvidence": [
+            {
+              "url": "https://www.lihkg.com/thread/example",
+              "title": "公開討論示例",
+              "snippetExcerpt": "與名冊甲公司相關字串出現於摘要",
+              "matchedToken": "名冊甲公司",
+              "matchReason": "entity_token"
+            }
+          ],
+          "actionableClauses": [],
+          "contractChecklist": [
+            "工程範圍、物料品牌與單價是否寫清？",
+            "付款期數是否與工程進度掛鈎？",
+            "保養期、延誤責任與終止合約條款是否明確？"
+          ]
+        },
+        "disclaimerVersion": "1.0.0",
+        "generatedAt": "2026-01-01T00:00:00.000Z"
+      },
+      "expect": {
+        "nameAlignment": "match",
+        "minBoundHits": 1,
+        "minChecklistItems": 3,
+        "forbiddenThemes": ["未檢出相關討論"],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C"
+      }
+    },
+    {
+      "id": "actionable-clauses-open",
+      "report": {
+        "reportVersion": "2.3.1",
+        "entity": {
+          "displayName": "示例裝修有限公司",
+          "matchType": "company_name",
+          "queryEcho": "示例裝修有限公司",
+          "searchLabelUsed": "示例裝修有限公司",
+          "nameAlignment": "user_only"
+        },
+        "grade": "C",
+        "confidence": "medium",
+        "evaluation": {
+          "overallGrade": "C",
+          "displayGradeZh": "C",
+          "riskBandZh": "風險中等",
+          "confidence": "medium",
+          "dataSaturation": "moderate",
+          "complianceTrack": {
+            "isMwcRegistered": false,
+            "licenseStatus": "not_found"
+          },
+          "reputationTrack": {
+            "disputeLevel": "historical_isolated",
+            "recentDisputeCount": 0
+          }
+        },
+        "summaryZh": "根據本次可檢索的公開來源，有一則與裝修相關的提及，請自行核實。",
+        "official": { "mwcMatched": false },
+        "signals": {
+          "discussionCount": 1,
+          "themes": ["超支"],
+          "highlights": [
+            {
+              "summaryZh": "網上提及付款爭議，細節待查。",
+              "url": "https://www.lihkg.com/thread/golden-1",
+              "incidentType": "payment_dispute",
+              "approxYear": "2022",
+              "factSummary": "帖文提及追加工程款。"
+            }
+          ],
+          "serpHitCount": 3,
+          "boundHitCount": 1,
+          "retrievalEvidence": [
+            {
+              "url": "https://www.lihkg.com/thread/golden-1",
+              "title": "討論帖",
+              "snippetExcerpt": "示例裝修 超支",
+              "matchedToken": "示例裝修",
+              "matchReason": "entity_token"
+            }
+          ],
+          "actionableClauses": [
+            {
+              "category": "付款",
+              "clauseText": "追加工程款是否需書面確認？",
+              "reason": "公開討論曾提及付款爭議"
+            }
+          ],
+          "contractChecklist": [
+            "工程範圍、物料品牌與單價是否寫清？",
+            "付款期數是否與工程進度掛鈎？",
+            "保養期、延誤責任與終止合約條款是否明確？"
+          ]
+        },
+        "disclaimerVersion": "1.0.0",
+        "generatedAt": "2026-01-02T00:00:00.000Z"
+      },
+      "expect": {
+        "nameAlignment": "user_only",
+        "minBoundHits": 1,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C"
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+---
+description: Dependencies, tests, traceability, Phase V2+ enterprise hooks
+globs: "{src,supabase,scripts}/**/*"
+alwaysApply: false
+---
+
+# Software engineering
+
+## Traceability
+
+- Contract: single source `src/lib/report-schema.ts` (keep in sync with `docs/MVP.md` §5). MVP cites MVP sections; V2+ cites `RNCK-REQ-nnn` in `docs/requirements/MRL.md`.
+- AI-generated code must be verifiable (tests or typed boundaries).
+- After substantive edits: agent runs `pnpm test` and `pnpm lint` (and `pnpm build` when relevant) before handing off — see `agent-execution` rule.
+
+## Dependencies
+
+- Lockfile committed. New npm package: state **pain point** and why platform/ existing code is insufficient (in PR/chat).
+- Prefer Vercel, Supabase, and `ai` SDK over custom HTTP stacks.
+
+## Abstraction (YAGNI)
+
+- Extract module/helper only after **3rd repetition** or a **V2/MVP-documented** need — not for hypothetical futures.
+- MVP tests only: **report schema**, **phone normalize**, **search handler** unit tests. No E2E framework in MVP.
+
+## Data and migrations
+
+- Synthetic test data only. Migrations reversible or document rollback in the same change.
+
+## Phase V2+
+
+- SBOM, dependency audit, immutable deploy hashes — enable per `docs/phases/V2-roadmap.md`, not before.

@@ -1,0 +1,13 @@
+---
+description: Unit tests, synthetic fixtures, schema sync
+globs: "**/*.{test,spec}.ts"
+alwaysApply: false
+---
+
+# Testing
+
+- Agents: run `pnpm test` (and `pnpm eval:report-quality` when changing schema, calibration, or pipeline) after changes — see `agent-execution`.
+- Use **synthetic** company names and phones only — no real PII in fixtures.
+- When changing `report-schema` or search validation, update tests in the same change.
+- MVP scope: `src/lib` unit tests; E2E is V2+ per `docs/phases/V2-roadmap.md`.
+- Do not add tests that only assert mocks or framework defaults.

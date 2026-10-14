@@ -1,0 +1,34 @@
+---
+description: LLM de-noising, grading, structured output, no agent hype
+globs: src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# LLM usage
+
+Model: **gpt-4o-mini** (AI Gateway). Use `generateObject` + Zod (`report-schema`).
+
+## Call pattern (anti-hype)
+
+- One search ≈ **one** structured LLM call (retries OK). No agent swarms, RAG KB, or meta-prompt frameworks for MVP.
+- Version prompts via constants or a single file (e.g. `src/lib/prompts/risk-report.ts`).
+
+## System rules (in prompt)
+
+1. Renovation / interior / construction disputes only.
+2. Tie hits to query entity (phone > name).
+3. Neutral Traditional Chinese; no legal conclusions.
+4. Default grade **C** when evidence is thin or conflicting.
+
+## Grading (heuristic, not statute)
+
+| Grade | Guidance |
+|-------|----------|
+| A–B | MWC match + few/no relevant negative public mentions |
+| C | Insufficient or mixed signals |
+| D–F | Multiple consistent dispute-related public mentions |
+
+## Governance
+
+- Do not use AI as the sole basis for regulatory or defamation-sensitive positions.
+- Cap snippets (top N, truncated). Cache final report in Supabase.

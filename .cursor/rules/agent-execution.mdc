@@ -1,0 +1,31 @@
+---
+description: Agent loop — validate after code, plan with self-review, then execute
+alwaysApply: true
+---
+
+# Agent execution loop
+
+Applies to **implementation tasks** (not pure Q&A or doc-only typos).
+
+## After code changes
+
+1. Run verification **yourself** (do not ask the user to run first):
+   - Default: `pnpm test` + `pnpm lint`
+   - Touch routes/build/config: add `pnpm build`
+   - Pipeline/report/retrieval: `pnpm eval:report-quality`; if dev + keys available, `pnpm eval:report-quality --live` or document why skipped
+2. If verification **fails** → fix or stop with root cause; do not declare done.
+
+## When scope is non-trivial
+
+1. **Investigate** (read code, run checks) until failures or gaps are concrete.
+2. **Write a short plan** in chat or `docs/plans/` — steps, files, risks, what “done” means vs `docs/design/pipeline-ssot.md`.
+3. **Self-review the plan once** before executing: missing DEC? YAGNI breach? SSOT/compliance conflict? Revise the plan if needed.
+4. **Execute** the plan; re-run verification after each logical chunk.
+
+## Plans in repo
+
+Multi-step trust/pipeline work: update or add under `docs/plans/` and link DECs. Do not treat “merged code” as SSOT north-star complete without evidence criteria in `pipeline-ssot.md`.
+
+## User commits
+
+Create git commits only when the user asks (see user rules).

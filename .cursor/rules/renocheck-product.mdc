@@ -1,0 +1,40 @@
+---
+description: Renocheck product positioning, UX language, and MVP scope
+alwaysApply: true
+---
+
+# Renocheck product
+
+Read `docs/MVP.md` before feature work. **Owner-defense risk search (HK)**, not a marketplace.
+
+**Success metric:** pipeline output is **reliable, user-referenceable SSOT** — see `docs/design/pipeline-ssot.md` (not “shippable UI” alone).
+
+## Scope gate (YAGNI)
+
+New feature: must be **MVP Must Have** in `docs/MVP.md` or backed by a **DEC**. Notion/V2 ideas stay out until MVP or DEC updates.
+
+## In MVP
+
+Single search (company / HK phone / BR) → A–F report, MWC lookup, public discussion aggregation, cache, progress UI, disclaimer.
+
+## Out of scope
+
+| Item | Phase |
+|------|-------|
+| Contractor matching, UGC reviews | — |
+| B2B 「優良徽章」 | V3+ |
+| AI quote PDF review | V2 |
+| Court data automation | stub only in MVP |
+| Community / forum | — |
+
+## User-facing copy
+
+- Locale: **Traditional Chinese (HK)** — calm, factual, protective.
+- No 「黑店」「騙子」; use **風險參考分檔**（風險偏高／風險中等／中性／未見負面摘要）and 「公開資料摘要」.
+- Low data → **低置信度 / 資料不足 (C)** + caution.
+- Mask individuals: `陳** 師傅`.
+
+## Monetization hooks
+
+- Free: grade + discussion **count**.
+- Paid: snippets/URLs, license detail, checklist — gate `premium` in API, not the grade.

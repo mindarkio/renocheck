@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "cases": [
+    {
+      "id": "conscientious-renovation",
+      "label": "公開討論曾提及（工程質素／糾紛相關）；Serp 召回目標",
+      "companyName": "良心裝修顧問有限公司",
+      "mustIncludeInResults": "良心裝修",
+      "goldEvidenceUrls": [
+        "https://lihkg.com/thread/3049015"
+      ],
+      "goldEvidenceNote": "LIHKG 長文討論（口頭品牌「良心裝修佬」）；唔構成指控，只作检索評估 gold。"
+    },
+    {
+      "id": "yuanshi-international",
+      "label": "公開討論／報道摘要曾提及（源始國際）；Serp 召回目標",
+      "companyName": "源始（國際）設計及裝修有限公司",
+      "mustIncludeInResults": "源始（國際）",
+      "goldEvidenceUrls": [
+        "threads.com",
+        "tkww.hk"
+      ],
+      "goldEvidenceNote": "Threads 用戶分享裝修糾紛經過；報章摘錄亦曾用「源始（國際）設計及裝修」表述（見 fixtures 文檔）。"
+    },
+    {
+      "id": "nam-hing",
+      "label": "MWC 全名；論壇未必用同一實體字串（無強制召回）",
+      "companyName": "南興工程有限公司",
+      "mustIncludeInResults": null
+    },
+    {
+      "id": "sham-tak-mwc",
+      "label": "MWC 公司；論壇「深德」多為其他商號",
+      "companyName": "深德(香港)工程有限公司",
+      "mustIncludeInResults": null
+    },
+    {
+      "id": "fictional-empty",
+      "label": "虛構公司名（應無相關命中）",
+      "companyName": "Renocheck評估用虛構裝修有限公司",
+      "mustIncludeInResults": null,
+      "mustExcludeTextInResults": "Renocheck評估用虛構裝修有限公司"
+    },
+    {
+      "id": "wai-king",
+      "label": "名冊公司；曾試搜多為零相關討論",
+      "companyName": "偉景工程",
+      "mustIncludeInResults": null
+    },
+    {
+      "id": "fei-wong",
+      "label": "名冊公司；常見零討論 case",
+      "companyName": "輝煌設計工程有限公司",
+      "mustIncludeInResults": null
+    },
+    {
+      "id": "create21-mwc",
+      "label": "MWC 全形２１；論壇多用創建21／CR21（L1 NFKC）",
+      "companyName": "創建 2 1 顧問有限公司",
+      "mustIncludeInResults": "創建21",
+      "goldEvidenceNote": "MWC 2091/2011 創建２１顧問有限公司；公開帖常寫 CR21康藝家居。"
+    },
+    {
+      "id": "phone-mwc-smoke",
+      "label": "電話 L1 + Prod Q3（development 名冊 smoke；無強制召回）",
+      "phone": "92805455",
+      "mustIncludeInResults": null,
+      "goldEvidenceNote": "合成 eval id；公開帖是否含電話視 Serp。單元測試覆蓋 phone_anchor 匹配。"
+    }
+  ]
+}

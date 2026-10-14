@@ -1,0 +1,18 @@
+---
+description: Pre-release and CI checklist (minimal MVP)
+globs: "{package.json,.github/**,scripts/release/**}"
+alwaysApply: false
+---
+
+# Release verification
+
+MVP minimum before production promote:
+
+- `lint` and `typecheck` pass (when configured).
+- Supabase migrations applied or dry-run reviewed.
+- No secrets in diff; `disclaimerVersion` bumped if legal copy or grading logic changed.
+- Smoke: search returns valid `RiskReport` shape for a synthetic query.
+
+Do not add CI checks unrelated to the product for “green badge” optics. Zip handoff packages: V2+ only.
+
+Pre-scaffold: follow checklist in `AGENTS.md` manually.

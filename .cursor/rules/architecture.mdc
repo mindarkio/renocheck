@@ -1,0 +1,46 @@
+---
+description: YAGNI defaults, stack, pipeline, repo layout
+alwaysApply: true
+---
+
+# Architecture
+
+## YAGNI (default stack)
+
+1. **Simplest path** that satisfies `docs/MVP.md` — no new framework, service, store, or second pipeline without a DEC or explicit approval.
+2. **Default stack:** Next.js App Router + Supabase + single `POST /api/search` + Vercel AI Gateway / `ai` SDK + Serper (preferred) or SerpAPI / Google CSE (DEC-0008).
+3. **Abstraction:** extract only after 3rd repetition or V2/MVP-documented need (see `software-engineering`).
+
+Enterprise extras (SBOM, full E2E, zip handoff) only per `docs/phases/V2-roadmap.md`.
+
+## Pipeline (single path of truth)
+
+`POST /api/search` → normalize input → cache lookup → parallel **MWC DB** + **web search** → **L1** → **LLM** → **`risk-report-calibration`** → Zod `RiskReport` → cache → response.
+
+- `Promise.all` for independent I/O.
+- Schema: `src/lib/report-schema.ts` (sync with `docs/MVP.md` §5).
+- **User SSOT:** one report object powers API + UI; evidence/entity rules in `docs/design/pipeline-ssot.md`.
+- Configured search/LLM failure → API error codes (`serp_failed` / `llm_failed`); do not invent heuristic downgrade paths without DEC.
+
+## MVP anti-patterns
+
+- No queue/worker/second search pipeline for MVP.
+- No `runtime = 'edge'` without measured need.
+- Secrets: see `security-secrets` (not duplicated here).
+
+## Repo layout
+
+```
+src/app/          routes + API
+src/lib/          schemas, clients
+src/components/   UI
+scripts/          MWC import
+supabase/migrations/
+docs/             MVP, decision-log, phases
+```
+
+**Phase V2+:** may add `docs/requirements/`, E2E, observability — not before roadmap says so.
+
+## Dependencies
+
+Minimize packages; prefer official Supabase + Vercel AI patterns.

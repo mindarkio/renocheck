@@ -1,0 +1,15 @@
+---
+description: Renocheck UI tokens, pages, a11y baseline
+globs: "src/**/*.{tsx,jsx}"
+alwaysApply: false
+---
+
+# Frontend UI
+
+- Use semantic tokens: `bg-background`, `text-foreground`, `bg-primary`, `border-border`, `text-warning` — no ad-hoc palette classes (e.g. `bg-blue-500`).
+- Font: Noto Sans TC via root layout; `lang="zh-HK"`.
+- MVP routes: `/`, `/legal/disclaimer`, `/report/[fingerprint]`; core API `/api/search` (when built).
+- Every interactive flow: loading / error / empty states; mobile-first (`min-h-11` tap targets).
+- Grades A–F: always show letter + text; do not rely on color alone.
+- Copy: Traditional Chinese (HK), calm tone — see `renocheck-product` for legal wording.
+- No heavy UI kits in MVP without DEC; prefer Tailwind + small local components.

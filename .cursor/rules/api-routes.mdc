@@ -1,0 +1,33 @@
+---
+description: Next.js API route handlers for search and errors
+globs: src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# API routes
+
+## `POST /api/search` (core)
+
+- Validate: at least one of `companyName`, `phone`, `br` (trim). New routes must map to `docs/MVP.md` §6 or a DEC — do not split REST for aesthetics.
+- Rate-limit by IP (MVP: in-memory; Vercel KV later).
+- Return `RiskReport`; 400 validation, 429 limit, 502 only when no partial result possible.
+- Idempotent-friendly: respect cache fingerprint before expensive upstream calls.
+- Errors: no stack traces or internal details to clients.
+- Strip `premium` server-side until payment/session allows.
+
+```typescript
+const parsed = searchInputSchema.safeParse(body);
+if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+```
+
+## Contract changes
+
+Update `src/lib/report-schema.ts` and `docs/MVP.md` §5–6 in the same change.
+
+## Logging
+
+Log `fingerprint`, `cache_hit`, duration — not raw phone or full query strings in production.
+
+## Runtime
+
+Default Node.js on Vercel. Edge only with measured need.

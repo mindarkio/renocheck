@@ -1,0 +1,36 @@
+---
+description: Legal-safe reporting, PDPO, third-party search, human review gates
+alwaysApply: true
+---
+
+# Compliance (HK)
+
+Renocheck aggregates **public** sources and algorithmic summaries — not accusations. Use `[Certain]` / `[Likely]` / `[Guessing]` for substantive compliance claims (see `advisor-conduct`).
+
+## Wording
+
+- ✅ 「根據公開討論摘要，出現多宗與裝修糾紛相關的提及」
+- ❌ 「該公司係黑店 / 一定會爛尾」
+
+## Data handling
+
+- Normalize HK phones for matching; minimize stored PII; hashed cache fingerprints.
+- Public search only: snippets and URLs; respect provider ToS; do not persist full post bodies long-term.
+- No scraping behind logins.
+
+## UI
+
+- Every report: `disclaimerVersion`, `generatedAt`, link to `/legal/disclaimer`.
+- `confidence === "low"`: prominent caution — no false certainty.
+
+## Human review (before ship)
+
+Required human sign-off for changes to **`/legal/*`**, **grading logic**, or **external announcements** — not every commit.
+
+## Copy discipline
+
+Compliance text: **enough, not theatrical** — no extra legal bulk beyond MVP needs.
+
+## Code review bar
+
+UGC accusations, non-public data, or defamatory labels → stop; redesign per `docs/MVP.md` §2.4.

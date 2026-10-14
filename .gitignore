@@ -1,0 +1,26 @@
+# dependencies
+node_modules/
+.pnp.*
+
+# next
+.next/
+out/
+
+# env
+.env
+.env.*
+!.env.example
+
+# debug
+npm-debug.log*
+.DS_Store
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# supabase
+.branches
+tmp-report-2.1.0.json

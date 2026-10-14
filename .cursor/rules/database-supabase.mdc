@@ -1,0 +1,12 @@
+---
+description: Migrations, RLS, tables aligned with MVP
+globs: supabase/**/*
+alwaysApply: false
+---
+
+# Supabase / Postgres
+
+- One migration per concern; name `YYYYMMDDHHMMSS_description.sql`.
+- **RLS required** on all user-facing tables. Match `docs/MVP.md` §4 (`mwc_contractors`, `search_cache`, etc.).
+- Do not seed real PII in migrations. Phone indexes must match app-layer normalization.
+- Do not add tables “for future features” — only what MVP or an approved DEC requires.

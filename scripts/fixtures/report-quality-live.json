@@ -1,0 +1,190 @@
+{
+  "version": 2,
+  "description": "Live POST /api/search gold set. blocking = release gate (--live --gate). stretch = follow-up only.",
+  "cases": [
+    {
+      "id": "create21-mwc",
+      "goldTier": "blocking",
+      "label": "dispute：全形２１／創建21；唔應 B+ 零 bound",
+      "input": { "companyName": "創建 2 1 顧問有限公司" },
+      "expect": {
+        "searchLabelIncludes": "創建",
+        "minBoundHits": 3,
+        "minRetrievalEvidence": 3,
+        "goldEvidenceUrlSubstrings": ["lihkg.com", "facebook.com"],
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "F",
+        "forbiddenSummaryPhrases": [
+          "暫無具體風險",
+          "暫無風險",
+          "無風險",
+          "未檢出公開糾紛"
+        ],
+        "riskBandZh": "風險偏高"
+      }
+    },
+    {
+      "id": "conscientious-renovation",
+      "goldTier": "blocking",
+      "label": "dispute：良心裝修；bound 常 ≥1",
+      "input": { "companyName": "良心裝修顧問有限公司" },
+      "expect": {
+        "mwcMatched": false,
+        "nameAlignment": "user_only",
+        "minBoundHits": 1,
+        "minRetrievalEvidence": 1,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "F",
+        "forbiddenSummaryPhrases": ["黑店", "騙子", "暫無具體風險", "暫無風險"],
+        "riskBandZhIn": ["風險偏高", "風險中等"]
+      }
+    },
+    {
+      "id": "fictional-empty",
+      "goldTier": "blocking",
+      "label": "quiet：虛構公司",
+      "input": { "companyName": "Renocheck評估用虛構裝修有限公司" },
+      "expect": {
+        "mwcMatched": false,
+        "nameAlignment": "user_only",
+        "minBoundHits": 0,
+        "maxBoundHits": 0,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C",
+        "dataSaturation": "unindexed",
+        "forbiddenSummaryPhrases": ["黑店", "騙子", "暫無具體風險", "暫無風險"],
+        "riskBandZh": "中性"
+      }
+    },
+    {
+      "id": "fei-wong-mwc",
+      "goldTier": "blocking",
+      "label": "quiet：MWC 名冊公司名",
+      "input": { "companyName": "輝煌設計工程有限公司" },
+      "expect": {
+        "mwcMatched": true,
+        "minBoundHits": 0,
+        "maxBoundHits": 0,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C",
+        "forbiddenSummaryPhrases": [
+          "黑店",
+          "騙子",
+          "暫無具體風險",
+          "暫無風險",
+          "無風險"
+        ],
+        "riskBandZh": "中性"
+      }
+    },
+    {
+      "id": "fei-wong-phone",
+      "goldTier": "blocking",
+      "label": "entity：電話→名冊名",
+      "input": { "phone": "92805455" },
+      "expect": {
+        "mwcMatched": true,
+        "nameAlignment": "match",
+        "searchLabelIncludes": "輝煌",
+        "minBoundHits": 0,
+        "maxBoundHits": 0,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C",
+        "forbiddenSummaryPhrases": [
+          "黑店",
+          "騙子",
+          "暫無具體風險",
+          "暫無風險",
+          "無風險"
+        ],
+        "riskBandZh": "中性"
+      }
+    },
+    {
+      "id": "wai-king",
+      "goldTier": "blocking",
+      "label": "quiet：MWC 弱討論",
+      "input": { "companyName": "偉景工程" },
+      "expect": {
+        "mwcMatched": true,
+        "minBoundHits": 0,
+        "maxBoundHits": 0,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C",
+        "forbiddenSummaryPhrases": [
+          "黑店",
+          "騙子",
+          "暫無具體風險",
+          "暫無風險",
+          "無風險"
+        ],
+        "riskBandZh": "中性"
+      }
+    },
+    {
+      "id": "nam-hing-mwc",
+      "goldTier": "stretch",
+      "label": "MWC 全名；短名易误绑（跟進 L1）",
+      "input": { "companyName": "南興工程有限公司" },
+      "expect": {
+        "minBoundHits": 0,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C",
+        "forbiddenSummaryPhrases": [
+          "黑店",
+          "騙子",
+          "暫無具體風險",
+          "暫無風險",
+          "無風險"
+        ]
+      }
+    },
+    {
+      "id": "sham-tak-mwc",
+      "goldTier": "blocking",
+      "label": "MWC 易混淆名；bound>0 時 ≤C、風險中等",
+      "input": { "companyName": "深德(香港)工程有限公司" },
+      "expect": {
+        "mwcMatched": true,
+        "minBoundHits": 1,
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C",
+        "forbiddenSummaryPhrases": ["黑店", "騙子", "暫無具體風險", "暫無風險", "無風險"],
+        "riskBandZh": "風險中等"
+      }
+    },
+    {
+      "id": "yuanshi-international",
+      "goldTier": "stretch",
+      "label": "dispute hard：源始品牌检索",
+      "input": { "companyName": "源始（國際）設計及裝修有限公司" },
+      "expect": {
+        "mwcMatched": false,
+        "nameAlignment": "user_only",
+        "minBoundHits": 1,
+        "minRetrievalEvidence": 1,
+        "goldEvidenceUrlSubstrings": ["threads.com", "tkww.hk", "facebook.com"],
+        "minChecklistItems": 3,
+        "forbiddenThemes": [],
+        "maxGrade": "C",
+        "zeroHighlightGradeMustBe": "C",
+        "dataSaturation": "moderate",
+        "forbiddenSummaryPhrases": ["黑店", "騙子", "暫無具體風險", "暫無風險"]
+      }
+    }
+  ]
+}
