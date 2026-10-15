@@ -45,6 +45,9 @@ export const incidentTypeSchema = z.enum([
   "other",
 ]);
 
+/** Max highlights per report (aligned with SERP_LLM_HIT_CAP default 15). */
+export const HIGHLIGHTS_MAX = 15;
+
 export const discussionHighlightSchema = z.object({
   summaryZh: z.string().max(160),
   url: z.string().url(),
@@ -106,6 +109,7 @@ const riskReportBaseSchema = z.object({
   entity: z.object({
     displayName: z.string().min(1),
     matchType: z.enum(["phone", "br", "company_name"]),
+    /** @deprecated DEC-0011 — legacy cache only; new reports omit */
     maskedLabel: z.string().optional(),
     queryEcho: z.string().min(1),
     searchLabelUsed: z.string().min(1),
@@ -123,6 +127,15 @@ const riskReportBaseSchema = z.object({
       .object({
         companyName: z.string(),
         registrationNo: z.string().optional(),
+        /** ISO date (YYYY-MM-DD) from MWC open-data import */
+        expiryDate: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .optional(),
+        /** Primary authorized signatory (one AS per deduped register row) */
+        authorizedSignatory: z.string().max(120).optional(),
+        /** When the imported register snapshot was last refreshed */
+        registryDataAsOf: z.string().datetime().optional(),
       })
       .optional(),
   }),
@@ -130,7 +143,7 @@ const riskReportBaseSchema = z.object({
     discussionCount: z.number().int().nonnegative(),
     themes: z.array(z.string()),
     /** LLM 整理：來源、時間提示、事件摘要 */
-    highlights: z.array(discussionHighlightSchema).max(8).optional(),
+    highlights: z.array(discussionHighlightSchema).max(HIGHLIGHTS_MAX).optional(),
     /** Serp 命中條數（未必全部相關）；AI 未完成時供參考 */
     serpHitCount: z.number().int().nonnegative().optional(),
     /** L1 後送 LLM 的條數 */

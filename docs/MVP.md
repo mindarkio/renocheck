@@ -62,7 +62,7 @@ flowchart LR
 ### 2.4 合規（產品與文案硬規則）
 
 - 報告 **不得** 斷言「黑店」；使用 **A–F 信用／風險指標** + 「公開資料摘要」。
-- 個人師傅：**脫敏顯示**（例：`陳** 師傅`）；內部可用 hash 比對，唔 expose 全名。
+- **MWC 名冊（含 MWC(W) 個人承建商）：** 公司名、獲授權簽署人等按屋宇署公開名冊**原文顯示**（DEC-0011）；報告須標名冊摘錄時間並連結屋宇署核對。網搜討論仍只摘要＋連結，唔自行拼湊個人指控。
 - 資料不足：**明確 C 級／低置信度**，附「保持警惕」提示。
 - 每份報告頁：**免責聲明** + 資料來源與更新時間。
 
@@ -102,6 +102,8 @@ flowchart LR
 | `company_name` | text | 索引 |
 | `phone` | text | normalized，索引 |
 | `registration_no` | text | 牌照相關 |
+| `expiry_date` | date | 名冊屆滿日（可選） |
+| `primary_signatory_name` | text | 主要 AS（dedupe 行） |
 | `source_updated_at` | timestamptz | CSV 版本 |
 
 ### `search_cache`
@@ -135,6 +137,7 @@ interface RiskReport {
   entity: {
     displayName: string;
     matchType: "phone" | "br" | "company_name";
+    /** @deprecated DEC-0011；新報告不寫入 */
     maskedLabel?: string;
     queryEcho: string;
     searchLabelUsed: string;
@@ -145,7 +148,13 @@ interface RiskReport {
   summaryZh: string;
   official: {
     mwcMatched: boolean;
-    details?: { companyName: string; registrationNo?: string };
+    details?: {
+      companyName: string;
+      registrationNo?: string;
+      expiryDate?: string; // YYYY-MM-DD
+      authorizedSignatory?: string;
+      registryDataAsOf?: string;
+    };
   };
   signals: {
     discussionCount: number;

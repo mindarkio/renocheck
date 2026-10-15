@@ -21,6 +21,9 @@ describe("computeNameAlignment", () => {
     company_name: "甲公司有限公司",
     phone: null,
     registration_no: "MWC123",
+    expiry_date: null,
+    primary_signatory_name: null,
+    source_updated_at: null,
   };
 
   it("returns ambiguous when flagged", () => {

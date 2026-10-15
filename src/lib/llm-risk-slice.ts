@@ -8,6 +8,7 @@ import {
   discussionHighlightSchema,
   disputeLevelSchema,
   gradeSchema,
+  HIGHLIGHTS_MAX,
   type ActionableClause,
 } from "./report-schema";
 
@@ -18,7 +19,7 @@ export const llmSliceSchema = z.object({
   summaryZh: z.string().max(120),
   discussionCount: z.number().int().nonnegative().max(50),
   themes: z.array(z.string()).max(6),
-  highlights: z.array(discussionHighlightSchema).max(8),
+  highlights: z.array(discussionHighlightSchema).max(HIGHLIGHTS_MAX),
   disputeLevel: disputeLevelSchema.optional(),
   recentDisputeCount: z.number().int().nonnegative().max(20).optional(),
   customClauses: z.array(actionableClauseSchema).max(8).default([]),

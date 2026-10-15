@@ -1,8 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { SearchProgress } from "./SearchProgress";
+import { useMemo, useState } from "react";
+import {
+  parseUnifiedSearchQuery,
+  parsedSearchQueryLabel,
+  toSearchInputBody,
+} from "@/lib/parse-unified-search-query";
+import { brandSectionTitleClass } from "@/lib/ui-surfaces";
+import { SearchProgressModal } from "./SearchProgress";
 
 const PIPELINE_ERROR_ZH: Record<string, string> = {
   supabase_unavailable:
@@ -15,8 +21,21 @@ const PIPELINE_ERROR_ZH: Record<string, string> = {
   search_failed: "報告未能顯示，請稍後再試。",
 };
 
-export function SearchForm() {
+type SearchFormProps = {
+  variant?: "card" | "landing";
+};
+
+const inputBase =
+  "w-full min-h-11 bg-transparent text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-60";
+
+const inputCard =
+  "rounded-lg border border-border bg-background px-3 py-2 focus:ring-2 focus:ring-primary/30";
+
+const inputLanding = "px-1 py-2.5 focus:ring-0";
+
+export function SearchForm({ variant = "card" }: SearchFormProps) {
   const router = useRouter();
+  const [unifiedQuery, setUnifiedQuery] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [br, setBr] = useState("");
@@ -26,12 +45,26 @@ export function SearchForm() {
     null,
   );
 
+  const isLanding = variant === "landing";
+
+  const parsedUnified = useMemo(
+    () => parseUnifiedSearchQuery(unifiedQuery),
+    [unifiedQuery],
+  );
+  const detectLabel = parsedSearchQueryLabel(parsedUnified);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const hasInput =
-      companyName.trim() || phone.trim() || br.trim();
-    if (!hasInput) {
-      setMessage("請至少填寫一項查詢資料。");
+    const body = isLanding
+      ? toSearchInputBody(parseUnifiedSearchQuery(unifiedQuery))
+      : {
+          companyName: companyName.trim() || undefined,
+          phone: phone.trim() || undefined,
+          br: br.trim() || undefined,
+        };
+
+    if (!body) {
+      setMessage("請輸入公司名稱、香港電話或 BR 號碼。");
       return;
     }
 
@@ -43,11 +76,7 @@ export function SearchForm() {
       const res = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          companyName: companyName.trim() || undefined,
-          phone: phone.trim() || undefined,
-          br: br.trim() || undefined,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (res.status === 429) {
@@ -89,68 +118,124 @@ export function SearchForm() {
     }
   }
 
+  const fieldClass = `${inputBase} ${isLanding ? "text-sm sm:text-[15px]" : "text-base"} ${isLanding ? inputLanding : inputCard}`;
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-xl border border-border bg-background p-4 shadow-sm sm:p-6"
+      className={
+        isLanding
+          ? "w-full max-w-[584px]"
+          : "space-y-4 rounded-xl border border-border bg-background p-4 shadow-sm sm:p-6"
+      }
     >
-      <div className="space-y-1">
-        <label htmlFor="companyName" className="text-sm font-medium text-foreground">
-          公司名稱
-        </label>
-        <input
-          id="companyName"
-          name="companyName"
-          type="text"
-          autoComplete="organization"
-          value={companyName}
-          onChange={(e) => setCompanyName(e.target.value)}
+      {isLanding ? (
+        <div className="space-y-1.5">
+          <div
+            className="flex items-center gap-3 rounded-full border border-border/80 bg-background px-4 py-1 shadow-[0_1px_6px_rgba(32,33,36,0.16)] transition-shadow hover:shadow-[0_1px_8px_rgba(32,33,36,0.22)] focus-within:shadow-[0_1px_8px_rgba(32,33,36,0.22)] sm:px-5"
+          >
+            <button
+              type="submit"
+              disabled={loading}
+              aria-label={loading ? "查閱中" : "查閱公開資料摘要"}
+              className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+            >
+              <SearchGlyph className="size-5" />
+            </button>
+            <label htmlFor="search-query" className="sr-only">
+              輸入裝修公司名稱、電話或 BR 號碼
+            </label>
+            <input
+              id="search-query"
+              name="q"
+              type="search"
+              enterKeyHint="search"
+              autoComplete="off"
+              value={unifiedQuery}
+              onChange={(e) => setUnifiedQuery(e.target.value)}
+              disabled={loading}
+              className={`${fieldClass} min-h-12`}
+              placeholder="輸入裝修公司名稱、電話或 BR 號碼"
+            />
+          </div>
+          {detectLabel && unifiedQuery.trim() && (
+            <p className="px-4 text-center text-xs text-muted-foreground">
+              將以
+              <strong className="font-medium text-foreground/80">
+                {detectLabel}
+              </strong>
+              搜尋 · 8 位數字不明確時可加「BR」前綴
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="space-y-1">
+            <label
+              htmlFor="companyName"
+              className={brandSectionTitleClass}
+            >
+              公司名稱
+            </label>
+            <input
+              id="companyName"
+              name="companyName"
+              type="text"
+              autoComplete="organization"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              disabled={loading}
+              className={fieldClass}
+              placeholder="例：某某裝修工程有限公司"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="phone" className={brandSectionTitleClass}>
+              香港電話
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              disabled={loading}
+              className={fieldClass}
+              placeholder="例：9123 4567"
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="br" className={brandSectionTitleClass}>
+              商業登記號碼（BR）
+            </label>
+            <input
+              id="br"
+              name="br"
+              type="text"
+              value={br}
+              onChange={(e) => setBr(e.target.value)}
+              disabled={loading}
+              className={fieldClass}
+              placeholder="例：12345678"
+            />
+          </div>
+        </>
+      )}
+
+      {!isLanding && (
+        <button
+          type="submit"
           disabled={loading}
-          className="w-full min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-          placeholder="例：某某裝修工程有限公司"
-        />
-      </div>
-      <div className="space-y-1">
-        <label htmlFor="phone" className="text-sm font-medium text-foreground">
-          香港電話
-        </label>
-        <input
-          id="phone"
-          name="phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          disabled={loading}
-          className="w-full min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-          placeholder="例：9123 4567"
-        />
-      </div>
-      <div className="space-y-1">
-        <label htmlFor="br" className="text-sm font-medium text-foreground">
-          商業登記號碼（BR）
-        </label>
-        <input
-          id="br"
-          name="br"
-          type="text"
-          value={br}
-          onChange={(e) => setBr(e.target.value)}
-          disabled={loading}
-          className="w-full min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-base text-foreground outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
-          placeholder="例：12345678"
-        />
-      </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full min-h-11 rounded-lg bg-primary px-4 py-2 text-base font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
-      >
-        {loading ? "查閱中…" : "查閱公開資料摘要"}
-      </button>
+          className="w-full min-h-11 rounded-lg bg-primary px-4 py-2 text-base font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+        >
+          {loading ? "查閱中…" : "查閱公開資料摘要"}
+        </button>
+      )}
+
       {progressStartedAt !== null && (
-        <SearchProgress
+        <SearchProgressModal
           key={progressStartedAt}
           startedAt={progressStartedAt}
         />
@@ -158,11 +243,29 @@ export function SearchForm() {
       {message && (
         <p
           role="status"
-          className="rounded-lg border border-warning/30 bg-warning-foreground px-3 py-2 text-sm text-warning"
+          className={`rounded-lg border border-warning/30 bg-warning-foreground px-3 py-2 text-sm text-warning ${
+            isLanding ? "mt-4 text-center" : ""
+          }`}
         >
           {message}
         </p>
       )}
     </form>
+  );
+}
+
+function SearchGlyph({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
+    </svg>
   );
 }

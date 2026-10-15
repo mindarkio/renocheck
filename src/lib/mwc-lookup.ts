@@ -6,6 +6,9 @@ export type MwcRow = {
   company_name: string;
   phone: string | null;
   registration_no: string;
+  expiry_date: string | null;
+  primary_signatory_name: string | null;
+  source_updated_at: string | null;
 };
 
 export type MwcLookupResult = {
@@ -20,7 +23,9 @@ export async function lookupMwcWithMeta(
   if (input.phone) {
     const { data } = await supabase
       .from("mwc_contractors")
-      .select("company_name, phone, registration_no")
+      .select(
+        "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at",
+      )
       .eq("phone", input.phone)
       .limit(1)
       .maybeSingle();
@@ -30,7 +35,9 @@ export async function lookupMwcWithMeta(
   if (input.br) {
     const { data } = await supabase
       .from("mwc_contractors")
-      .select("company_name, phone, registration_no")
+      .select(
+        "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at",
+      )
       .ilike("registration_no", `%${input.br}%`)
       .limit(1)
       .maybeSingle();
@@ -42,7 +49,9 @@ export async function lookupMwcWithMeta(
     for (const term of mwcCompanyNameLookupTerms(input.companyName)) {
       const { data } = await supabase
         .from("mwc_contractors")
-        .select("company_name, phone, registration_no")
+        .select(
+        "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at",
+      )
         .ilike("company_name", `%${term}%`)
         .limit(2);
       if (!data?.length) continue;
@@ -65,11 +74,4 @@ export async function lookupMwcContractor(
 
 export function isIndividualRegistration(registrationNo: string): boolean {
   return registrationNo.toUpperCase().includes("MWC(W)");
-}
-
-export function maskIndividualDisplayName(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return "師傅";
-  const first = trimmed.charAt(0);
-  return `${first}** 師傅`;
 }

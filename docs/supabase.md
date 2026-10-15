@@ -66,7 +66,7 @@ pnpm db:push
 pnpm import:mwc
 ```
 
-腳本會篩選 `MWC` / `MWC(W)`，按 `REGISTRATION_NUMBER` 去重後 upsert 至 `mwc_contractors`。
+腳本會篩選 `MWC` / `MWC(W)`，按 `REGISTRATION_NUMBER` 去重後 upsert 至 `mwc_contractors`（含 `expiry_date`、`primary_signatory_name` 供報告「政府名冊」展示）。
 
 ## 本地 Supabase（可選）
 

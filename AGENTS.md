@@ -12,7 +12,8 @@
 3. [`docs/phases/V2-roadmap.md`](docs/phases/V2-roadmap.md) — what not to build early  
 4. [`docs/development.md`](docs/development.md) — `pnpm dev` / test  
 4b. [`docs/supabase.md`](docs/supabase.md) — project ref、link、env  
-5. [`docs/ui-principles.md`](docs/ui-principles.md) — tokens and tone  
+5. [`docs/ui-principles.md`](docs/ui-principles.md) — tokens and tone 
+5b. [`docs/design/brand-identity.md`](docs/design/brand-identity.md) — logo 色板與 VI（`public/logo/overview.png`）  
 
 **Work order:** MVP.md → relevant `.cursor/rules/` → code.
 
@@ -49,7 +50,9 @@ Formal external handoff / audit: also read [`docs/ai-agent/AI-Agent-Generic-Prom
 
 See [`docs/decision-log/README.md`](docs/decision-log/README.md). Examples: search provider swap, grading schema, new PII, stack deviation, launch/pricing.
 
-Recorded: [`DEC-0001-lightweight-governance.md`](docs/decision-log/DEC-0001-lightweight-governance.md), [`DEC-0002-search-query-pack-l1.md`](docs/decision-log/DEC-0002-search-query-pack-l1.md), [`DEC-0003-serp-q2-loose-short-entity.md`](docs/decision-log/DEC-0003-serp-q2-loose-short-entity.md), [`DEC-0004-trustworthy-report-open-access.md`](docs/decision-log/DEC-0004-trustworthy-report-open-access.md), [`DEC-0005-serp-partial-pages.md`](docs/decision-log/DEC-0005-serp-partial-pages.md), [`DEC-0006-retrieval-evidence-ssot.md`](docs/decision-log/DEC-0006-retrieval-evidence-ssot.md), [`DEC-0007-dual-track-v2-2-0.md`](docs/decision-log/DEC-0007-dual-track-v2-2-0.md), [`DEC-0008-serper-primary-search-provider.md`](docs/decision-log/DEC-0008-serper-primary-search-provider.md), [`DEC-0009-release-gold-set-acceptance.md`](docs/decision-log/DEC-0009-release-gold-set-acceptance.md)（[`release-gold-set.md`](docs/design/release-gold-set.md)）, [`DEC-0010-risk-band-display-grading.md`](docs/decision-log/DEC-0010-risk-band-display-grading.md)（[`risk-band-grading.md`](docs/design/risk-band-grading.md)）.
+Plans: [`seo-aeo-geo-optimization.md`](docs/plans/seo-aeo-geo-optimization.md)（SEO／AEO／GEO；域名 renocheck.homes）。
+
+Recorded: [`DEC-0001-lightweight-governance.md`](docs/decision-log/DEC-0001-lightweight-governance.md), [`DEC-0002-search-query-pack-l1.md`](docs/decision-log/DEC-0002-search-query-pack-l1.md), [`DEC-0003-serp-q2-loose-short-entity.md`](docs/decision-log/DEC-0003-serp-q2-loose-short-entity.md), [`DEC-0004-trustworthy-report-open-access.md`](docs/decision-log/DEC-0004-trustworthy-report-open-access.md), [`DEC-0005-serp-partial-pages.md`](docs/decision-log/DEC-0005-serp-partial-pages.md), [`DEC-0006-retrieval-evidence-ssot.md`](docs/decision-log/DEC-0006-retrieval-evidence-ssot.md), [`DEC-0007-dual-track-v2-2-0.md`](docs/decision-log/DEC-0007-dual-track-v2-2-0.md), [`DEC-0008-serper-primary-search-provider.md`](docs/decision-log/DEC-0008-serper-primary-search-provider.md), [`DEC-0009-release-gold-set-acceptance.md`](docs/decision-log/DEC-0009-release-gold-set-acceptance.md)（[`release-gold-set.md`](docs/design/release-gold-set.md)）, [`DEC-0010-risk-band-display-grading.md`](docs/decision-log/DEC-0010-risk-band-display-grading.md)（[`risk-band-grading.md`](docs/design/risk-band-grading.md)）, [`DEC-0011-mwc-public-register-names.md`](docs/decision-log/DEC-0011-mwc-public-register-names.md).
 
 ## Hype / scope traps (quick map)
 

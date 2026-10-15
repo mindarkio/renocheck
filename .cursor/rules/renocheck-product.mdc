@@ -32,7 +32,7 @@ Single search (company / HK phone / BR) → A–F report, MWC lookup, public dis
 - Locale: **Traditional Chinese (HK)** — calm, factual, protective.
 - No 「黑店」「騙子」; use **風險參考分檔**（風險偏高／風險中等／中性／未見負面摘要）and 「公開資料摘要」.
 - Low data → **低置信度 / 資料不足 (C)** + caution.
-- Mask individuals: `陳** 師傅`.
+- MWC 名冊姓名：按政府公開名冊全文顯示（DEC-0011）；討論摘要仍用 snippet＋連結，唔 UGC 點名指控。
 
 ## Monetization hooks
 

@@ -1,24 +1,138 @@
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { BrandMenuMark } from "@/components/BrandMenuMark";
+
+const HOME_NAV = [
+  { href: "/how-it-works", label: "點樣運作" },
+  { href: "/faq", label: "常見問題" },
+  { href: "/about", label: "關於" },
+  { href: "/legal/disclaimer", label: "免責聲明" },
+] as const;
+
+const navLinkClass =
+  "rounded-md hover:underline hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+
+const homeMenuLinkClass =
+  "rounded-md text-white hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
+
+const menuButtonClass = (menuOpen: boolean) =>
+  `inline-flex min-h-11 min-w-11 items-center justify-center rounded-md transition-[color,transform,opacity] duration-200 ease-out active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 sm:hidden ${
+    menuOpen
+      ? "fixed right-4 top-3 z-[130] text-white focus-visible:ring-white/50"
+      : "text-foreground/85 hover:text-foreground focus-visible:ring-primary/30"
+  }`;
+
+function useMobileNavMenu() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  return { menuOpen, setMenuOpen, closeMenu: () => setMenuOpen(false) };
+}
+
+function MobileNavMenuPortal({
+  open,
+  menuId,
+  onNavigate,
+}: {
+  open: boolean;
+  menuId: string;
+  onNavigate: () => void;
+}) {
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      id={menuId}
+      role="dialog"
+      aria-modal="true"
+      aria-label="網站選單"
+      className="fixed inset-0 z-[100] flex flex-col bg-primary/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-primary/85 sm:hidden"
+    >
+      <nav
+        className="renocheck-menu-panel-in flex flex-1 flex-col items-center justify-center gap-1 px-6 pb-16"
+      >
+        {HOME_NAV.map(({ href, label }, index) => (
+          <Link
+            key={href}
+            href={href}
+            className={`renocheck-menu-link-in min-h-12 py-3 text-lg font-medium ${homeMenuLinkClass}`}
+            style={{ animationDelay: `${60 + index * 40}ms` }}
+            onClick={onNavigate}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+    </div>,
+    document.body,
+  );
+}
+
+function DesktopNavLinks() {
+  return (
+    <div className="hidden items-center gap-5 text-sm text-foreground/85 sm:flex">
+      {HOME_NAV.map(({ href, label }) => (
+        <Link key={href} href={href} className={navLinkClass}>
+          {label}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 export function SiteHeader() {
+  const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu();
+  const menuId = "site-nav-menu";
+
   return (
-    <header className="border-b border-border bg-background">
-      <div className="mx-auto flex h-14 max-w-3xl items-center px-4">
-        <Link
-          href="/"
-          className="flex items-center rounded-md hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <>
+      <header
+        className={`relative shrink-0 ${
+          menuOpen ? "z-[120] bg-transparent" : "z-[60] bg-background"
+        }`}
+      >
+        <nav
+          className="mx-auto flex max-w-[584px] items-center justify-end px-4 py-3 sm:px-6"
+          aria-label="頁首"
         >
-          <Image
-            src="/logo/lockup-horizontal.svg"
-            alt="Renocheck 裝修點評"
-            width={200}
-            height={91}
-            className="h-8 w-auto max-w-[min(220px,70vw)]"
-            priority
-          />
-        </Link>
-      </div>
-    </header>
+          <button
+            type="button"
+            className={menuButtonClass(menuOpen)}
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            aria-label={menuOpen ? "關閉選單" : "開啟選單"}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <BrandMenuMark
+              open={menuOpen}
+              onPrimary={menuOpen}
+              className="size-7"
+            />
+          </button>
+          <DesktopNavLinks />
+        </nav>
+      </header>
+      <MobileNavMenuPortal
+        open={menuOpen}
+        menuId={menuId}
+        onNavigate={closeMenu}
+      />
+    </>
   );
 }

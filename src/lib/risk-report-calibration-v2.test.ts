@@ -46,7 +46,7 @@ describe("calibrateEvaluation", () => {
     expect(out.grade).toBe("C");
     expect(out.evaluation.displayGradeZh).not.toBe("B+");
     expect(out.evaluation.dataSaturation).toBe("sparse");
-    expect(out.summaryZh).toContain("未能與本次查證名稱");
+    expect(out.summaryZh).toContain("未檢出與查證對象相關的糾紛或投訴");
   });
 
   it("no MWC, zero evidence → C / unindexed", () => {

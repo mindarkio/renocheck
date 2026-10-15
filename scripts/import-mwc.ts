@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import { parse } from "csv-parse/sync";
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+import { parseBdRegistryExpiryDate } from "../src/lib/mwc-registry-display";
 import { normalizeHongKongPhone } from "../src/lib/normalize-phone";
 
 const CSV_PATH = resolve(
@@ -60,6 +61,12 @@ function displayName(row: CsvRow): string {
 
 function pickPhone(row: CsvRow): string | null {
   return normalizeHongKongPhone(row.TELEPHONE_NO);
+}
+
+function pickPrimarySignatory(row: CsvRow): string | null {
+  const zh = stripHtml(row.AS_NAME_CHINESE ?? "");
+  const en = stripHtml(row.AS_NAME_ENGLISH ?? "");
+  return zh || en || null;
 }
 
 function dedupeRows(rows: CsvRow[]): CsvRow[] {
@@ -120,6 +127,8 @@ async function main() {
     company_name: displayName(row),
     phone: pickPhone(row),
     registration_no: row.REGISTRATION_NUMBER.trim(),
+    expiry_date: parseBdRegistryExpiryDate(row.EXPIRY_DATE ?? ""),
+    primary_signatory_name: pickPrimarySignatory(row),
     source_updated_at: sourceUpdatedAt,
   }));
 

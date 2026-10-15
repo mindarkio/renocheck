@@ -1,0 +1,39 @@
+# Renocheck (裝修點評)
+
+Canonical site: https://renocheck.homes/
+Contact: hello@renocheck.homes
+
+## Tagline (zh-HK)
+
+裝修爛尾、糾紛避雷——一鍵查公開討論風險參考。
+
+## What this service is
+
+Renocheck is a Hong Kong homeowner-facing tool that aggregates **public** sources—primarily the Buildings Department Minor Works Contractor (MWC) register and **public web discussion snippets**—into a **risk reference** report when you search by company name, HK phone, or business registration number.
+
+## What this service is NOT
+
+- Not a credit report, TransUnion product, or credit score.
+- Not a contractor matching or advertising marketplace.
+- Not user-generated reviews or a forum.
+- Not legal advice or a guarantee of workmanship or completion.
+
+## Risk bands (display)
+
+Reports use Traditional Chinese risk reference bands such as 風險偏高, 風險中等, 中性, and 未見負面摘要—not letter grades A–F as the primary user-facing label.
+
+## Cache
+
+Identical queries may return a cached report snapshot for about **7 days**; see disclaimer for limits.
+
+## Key public pages
+
+- / — search
+- /how-it-works — methodology
+- /faq — frequently asked questions
+- /about — about the project
+- /legal/disclaimer — disclaimer, data sources, privacy summary
+
+## Crawling
+
+/report/* URLs are report snapshots and should not be treated as stable SEO landing pages.

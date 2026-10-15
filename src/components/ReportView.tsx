@@ -1,5 +1,8 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { RiskReport } from "@/lib/report-schema";
 import { ReportCard } from "./ReportCard";
@@ -64,17 +67,60 @@ export function ReportView({ fingerprint }: { fingerprint: string }) {
   }, [fingerprint]);
 
   return (
-    <main className="mx-auto w-full max-w-lg px-4 py-10">
-      <h1 className="mb-6 text-center text-xl font-semibold text-foreground">
-        風險報告摘要
-      </h1>
-      {error && (
-        <p className="text-center text-sm text-warning">{error}</p>
-      )}
-      {!error && !report && (
-        <p className="text-center text-sm text-muted-foreground">載入中…</p>
-      )}
-      {report && <ReportCard report={report} />}
+    <main className="flex min-h-0 flex-1 flex-col px-4 pb-12 pt-5 sm:px-6 sm:pb-16 sm:pt-7">
+      <div className="mx-auto w-full max-w-[584px]">
+        {error && (
+          <div
+            className="rounded-xl border border-warning/35 bg-warning-foreground/50 px-4 py-3 text-sm leading-relaxed text-warning"
+            role="alert"
+          >
+            {error}
+            <p className="mt-3">
+              <Link
+                href="/"
+                className="font-medium text-primary underline-offset-2 hover:underline"
+              >
+                返回首頁搜尋
+              </Link>
+            </p>
+          </div>
+        )}
+
+        {!error && !report && (
+          <div
+            className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2
+              className="size-4 shrink-0 animate-spin text-primary"
+              aria-hidden
+            />
+            載入報告中…
+          </div>
+        )}
+
+        {report && <ReportCard report={report} />}
+
+        {(report || error) && (
+          <div className="mt-8 sm:mt-10">
+            <Link
+              href="/"
+              className="flex w-full min-h-12 items-center justify-center gap-2.5 rounded-xl border border-primary bg-transparent px-5 py-3 text-[15px] font-semibold tracking-wide text-primary transition-[transform,background-color] duration-200 hover:bg-primary/5 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+            >
+              <Image
+                src="/logo/mark-color-transparent.svg"
+                alt=""
+                width={28}
+                height={30}
+                className="size-7 shrink-0"
+                aria-hidden
+              />
+              新搜尋
+            </Link>
+          </div>
+        )}
+      </div>
     </main>
   );
 }

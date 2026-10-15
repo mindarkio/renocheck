@@ -1,10 +1,18 @@
 @import "tailwindcss";
 
+/* Brand palette — docs/design/brand-identity.md (overview.png) */
 :root {
-  --background: #fafafa;
-  --foreground: #18181b;
-  --primary: #334155;
-  --primary-foreground: #f8fafc;
+  --brand-navy: #2f5d8a;
+  --brand-coral: #ff8f7d;
+  --brand-coral-emphasis: #d64532;
+  --brand-ink: #2b2f36;
+
+  --background: #ffffff;
+  --foreground: #2b2f36;
+  --primary: var(--brand-navy);
+  --primary-foreground: #ffffff;
+  --accent: var(--brand-coral);
+  --accent-foreground: var(--brand-ink);
   --muted: #f4f4f5;
   --muted-foreground: #71717a;
   --border: #e4e4e7;
@@ -17,6 +25,8 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
@@ -29,4 +39,34 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes renocheck-menu-panel-in {
+    from {
+      transform: translateY(1rem);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes renocheck-menu-link-in {
+    from {
+      transform: translateY(0.5rem);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .renocheck-menu-panel-in {
+    animation: renocheck-menu-panel-in 0.35s cubic-bezier(0.22, 1, 0.36, 1)
+      both;
+  }
+
+  .renocheck-menu-link-in {
+    animation: renocheck-menu-link-in 0.35s cubic-bezier(0.22, 1, 0.36, 1)
+      both;
+  }
 }

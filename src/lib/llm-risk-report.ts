@@ -9,10 +9,7 @@ import { gradeSchema, type RiskReport } from "./report-schema";
 
 type Grade = z.infer<typeof gradeSchema>;
 import { DISCLAIMER_VERSION, REPORT_VERSION } from "./constants";
-import {
-  isIndividualRegistration,
-  maskIndividualDisplayName,
-} from "./mwc-lookup";
+import { buildOfficialMwcDetails } from "./mwc-official-details";
 import { SearchPipelineError } from "./search-pipeline-error";
 import { isLlmConfigured } from "./llm-model";
 import type { NameAlignment } from "./entity-report-context";
@@ -57,33 +54,18 @@ export async function synthesizeRiskReport(params: {
     input.br ??
     "未知查詢";
 
-  const individual =
-    mwc != null && isIndividualRegistration(mwc.registration_no);
-
   const entity = {
-    displayName: individual
-      ? maskIndividualDisplayName(displayName)
-      : displayName,
+    displayName,
     matchType: input.matchType,
     queryEcho: entityContext.queryEcho,
     searchLabelUsed: entityContext.searchLabelUsed,
     nameAlignment: entityContext.nameAlignment,
     ...(input.phone ? { normalizedPhone: input.phone } : {}),
-    ...(individual
-      ? { maskedLabel: maskIndividualDisplayName(displayName) }
-      : {}),
   };
 
   const official = {
     mwcMatched: mwc != null,
-    ...(mwc
-      ? {
-          details: {
-            companyName: mwc.company_name,
-            registrationNo: mwc.registration_no,
-          },
-        }
-      : {}),
+    ...(mwc ? { details: buildOfficialMwcDetails(mwc) } : {}),
   };
 
   const userPayload = JSON.stringify({

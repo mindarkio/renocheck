@@ -21,6 +21,8 @@ cp .env.example .env.local
 
 Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm db:link`）。
 
+**正式域名：** 建議 Vercel primary 用 `https://renocheck.homes`，並在 `.env.local`／Vercel 設 `NEXT_PUBLIC_SITE_URL=https://renocheck.homes`（供 `metadataBase`、`/sitemap.xml`、`/robots.txt`）。詳見 [`plans/seo-aeo-geo-optimization.md`](plans/seo-aeo-geo-optimization.md)。
+
 ## 指令
 
 | 指令 | 說明 |
