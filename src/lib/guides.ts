@@ -14,6 +14,8 @@ export type GuideSource = { label: string; url: string };
 export type Guide = {
   slug: string;
   title: string;
+  /** Short card tag. */
+  category: string;
   /** Meta description (≈ 80–120 字). */
   description: string;
   /** Answer-first lead paragraph (AEO). */
@@ -87,6 +89,7 @@ export const GUIDES: Guide[] = [
   {
     slug: "check-renovation-contractor-licence",
     title: "點樣查裝修公司有冇牌？屋宇署承建商名冊查法",
+    category: "查牌照",
     description:
       "教你用屋宇署名冊搜尋，查裝修公司係咪註冊小型工程承建商（RMWC）或註冊一般建築承建商（RGBC），睇清登記級別、類型、有效期同紀律處分紀錄。",
     answer:
@@ -130,6 +133,7 @@ export const GUIDES: Guide[] = [
   {
     slug: "minor-works-class-1-2-3",
     title: "小型工程第 I、II、III 級係咩？業主要知嘅程序",
+    category: "小型工程",
     description:
       "屋宇署小型工程監管制度簡明解說：三個級別分別由邊類專業人士／承建商負責、開工前 7 日通知、完工後 14 日內提交證明書，同埋指定豁免工程。",
     answer:
@@ -168,6 +172,7 @@ export const GUIDES: Guide[] = [
   {
     slug: "renovation-abandoned-what-to-do",
     title: "裝修爛尾點算？業主追討步驟（消委會、小額錢債審裁處）",
+    category: "糾紛追討",
     description:
       "裝修公司收錢唔做、工程爛尾或質素有問題時可以點做：整理證據、書面要求、向消委會投訴調停，以及 $75,000 或以下申索可到小額錢債審裁處。",
     answer:
@@ -211,6 +216,7 @@ export const GUIDES: Guide[] = [
   {
     slug: "renovation-contract-checklist",
     title: "裝修合約要寫咩？簽約前清單",
+    category: "合約",
     description:
       "根據消委會建議整理的裝修合約清單：工程範圍、用料、連工包料定代買、工期、分階段付款、改動書面確認、執漏與尾數、保養條款。",
     answer:
@@ -248,6 +254,7 @@ export const GUIDES: Guide[] = [
   {
     slug: "questions-before-hiring-contractor",
     title: "揀裝修公司前要問嘅 10 條問題",
+    category: "揀公司",
     description:
       "委聘裝修公司前必問 10 條：商業登記、屋宇署註冊、報價計法、連工包料、付款期數、改動收費、執漏尾數、保養、分判同工期。",
     answer:
@@ -282,6 +289,7 @@ export const GUIDES: Guide[] = [
   {
     slug: "business-registration-number-search",
     title: "商業登記號碼點查？商業登記同公司註冊有咩分別",
+    category: "查商業登記",
     description:
       "教你用稅務局商業登記號碼查詢同公司註冊處電子查冊核對裝修公司身份；講解商業登記署與公司註冊處的分別，以及 2023 年起的商業登記號碼統一識別。",
     answer:
@@ -316,6 +324,7 @@ export const GUIDES: Guide[] = [
   {
     slug: "how-to-read-renovation-quotation",
     title: "裝修報價點睇？報價單要列明嘅重點",
+    category: "報價",
     description:
       "消委會及專業學會建議的裝修報價單重點：數量、單價、分項合計、連工包料、包生仔定實量實度、後加工程收費、隱藏條款及貨比三家。",
     answer:
