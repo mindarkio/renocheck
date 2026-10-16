@@ -77,7 +77,7 @@ flowchart LR
 |------|-----|------|
 | **Google CSE** | 第二 provider DEC | 可固定 site collection；與 Serp 二選一或 failover |
 | **DATA.GOV / MWC** | 已有 | 官方，非討論 |
-| **法院／海關** | Phase 1.5 | 結構化來源，另表 |
+| **法院／海關／清盤** | v1.0.0–v1.2.0 Track 1 | 結構化匯入 + lookup；見 [`track1-official-extensions-roadmap.md`](../phases/track1-official-extensions-roadmap.md)、DEC-0012 |
 | **直接爬 LIHKG／FB** | 不做 | ToS／登入／維護成本 |
 | **HouseHero／博客黑名單** | 不做自動 ingest | 僅人工找 case 做評估標籤 |
 
