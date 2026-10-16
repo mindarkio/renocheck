@@ -127,6 +127,20 @@ flowchart LR
 
 **唔需要**（YAGNI）：為法律源單獨開 queue/worker 微服務；一個 idempotent import + cron 足夠直至量級觸發 DEC。
 
+#### Phase 3 — Daily Cause List（每日排期表）
+
+**[Certain]** v1.0 GA **唔**包含自動爬排期表；產品只提供司法網 **深度連結**（見 `judiciary-search-deep-links.ts`：用戶自行以公司／訴訟方名稱查 [每日排期表](https://www.judiciary.hk/zh/court_services_facilities/daily_cause_list.html)）。
+
+**[Likely]** **小額錢債審裁處（HKSCT／DCCJ 小額索償）** 多數裁決 **唔**刊憲於 LRS Judgments；裝修欠款、工程款追討等 **被告公司** 發現，長期應以 **Daily Cause List** 為主渠道（LRS keyword／HKLII 只作補充，見 [`judgment-ingestion-execution.md`](../plans/judgment-ingestion-execution.md) Phase 3）。
+
+| 次序 | 做法 |
+|------|------|
+| **3a — 歷史 archive** | 先離線抓取／匯入司法機構提供的 **舊排期 archive**（日期範圍由運維定），解析 parties → 候選 manifest → 沿用 D2／D3（**唔**改 user search 即時爬） |
+| **3b — 每日 cron** | archive 穩定後再加 **定時 job**（日更）：只拉 **當日／新增** 排期頁 → staging → 規則＋抽樣審核 → upsert；**禁止**未審核自動寫入 `official_legal_events` |
+| **範圍** | 優先 **小額錢債** 及裝修欠款相關案類；刊憲判詞仍走 LRS D1；兩源可並存同一 `case_ref` 去重 |
+
+**觸發 DEC：** 排期表全文 mirror、登入後台、或排期-derived 內容送入 LLM 前。
+
 **與 `search_cache`：** 法律庫更新 **唔** 自動令舊 fingerprint 失效（同 MWC 更新）；用戶要最新法律區可 `refresh` 或等 cache TTL。報告應顯示法律紀錄 **摘錄截至** 時間。
 
 ### 技術骨架（實作指引，非本 DEC 強制表名）
@@ -232,6 +246,7 @@ flowchart LR
 | 日期 | 變更 |
 |------|------|
 | 2026-10-16 | **原告 pass：** 入庫／lookup／calibration 僅 **被告**；覆蓋目標 = 盡量 MWC 被告案（非 exhaustive） |
+| 2026-10-16 | **Phase 3 Daily Cause List：** v1.0 後 ingestion；先 archive 後日更 cron；小額錢債主渠道（見上文 Phase 3 小節） |
 
 ## Consequences
 

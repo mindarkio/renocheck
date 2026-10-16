@@ -7,6 +7,7 @@ DEC-0012 要求可追溯來源；**唔**鎖死單一域名。
 | [司法機構法律參考系統](https://legalref.judiciary.hk/) | 刊憲判詞主連結 | 不定期 | 商業使用須法律確認（私人研究條款） |
 | [judiciary.hk 判詞](https://www.judiciary.hk/zh/judgments_legal_reference/judgments.html) | 入口／核對 | 不定期 | 同上 |
 | [HKLII](https://v2.hklii.hk/) | 索引與連結（含 HKSCT、勞資等） | 不定期 | 遵守站方使用條款；唔 mirror 全文 |
+| [司法機構 Daily Cause List](https://www.judiciary.hk/zh/court_services_facilities/daily_cause_list.html) | **Phase 3** 離線發現（**小額錢債** 主渠道；先 archive、後日更 cron） | 每日 | 產品僅深度連結；自動抓取見 DEC-0012 Phase 3 |
 
 ### D0.3 狀態（2026-10-16）
 

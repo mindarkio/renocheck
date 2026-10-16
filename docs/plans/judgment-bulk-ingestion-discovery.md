@@ -15,6 +15,7 @@
 | **D1 發現** | LRS 直連（URL → fetch → parse） | `judgment-candidates.json` |
 | **D2 篩選** | 規則 + 可選 LLM 草稿 + 人工 gate | `judgments-seed.local.json` |
 | **D3 入庫** | `pnpm import:judgments` | `official_legal_events` |
+| **Phase 3 排期表**（v1.0 後） | Daily Cause List：先 **archive**，後 **日更 cron**；**小額錢債** 主渠道 | 見 [`judgment-ingestion-execution.md`](./judgment-ingestion-execution.md) §4 Phase 3 |
 
 ## 快速命令
 

@@ -168,6 +168,22 @@ pnpm discover:judgments --open-hints
 
 **D1 全量 crawl：** [`judgment-d1-full-crawl.md`](./judgment-d1-full-crawl.md) — 2026-10-16 本機 **174** `caseRef`（[`judgment-d1-crawl-run-2026-10-16.md`](./judgment-d1-crawl-run-2026-10-16.md)）。
 
+### Phase 3 — Daily Cause List（小額錢債主渠道）
+
+**狀態：** post–v1.0（**唔**阻塞 D1–D3 LRS 建庫）；產品決策見 [DEC-0012 Phase 3](../decision-log/DEC-0012-track1-court-judgments-v1-0-0.md#phase-3--daily-cause-list每日排期表)。
+
+**背景：** 小額錢債審裁處多數案件 **唔**上 LRS 刊憲 Judgments；裝修承辦商被追討工程款、按金等，**[Likely]** 較易出現於 [司法機構每日排期表](https://www.judiciary.hk/zh/court_services_facilities/daily_cause_list.html)（報告 UI 已連結，用戶自行查閱）。離線建庫要補覆蓋，應把 **Daily Cause List** 視為 **小額錢債／索償被告** 嘅 **主 discovery 源**；LRS `DCCJ` keyword、HKLII HKSCT 索引為次。
+
+| 步驟 | 做咩 | Done 標準（草案） |
+|------|------|-------------------|
+| **3a Archive** | 抓取並解析 **歷史排期 archive**（日期 shard、法院選 HKSCT／相關列表）；產出與 D1 相容嘅候選 row（`partiesLine`、`caseRef`、聆訊日期） | manifest ≥N 宗裝修／工程關鍵字命中；**唔** import 直至 D2 keep |
+| **3b 日更 cron** | **3a 穩定後** 才開 Vercel Cron／GHA：每日拉 **新排期** → 與 archive 去重 → staging | 連續 7 日零失敗；異常告警；仍須 D2＋`import:judgments` |
+| **3c 入庫** | 與現有 D2 v3e、`small_claims_debt` category、被告-only 規則一致；`sourceUrl` 指向排期／聆訊公開頁（**唔** mirror 全文） | 與 LRS 行 `case_ref` 去重；lookup smoke 命中商號 |
+
+**YAGNI：** Phase 3 完成前 **唔**為排期表開第二 pipeline 微服務；复用 `judgment-candidates.json` → D2 → seed → import 單一路徑。
+
+**Out of scope（Phase 3 同樣禁止）：** user search 即時開排期表、登入後台、把排期全文長期 mirror。
+
 **D2 覆蓋目標（owner）：** 盡量 **MWC 被告**；**原告 pass** — [`judgment-d2-mwc-defendant-scope.md`](./judgment-d2-mwc-defendant-scope.md)。**清洗 SSOT：** [`judgment-d2-cleaning.md`](./judgment-d2-cleaning.md)。
 
 **D1 Done：**
