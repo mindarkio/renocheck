@@ -31,8 +31,13 @@ export function shapeSoleProprietorImportRow(input: {
   }
 
   const trade = extractSoleProprietorTradeAlias(defendantLabel);
+  if (!trade?.trim() || trade.trim().length < 2) {
+    throw new Error(
+      `sole_proprietor_trade_parse_failed:${defendantLabel.slice(0, 120)}`,
+    );
+  }
   const owner = extractSoleProprietorOwnerName(defendantLabel);
-  const tradeName = trade ?? defendantLabel;
+  const tradeName = trade.trim();
 
   const ownerNorm = owner ? normalizeCompanyNameForCompare(owner) : "";
   const aliasExtras = [
@@ -54,11 +59,29 @@ export function shapeSoleProprietorImportRow(input: {
   for (const a of base) maybeAddAlias(a);
   for (const term of mwcCompanyNameLookupTerms(tradeName)) maybeAddAlias(term);
 
+  const companyNameNormalized = normalizeCompanyNameForCompare(tradeName);
+  if (!companyNameNormalized || companyNameNormalized.length < 2) {
+    throw new Error(
+      `sole_proprietor_trade_normalize_failed:${defendantLabel.slice(0, 120)}`,
+    );
+  }
+
   return {
-    companyNameNormalized: normalizeCompanyNameForCompare(tradeName),
+    companyNameNormalized,
     lookupAliases: [...aliasSet],
     topicTags,
   };
+}
+
+/** Strip 東主個人名 from alias candidates before DB write. */
+export function filterSolePropLookupAliases(
+  defendantLabel: string,
+  aliasCandidates: string[],
+): string[] {
+  return shapeSoleProprietorImportRow({
+    defendantLabel,
+    manualAliases: aliasCandidates,
+  }).lookupAliases;
 }
 
 export function shapeCompanyImportRow(input: {

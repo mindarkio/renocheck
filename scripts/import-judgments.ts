@@ -123,7 +123,22 @@ async function main() {
 
   const raw = readFileSync(seedPath, "utf8");
   const rows = JSON.parse(raw) as SeedRow[];
-  const dbRows = rows.map(toDbRow);
+  const dbRows: ReturnType<typeof toDbRow>[] = [];
+  for (const row of rows) {
+    try {
+      dbRows.push(toDbRow(row));
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      console.error(
+        JSON.stringify({
+          event: "import_judgments_row_failed",
+          caseRef: row.caseRef,
+          error: message,
+        }),
+      );
+      process.exit(1);
+    }
+  }
 
   if (dryRun) {
     console.info(JSON.stringify({ event: "import_judgments_dry_run", count: dbRows.length }));

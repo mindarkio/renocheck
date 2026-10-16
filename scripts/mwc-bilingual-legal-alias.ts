@@ -14,6 +14,7 @@ import { defendantLabelForMwcLookup } from "../src/lib/judgment-defendant-label"
 import { extractSoleProprietorTradeAlias } from "../src/lib/judgment-d2-v3d-rules";
 import { legalRowMatchesSearchLabel, normalizeLookupAliases } from "../src/lib/judgment-lookup-match";
 import {
+  filterSolePropLookupAliases,
   isSoleProprietorshipLegalRow,
   resolveImportCompanyFields,
 } from "../src/lib/judgment-sole-prop-import";
@@ -286,8 +287,13 @@ async function main() {
       for (const mwc of matched) {
         extras.push(...bilingualAliasExtras(mwc));
       }
+      const defendantLabel =
+        seed?.companyNameNormalized ?? legal.company_name_normalized;
       const nextAliases = isSoleProprietorshipLegalRow(legal.topic_tags)
-        ? [...new Set([...shaped.lookupAliases, ...extras.map((e) => e)])]
+        ? filterSolePropLookupAliases(defendantLabel, [
+            ...shaped.lookupAliases,
+            ...extras,
+          ])
         : normalizeLookupAliases(shaped.companyNameNormalized, [
             ...shaped.lookupAliases,
             ...extras,

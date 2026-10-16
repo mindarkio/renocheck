@@ -41,4 +41,19 @@ describe("sole proprietorship import + lookup", () => {
       true,
     );
   });
+
+  it("fails import when sole prop trade cannot be parsed", () => {
+    expect(() =>
+      resolveImportCompanyFields({
+        companyNameNormalized: "陳大文",
+        partyNames: ["原告", "陳大文"],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      resolveImportCompanyFields({
+        companyNameNormalized: "陳大文經營",
+        partyNames: ["原告", "陳大文經營"],
+      }),
+    ).toThrow(/sole_proprietor_trade_parse_failed/);
+  });
 });

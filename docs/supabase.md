@@ -52,7 +52,10 @@ pnpm db:link
 ```bash
 pnpm supabase migration new your_change
 pnpm db:push
+pnpm supabase migration list --linked   # local vs remote
 ```
+
+**Rollbacks（唔會被 `db push` 套用）：** 手動 down SQL 在 `supabase/rollbacks/`（見該目錄 `README.md`）。
 
 表設計見 `docs/MVP.md` §4。
 
