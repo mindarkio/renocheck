@@ -13,6 +13,11 @@ import {
   suggestLookupAliases,
 } from "../src/lib/judgment-lookup-match";
 import { brNormalizedFromSeedField } from "../src/lib/normalize-br";
+import { classifyDefendantEntity } from "../src/lib/judgment-d2-entity";
+import {
+  extractSoleProprietorOwnerName,
+  extractSoleProprietorTradeAlias,
+} from "../src/lib/judgment-d2-v3d-rules";
 
 const DEFAULT_SEED = resolve(
   process.cwd(),
@@ -76,16 +81,24 @@ function contentHash(row: SeedRow): string {
 }
 
 function toDbRow(row: SeedRow) {
-  const company = normalizeCompanyNameForCompare(row.companyNameNormalized);
-  const br = brNormalizedFromSeedField(row.brNormalized);
+  let companyLabel = row.companyNameNormalized;
+  const topicTags = [...(row.topicTags ?? [])];
   const aliasExtras = [
     ...suggestLookupAliases(row.companyNameNormalized, row.partyNames),
     ...(row.lookupAliases ?? []),
   ];
-  const lookup_aliases = normalizeLookupAliases(
-    row.companyNameNormalized,
-    aliasExtras,
-  );
+  if (classifyDefendantEntity(companyLabel) === "sole_proprietor") {
+    const owner = extractSoleProprietorOwnerName(companyLabel);
+    const trade = extractSoleProprietorTradeAlias(companyLabel);
+    if (owner) companyLabel = owner;
+    if (trade) aliasExtras.push(trade);
+    if (!topicTags.includes("sole_proprietorship")) {
+      topicTags.push("sole_proprietorship");
+    }
+  }
+  const company = normalizeCompanyNameForCompare(companyLabel);
+  const br = brNormalizedFromSeedField(row.brNormalized);
+  const lookup_aliases = normalizeLookupAliases(companyLabel, aliasExtras);
   return {
     source_type: row.sourceType ?? "court_judgment",
     source_catalog_id: row.sourceCatalogId,
@@ -104,7 +117,7 @@ function toDbRow(row: SeedRow) {
     outcome_hint: row.outcomeHint ?? null,
     procedure_stage: row.procedureStage ?? null,
     renovation_relevant: row.renovationRelevant ?? true,
-    topic_tags: row.topicTags ?? [],
+    topic_tags: topicTags,
     source_content_hash: contentHash(row),
     review_status: row.reviewStatus ?? "auto",
   };

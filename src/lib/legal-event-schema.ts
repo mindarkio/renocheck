@@ -49,6 +49,8 @@ export type ProcedureStage = z.infer<typeof procedureStageSchema>;
 
 export const legalEventReviewStatusSchema = z.enum(["auto", "human_verified"]);
 
+export const legalEventBusinessFormSchema = z.enum(["sole_proprietorship"]);
+
 export const officialLegalEventSchema = z.object({
   sourceType: z.literal("court_judgment"),
   caseRef: z.string().max(80),
@@ -63,6 +65,9 @@ export const officialLegalEventSchema = z.object({
   matchReasonZh: z.string().max(80),
   sourceLabel: z.string().max(40).optional(),
   reviewStatus: legalEventReviewStatusSchema.optional(),
+  businessForm: legalEventBusinessFormSchema.optional(),
+  /** 獨資：UI 顯示東主／個人名；商號用 lookup alias 匹配。 */
+  defendantDisplayNameZh: z.string().max(120).optional(),
 });
 
 export type OfficialLegalEvent = z.infer<typeof officialLegalEventSchema>;

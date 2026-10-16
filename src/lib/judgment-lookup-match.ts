@@ -96,3 +96,38 @@ export function legalRowMatchesSearchLabel(
 
   return false;
 }
+
+/** Match reason when `legalRowMatchesSearchLabel` is true. */
+export function legalRowMatchReasonZh(
+  searchLabelUsed: string,
+  row: LegalRowMatchFields,
+): string {
+  const labelNorm = normalizeCompanyNameForCompare(searchLabelUsed);
+  const rowNorm = normalizeCompanyNameForCompare(row.company_name_normalized);
+  const aliasNorms = (row.lookup_aliases ?? []).map((a) =>
+    normalizeCompanyNameForCompare(a),
+  );
+  const normsMatch = (a: string, b: string) => {
+    if (a === b && a.length >= 2) return true;
+    return (
+      a.length >= 4 &&
+      b.length >= 4 &&
+      (a.includes(b) || b.includes(a))
+    );
+  };
+
+  for (const term of mwcCompanyNameLookupTerms(searchLabelUsed)) {
+    const termNorm = normalizeCompanyNameForCompare(term);
+    if (termNorm.length < 2) continue;
+    if (normsMatch(termNorm, rowNorm)) return "公司名稱與匯入紀錄一致";
+    for (const an of aliasNorms) {
+      if (normsMatch(termNorm, an)) return "商號與匯入紀錄一致";
+    }
+  }
+
+  if (normsMatch(labelNorm, rowNorm)) return "公司名稱與匯入紀錄一致";
+  for (const an of aliasNorms) {
+    if (normsMatch(labelNorm, an)) return "商號與匯入紀錄一致";
+  }
+  return "公司名稱與匯入紀錄一致";
+}

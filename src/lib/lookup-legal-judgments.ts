@@ -7,7 +7,10 @@ import {
   procedureStageSchema,
   type JudgmentCategory,
 } from "./legal-event-schema";
-import { legalRowMatchesSearchLabel } from "./judgment-lookup-match";
+import {
+  legalRowMatchReasonZh,
+  legalRowMatchesSearchLabel,
+} from "./judgment-lookup-match";
 import { normalizeBrDigits } from "./normalize-br";
 import { normalizeIsoDatetimeForSchema } from "./normalize-iso-datetime";
 
@@ -27,6 +30,7 @@ export type LegalJudgmentRow = {
   lookup_aliases: string[] | null;
   imported_at: string;
   review_status: string | null;
+  topic_tags: string[] | null;
 };
 
 export type LegalLookupContext = {
@@ -56,6 +60,7 @@ function rowToEvent(
   const judgmentCategory = parseEnum(judgmentCategorySchema, row.judgment_category);
   const partyRole = parseEnum(partyRoleSchema, row.party_role);
   if (!judgmentCategory || !partyRole) return null;
+  if (judgmentCategory === "employment_labour") return null;
 
   const points = Array.isArray(row.hearing_key_points_zh)
     ? row.hearing_key_points_zh.filter((p) => typeof p === "string" && p.trim())
@@ -94,7 +99,17 @@ function rowToEvent(
     matchReasonZh,
     sourceLabel: "司法機構刊憲",
     reviewStatus,
+    ...(row.topic_tags?.includes("sole_proprietorship")
+      ? {
+          businessForm: "sole_proprietorship" as const,
+          defendantDisplayNameZh: row.company_name_normalized,
+        }
+      : {}),
   };
+}
+
+function shouldSkipLegalRow(row: LegalJudgmentRow): boolean {
+  return row.judgment_category === "employment_labour";
 }
 
 function strongestCategory(events: OfficialLegalEvent[]): JudgmentCategory | undefined {
@@ -129,7 +144,7 @@ export async function lookupLegalJudgments(
   ctx: LegalLookupContext,
 ): Promise<LegalLookupResult> {
   const selectCols =
-    "source_type, case_ref, court, event_date, hearing_key_points_zh, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status";
+    "source_type, case_ref, court, event_date, hearing_key_points_zh, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
 
   const { data: metaRows } = await supabase
     .from("official_legal_events")
@@ -157,6 +172,7 @@ export async function lookupLegalJudgments(
     for (const row of data ?? []) {
       const r = row as LegalJudgmentRow;
       if (seenCase.has(r.case_ref)) continue;
+      if (shouldSkipLegalRow(r)) continue;
       const ev = rowToEvent(r, "商業登記號碼與匯入紀錄一致");
       if (!ev) continue;
       seenCase.add(r.case_ref);
@@ -177,8 +193,9 @@ export async function lookupLegalJudgments(
     for (const row of data ?? []) {
       const r = row as LegalJudgmentRow;
       if (seenCase.has(r.case_ref)) continue;
+      if (shouldSkipLegalRow(r)) continue;
       if (!legalRowMatchesSearchLabel(label, r)) continue;
-      const ev = rowToEvent(r, "公司名稱與匯入紀錄一致");
+      const ev = rowToEvent(r, legalRowMatchReasonZh(label, r));
       if (!ev) continue;
       seenCase.add(r.case_ref);
       matched.push(ev);

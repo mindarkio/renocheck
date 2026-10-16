@@ -31,9 +31,23 @@ export function isAutoDropCasePrefixV3d(caseRef: string): boolean {
   return AUTO_DROP_CASE_PREFIXES_V3D.has(caseRefPrefix(caseRef));
 }
 
-export function isLabourPrefixReview(caseRef: string): boolean {
+export function isLabourPrefixDrop(caseRef: string): boolean {
   const p = caseRefPrefix(caseRef);
   return p === "HCLA" || p === "DCEC";
+}
+
+/** @deprecated use isLabourPrefixDrop */
+export const isLabourPrefixReview = isLabourPrefixDrop;
+
+export function extractSoleProprietorOwnerName(defendantLabel: string): string | null {
+  const raw = defendantLabel.trim();
+  const cn = raw.match(/^(.+?)\s*經營/u)?.[1]?.trim();
+  if (cn && cn.length >= 2) return cn;
+  const en = raw.match(/^(.+?)\s+trading\s+as\s+/iu)?.[1]?.trim();
+  if (en && en.length >= 2) return en;
+  const ta = raw.match(/^(.+?)\s+t\/a\s+/iu)?.[1]?.trim();
+  if (ta && ta.length >= 2) return ta;
+  return null;
 }
 
 const OWNERS_CORP_RE =

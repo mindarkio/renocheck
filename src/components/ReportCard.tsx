@@ -548,6 +548,19 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   <p className="text-sm font-semibold text-foreground sm:text-[15px]">
                     {ev.caseRef}
                   </p>
+                  {ev.businessForm === "sole_proprietorship" &&
+                  ev.defendantDisplayNameZh ? (
+                    <p className={`mt-1.5 flex flex-wrap items-center gap-2 ${reportBodyClass}`}>
+                      <span className="font-medium text-foreground">
+                        {ev.defendantDisplayNameZh}
+                      </span>
+                      <span
+                        className="inline-flex rounded-full border border-muted-foreground/25 bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                      >
+                        獨資經營
+                      </span>
+                    </p>
+                  ) : null}
                   <p className={`mt-1.5 ${reportMetaClass}`}>
                     {ev.court} ·{" "}
                     <time dateTime={ev.eventDate}>{ev.eventDate}</time>

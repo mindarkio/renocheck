@@ -12,7 +12,7 @@ import {
   isDefendantOwnersCorporation,
   isEngineeringCompanyPlaintiffOnly,
   isForceKeepCaseRef,
-  isLabourPrefixReview,
+  isLabourPrefixDrop,
 } from "./judgment-d2-v3d-rules";
 import {
   caseRefPrefix,
@@ -140,16 +140,14 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
     };
   }
 
-  if (isLabourPrefixReview(row.caseRef)) {
+  if (isLabourPrefixDrop(row.caseRef)) {
     return {
-      disposition: "review",
-      reasons: ["labour_category_review"],
+      disposition: "drop",
+      reasons: ["employment_labour_dropped"],
       defendantLabel,
       plaintiffLabel,
       renovationRelevantSuggested,
-      matchConfidence: "review",
       defendantEntityKind: classifyDefendantEntity(defendantLabel),
-      reviewJudgmentCategory: "employment_labour",
     };
   }
 
