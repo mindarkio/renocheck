@@ -37,6 +37,7 @@ type KeepRow = {
   defendantLabel: string;
   plaintiffLabel?: string;
   mwcMatch?: { companyName: string; registrationNo: string };
+  reviewLookupAliases?: string[];
   sourceUrl: string;
 };
 
@@ -97,10 +98,10 @@ function main() {
     const defendant = k.defendantLabel.trim();
     const plaintiff = k.plaintiffLabel?.trim();
     const partyNames = plaintiff ? [plaintiff, defendant] : [defendant];
-    const aliases = normalizeLookupAliases(
-      defendant,
-      suggestLookupAliases(defendant, partyNames),
-    );
+    const aliases = normalizeLookupAliases(defendant, [
+      ...suggestLookupAliases(defendant, partyNames),
+      ...(k.reviewLookupAliases ?? []),
+    ]);
     const br = brNormalizedFromSeedField(k.mwcMatch?.registrationNo);
 
     const row = {

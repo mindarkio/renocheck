@@ -150,7 +150,7 @@ async function main() {
   const queue = {
     schemaVersion: 1,
     generatedAt,
-    policy: "company_defendant_v3d",
+    policy: "company_defendant_v3e",
     summary: counts,
     entries,
   };

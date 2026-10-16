@@ -44,6 +44,7 @@ export type LegalLookupResult = {
 };
 
 const MAX_EVENTS = 8;
+const FETCH_PAGE_SIZE = 500;
 
 function parseEnum<T extends string>(
   schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
@@ -139,6 +140,28 @@ function strongestCategory(events: OfficialLegalEvent[]): JudgmentCategory | und
 
 export { strongestCategory };
 
+async function fetchAllRenovationLegalRows(
+  supabase: SupabaseClient,
+  selectCols: string,
+): Promise<LegalJudgmentRow[]> {
+  let from = 0;
+  const out: LegalJudgmentRow[] = [];
+  while (true) {
+    const { data, error } = await supabase
+      .from("official_legal_events")
+      .select(selectCols)
+      .eq("renovation_relevant", true)
+      .order("event_date", { ascending: false })
+      .range(from, from + FETCH_PAGE_SIZE - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as LegalJudgmentRow[];
+    out.push(...batch);
+    if (batch.length < FETCH_PAGE_SIZE) break;
+    from += FETCH_PAGE_SIZE;
+  }
+  return out;
+}
+
 export async function lookupLegalJudgments(
   supabase: SupabaseClient,
   ctx: LegalLookupContext,
@@ -183,14 +206,9 @@ export async function lookupLegalJudgments(
 
   if (matched.length < MAX_EVENTS) {
     const label = ctx.searchLabelUsed.trim();
-    const { data } = await supabase
-      .from("official_legal_events")
-      .select(selectCols)
-      .eq("renovation_relevant", true)
-      .order("event_date", { ascending: false })
-      .limit(80);
+    const allRows = await fetchAllRenovationLegalRows(supabase, selectCols);
 
-    for (const row of data ?? []) {
+    for (const row of allRows) {
       const r = row as LegalJudgmentRow;
       if (seenCase.has(r.case_ref)) continue;
       if (shouldSkipLegalRow(r)) continue;

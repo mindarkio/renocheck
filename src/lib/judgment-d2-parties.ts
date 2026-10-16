@@ -13,6 +13,8 @@ function normalizePartiesLineRaw(partiesLine: string): string {
     .replace(/\u00a0/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/[／]/g, " ")
+    .replace(/訢/g, "對")
+    .replace(/([)）])\s*對/gu, "$1 對 ")
     .replace(/\s+/g, " ")
     .trim();
 }

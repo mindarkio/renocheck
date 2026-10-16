@@ -41,6 +41,8 @@ export const isLabourPrefixReview = isLabourPrefixDrop;
 
 export function extractSoleProprietorOwnerName(defendantLabel: string): string | null {
   const raw = defendantLabel.trim();
+  const parenOp = raw.match(/^(.+?)[（(]\s*經營/u)?.[1]?.trim();
+  if (parenOp && parenOp.length >= 2) return parenOp;
   const cn = raw.match(/^(.+?)\s*經營/u)?.[1]?.trim();
   if (cn && cn.length >= 2) return cn;
   const en = raw.match(/^(.+?)\s+trading\s+as\s+/iu)?.[1]?.trim();
@@ -96,8 +98,10 @@ export function extractSoleProprietorTradeAlias(
   defendantLabel: string,
 ): string | null {
   const raw = defendantLabel.trim();
+  const parenTrade = raw.match(/[（(]\s*經營\s*([^)）]+)[)）]/u)?.[1]?.trim();
+  if (parenTrade && parenTrade.length >= 2) return parenTrade;
   const cn = raw.match(/經營(.+)$/u)?.[1]?.trim();
-  if (cn && cn.length >= 2) return cn;
+  if (cn && cn.length >= 2) return cn.replace(/[)）]\s*$/u, "").trim();
   const en = raw.match(/\btrading\s+as\s+(.+)$/i)?.[1]?.trim();
   if (en && en.length >= 2) return en;
   const ta = raw.match(/\bt\/a\s+(.+)$/i)?.[1]?.trim();

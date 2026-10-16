@@ -19,7 +19,7 @@ const skip = ["CACC", "DCCC"];
 const priority = ["HCSA", "DCCJ"];
 
 describe("runD2Gates", () => {
-  it("reviews sole proprietor with trade alias", () => {
+  it("keeps sole proprietor when trade has engineering keyword on DCCJ", () => {
     const r = runD2Gates({
       row: baseRow("郭振強及另一人 對 陳國新經營燊記裝修水電工程"),
       skipPrefixes: skip,
@@ -31,9 +31,21 @@ describe("runD2Gates", () => {
         ambiguous: false,
       },
     });
-    expect(r.disposition).toBe("review");
-    expect(r.reasons).toContain("sole_proprietor_review");
+    expect(r.disposition).toBe("keep");
+    expect(r.reasons).toContain("sole_proprietor_engineering_keep");
     expect(r.reviewLookupAliases).toContain("燊記裝修水電工程");
+  });
+
+  it("drops sole proprietor when trade lacks engineering keyword", () => {
+    const r = runD2Gates({
+      row: baseRow("甲 對 李四經營天天書店"),
+      skipPrefixes: skip,
+      priorityPrefixes: priority,
+      mwcLeft: null,
+      mwcRight: null,
+    });
+    expect(r.disposition).toBe("drop");
+    expect(r.reasons).toContain("sole_proprietor_non_engineering_drop");
   });
 
   it("keeps company defendant with MWC enrich on DCCJ", () => {
@@ -63,7 +75,7 @@ describe("runD2Gates", () => {
     expect(r.matchConfidence).toBe("high");
   });
 
-  it("reviews CACV appeals", () => {
+  it("keeps CACV when defendant has engineering keyword", () => {
     const r = runD2Gates({
       row: baseRow("業主 對 名富工程服務有限公司", "CACV 12/2020"),
       skipPrefixes: skip,
@@ -71,8 +83,35 @@ describe("runD2Gates", () => {
       mwcLeft: null,
       mwcRight: null,
     });
-    expect(r.disposition).toBe("review");
-    expect(r.reasons).toContain("case_prefix_review_only");
+    expect(r.disposition).toBe("keep");
+  });
+
+  it("drops HCPI personal injury prefix", () => {
+    const r = runD2Gates({
+      row: baseRow("業主 對 名富工程服務有限公司", "HCPI 12/2020"),
+      skipPrefixes: skip,
+      priorityPrefixes: priority,
+      mwcLeft: null,
+      mwcRight: null,
+    });
+    expect(r.disposition).toBe("drop");
+    expect(r.reasons).toContain("case_prefix_v3e_drop");
+  });
+
+  it("keeps mwc ambiguous sole prop when trade has engineering keyword", () => {
+    const r = runD2Gates({
+      row: baseRow("陳偉東及另一人 訴 黎天帶(經營榮利工程公司)", "DCCJ 6711/2002"),
+      skipPrefixes: skip,
+      priorityPrefixes: priority,
+      mwcLeft: null,
+      mwcRight: {
+        companyName: "榮利工程公司",
+        registrationNo: "MWC(W) 1/2020",
+        ambiguous: true,
+      },
+    });
+    expect(r.disposition).toBe("keep");
+    expect(r.reasons).toContain("sole_proprietor_engineering_keep");
   });
 
   it("drops MWC plaintiff only", () => {

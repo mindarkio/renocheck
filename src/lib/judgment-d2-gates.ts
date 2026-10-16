@@ -3,7 +3,11 @@ import {
   classifyDefendantEntity,
   defendantMatchConfidence,
 } from "./judgment-d2-entity";
-import { autoImportEligibility } from "./judgment-d2-case-policy";
+import { autoImportEligibility, defendantHasEngineeringKeyword } from "./judgment-d2-case-policy";
+import {
+  manualDropReason,
+  manualKeepOverride,
+} from "./judgment-d2-manual-triage";
 import type { JudgmentCategory } from "./legal-event-schema";
 import {
   extractSoleProprietorTradeAlias,
@@ -14,6 +18,13 @@ import {
   isForceKeepCaseRef,
   isLabourPrefixDrop,
 } from "./judgment-d2-v3d-rules";
+import {
+  isDefendantHousingAuthority,
+  isSolePropAutoKeepCourt,
+  isV3eAutoDropCasePrefix,
+  normalizeV3eDropReason,
+  soleProprietorTradeHasKeepKeyword,
+} from "./judgment-d2-v3e-rules";
 import {
   caseRefPrefix,
   defaultDefendantPartyLabel,
@@ -103,6 +114,37 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
     };
   }
 
+  const triageDropEarly = manualDropReason(row.caseRef);
+  if (triageDropEarly) {
+    return {
+      disposition: "drop",
+      reasons: [triageDropEarly],
+      renovationRelevantSuggested: partiesSuggestRenovationRelevant(
+        row.partiesLine,
+        row.discoveredFrom.profileId,
+      ),
+    };
+  }
+
+  const triageKeepEarly = manualKeepOverride(row.caseRef);
+  if (triageKeepEarly) {
+    return {
+      disposition: "keep",
+      reasons: ["manual_triage_keep"],
+      defendantLabel: triageKeepEarly.defendantLabel,
+      plaintiffLabel: triageKeepEarly.plaintiffLabel,
+      renovationRelevantSuggested: partiesSuggestRenovationRelevant(
+        row.partiesLine,
+        row.discoveredFrom.profileId,
+      ),
+      matchConfidence: "high",
+      defendantEntityKind: classifyDefendantEntity(triageKeepEarly.defendantLabel),
+      ...(triageKeepEarly.lookupAliases?.length
+        ? { reviewLookupAliases: triageKeepEarly.lookupAliases }
+        : {}),
+    };
+  }
+
   const parsed =
     input.partiesSplit !== undefined
       ? { split: input.partiesSplit, retried: false }
@@ -151,6 +193,17 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
     };
   }
 
+  if (isV3eAutoDropCasePrefix(row.caseRef)) {
+    return {
+      disposition: "drop",
+      reasons: ["case_prefix_v3e_drop"],
+      defendantLabel,
+      plaintiffLabel,
+      renovationRelevantSuggested,
+      defendantEntityKind: classifyDefendantEntity(defendantLabel),
+    };
+  }
+
   const rightHit = mwcRight && !mwcRight.ambiguous ? mwcRight : null;
   const leftHit = mwcLeft && !mwcLeft.ambiguous ? mwcLeft : null;
 
@@ -178,10 +231,6 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
   } else if (rightHit) {
     reasons.push("mwc_defendant_label_mismatch");
   }
-  if (mwcRight?.ambiguous) {
-    reasons.push("mwc_defendant_ambiguous");
-  }
-
   if (entityKind === "natural_person") {
     return {
       disposition: "drop",
@@ -196,16 +245,66 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
 
   if (entityKind === "sole_proprietor") {
     const tradeAlias = extractSoleProprietorTradeAlias(defendantLabel);
+    const aliasExtra = tradeAlias ? { reviewLookupAliases: [tradeAlias] } : {};
+    if (
+      isSolePropAutoKeepCourt(row.caseRef) &&
+      soleProprietorTradeHasKeepKeyword(defendantLabel)
+    ) {
+      return {
+        disposition: "keep",
+        reasons: [...reasons, "sole_proprietor_engineering_keep"],
+        defendantLabel,
+        plaintiffLabel,
+        mwcMatch,
+        renovationRelevantSuggested,
+        matchConfidence: "high",
+        defendantEntityKind: entityKind,
+        ...aliasExtra,
+      };
+    }
     return {
-      disposition: "review",
-      reasons: [...reasons, "sole_proprietor_review"],
+      disposition: "drop",
+      reasons: [...reasons, "sole_proprietor_non_engineering_drop"],
       defendantLabel,
       plaintiffLabel,
       mwcMatch,
       renovationRelevantSuggested,
-      matchConfidence: "review",
       defendantEntityKind: entityKind,
-      ...(tradeAlias ? { reviewLookupAliases: [tradeAlias] } : {}),
+      ...aliasExtra,
+    };
+  }
+
+  if (mwcRight?.ambiguous) {
+    const renovationCompany =
+      entityKind === "company" &&
+      defendantHasEngineeringKeyword(defendantLabel);
+    if (renovationCompany) {
+      reasons.push("mwc_ambiguous_renovation_keep");
+    } else {
+      return {
+        disposition: "drop",
+        reasons: [...reasons, "mwc_ambiguous_non_renovation_drop"],
+        defendantLabel,
+        plaintiffLabel,
+        mwcMatch,
+        renovationRelevantSuggested,
+        defendantEntityKind: entityKind,
+      };
+    }
+  }
+
+  if (
+    entityKind === "unknown" ||
+    isDefendantHousingAuthority(defendantLabel)
+  ) {
+    return {
+      disposition: "drop",
+      reasons: [...reasons, "defendant_entity_unknown"],
+      defendantLabel,
+      plaintiffLabel,
+      mwcMatch,
+      renovationRelevantSuggested,
+      defendantEntityKind: entityKind,
     };
   }
 
@@ -247,31 +346,12 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
 
   if (confidence === "review") {
     return {
-      disposition: "review",
-      reasons: [
-        ...reasons,
-        entityKind === "unknown"
-          ? "defendant_entity_unknown"
-          : "weak_renovation_signal",
-      ],
+      disposition: "drop",
+      reasons: [...reasons, "weak_renovation_signal"],
       defendantLabel,
       plaintiffLabel,
       mwcMatch,
       renovationRelevantSuggested,
-      matchConfidence: "review",
-      defendantEntityKind: entityKind,
-    };
-  }
-
-  if (mwcRight?.ambiguous) {
-    return {
-      disposition: "review",
-      reasons,
-      defendantLabel,
-      plaintiffLabel,
-      mwcMatch,
-      renovationRelevantSuggested,
-      matchConfidence: "review",
       defendantEntityKind: entityKind,
     };
   }
@@ -285,13 +365,12 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
   });
   if (!auto.eligible) {
     return {
-      disposition: "review",
-      reasons: [...reasons, auto.reason],
+      disposition: "drop",
+      reasons: [...reasons, normalizeV3eDropReason(auto.reason)],
       defendantLabel,
       plaintiffLabel,
       mwcMatch,
       renovationRelevantSuggested,
-      matchConfidence: "review",
       defendantEntityKind: entityKind,
     };
   }

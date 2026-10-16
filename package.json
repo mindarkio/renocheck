@@ -40,6 +40,8 @@
     "d2:import-keep": "tsx scripts/d2-import-keep-batch.ts",
     "d2:sync-seed": "tsx scripts/d2-sync-seed-from-keep.ts",
     "d2:export-review-csv": "tsx scripts/export-judgment-d2-review-csv.ts",
+    "mwc:bilingual-legal-match": "tsx scripts/mwc-bilingual-legal-alias.ts",
+    "mwc:registry-manual-probe": "tsx scripts/mwc-registry-manual-probe.ts",
     "prune:legal-events-orphans": "tsx scripts/prune-legal-events-orphans.ts",
     "d1-d2:pull": "pnpm d1:extract-all && pnpm d2:prep",
     "j5:build-queue": "tsx scripts/j5-build-mwc-party-queue.ts",

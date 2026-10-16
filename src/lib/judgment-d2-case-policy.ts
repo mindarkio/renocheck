@@ -2,6 +2,8 @@
 
 import { caseRefPrefix } from "./judgment-d2-parties";
 
+const APPEAL_ENGINEERING_KEEP_PREFIXES = new Set(["CACV", "HCSA"]);
+
 /** Auto `import:judgments` — contract / debt civil only. */
 export const AUTO_IMPORT_CASE_PREFIXES = new Set([
   "DCCJ",
@@ -10,15 +12,11 @@ export const AUTO_IMPORT_CASE_PREFIXES = new Set([
   "LDPD",
 ]);
 
-/** Appeals, PI, regulatory, small claims tribunal, etc. — queue only. */
+/** Appeals / regulatory — v3e: CACV/HCSA 工程被告可 keep；其餘多為 drop（見 v3e gates）。 */
 export const REVIEW_ONLY_CASE_PREFIXES = new Set([
-  "CACV",
   "CACC",
-  "HCPI",
   "HCMP",
   "HCCT",
-  "HCSA",
-  "LDPE",
   "HKCFI",
   "FCMC",
   "FAMC",
@@ -27,9 +25,9 @@ export const REVIEW_ONLY_CASE_PREFIXES = new Set([
 const CONTRACT_DEBT_HINT_RE =
   /裝修|工程|承建|翻新|滲水|室內|水電|裝飾|欠款|工程款|合約|按金|違約|索償|contract|decoration|engineering|renovation|debt|arrears/i;
 
-/** DCCJ / HCA / LDBM keep — 裝修或工程（被告名工程字眼可滿足）。 */
+/** DCCJ / HCA / LDBM / 獨資商號 — 裝修或工程字眼（v3e 清單）。 */
 const RENOVATION_ENGINEERING_RE =
-  /裝修|工程|承建|翻新|滲水|室內|水電|裝飾|裝璜|木工|油漆|泥水|鋁窗|消防|冷氣|interior|decoration|renovation|engineering|construction|contractor|fitting|interiors/i;
+  /裝修|裝飾|設計|工程|廚櫃|防水|冷氣|水電|承建|翻新|滲水|室內|裝璜|木工|油漆|泥水|鋁窗|消防|decoration|engineering|interior|design|construction|contracting|waterproof|renovation|contractor|fitting|interiors/i;
 
 const STRICT_RENO_PREFIXES = new Set(["DCCJ", "HCA"]);
 
@@ -92,6 +90,13 @@ export function autoImportEligibility(input: {
   defendantLabel: string;
 }): AutoImportEligibility {
   const prefix = casePrefix(input.caseRef);
+
+  if (APPEAL_ENGINEERING_KEEP_PREFIXES.has(prefix)) {
+    if (defendantHasEngineeringKeyword(input.defendantLabel)) {
+      return { eligible: true };
+    }
+    return { eligible: false, reason: "weak_renovation_engineering_signal" };
+  }
 
   if (REVIEW_ONLY_CASE_PREFIXES.has(prefix)) {
     return { eligible: false, reason: "case_prefix_review_only" };
