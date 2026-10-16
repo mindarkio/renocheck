@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-10-16T00:00:00.000Z",
+  "policy": "no_serp_track1",
+  "configVersion": 2,
+  "profilesVersion": 1,
+  "rulesDoc": "docs/design/lrs-judgment-discovery-rules.md",
+  "entryCount": 2,
+  "entries": [
+    {
+      "provider": "lrs",
+      "profileId": "phrase-裝修工程",
+      "tier": "A",
+      "topicTerm": "裝修工程",
+      "mode": "phrase",
+      "url": "https://legalref.judiciary.hk/lrs/common/search/search_result.jsp?stem=1&txtselectopt=3&txtSearch=%E8%A3%9D%E4%BF%AE%E5%B7%A5%E7%A8%8B&selall=1&isadvsearch=1&selallct=1&selDatabase=JU",
+      "maxPagesDefault": 20,
+      "observedHitsJu": 749,
+      "note": "LRS tier A phrase; JU only — see docs/design/lrs-judgment-discovery-rules.md"
+    },
+    {
+      "provider": "hklii",
+      "profileId": "phrase-裝修工程",
+      "tier": "A",
+      "topicTerm": "裝修工程",
+      "url": "https://v2.hklii.hk/search?q=%E8%A3%9D%E4%BF%AE%E5%B7%A5%E7%A8%8B",
+      "note": "HKLII 站內搜尋；核對後 sourceUrl 優先改 LRS 刊憲鏈。"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "sites": ["legalref.judiciary.hk", "v2.hklii.hk"],
+  "profilesFile": "scripts/config/lrs-ingestion-profiles.json",
+  "topicTerms": [],
+  "courtTerms": [],
+  "pagesPerQuery": 1,
+  "delayMsBetweenQueries": 800,
+  "_comment": "LRS URLs come from lrs-ingestion-profiles.json; courtTerms prefix in txtSearch is deprecated — see docs/design/lrs-judgment-discovery-rules.md"
+}

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "note": "Prefix match on caseRef before slash. Expand in J5; used by J1+ manual seed and future parsers.",
+  "prefixes": {
+    "HCSA": "Small Claims Tribunal",
+    "DCCJ": "District Court",
+    "LDPD": "Lands Tribunal",
+    "LDBM": "Lands Tribunal",
+    "HCA": "Court of First Instance",
+    "HCPI": "Court of First Instance",
+    "CACV": "Court of Appeal",
+    "HCFI": "Court of First Instance",
+    "HCLA": "Court of First Instance",
+    "HCB": "High Court"
+  }
+}
