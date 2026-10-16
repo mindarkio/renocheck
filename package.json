@@ -45,6 +45,7 @@
     "j5:build-queue": "tsx scripts/j5-build-mwc-party-queue.ts",
     "j5:fetch-parties": "tsx scripts/j5-fetch-parties-batch.ts",
     "lrs:probe-keywords": "tsx scripts/lrs-probe-keyword-hits.ts",
+    "lrs:probe-round2-dual": "tsx scripts/lrs-probe-round2-dual-prefix.ts",
     "validate:judgments-seed": "tsx scripts/validate-judgments-seed.ts",
     "purge:legal-events": "tsx scripts/purge-legal-event-rows.ts",
     "judgment:poc-smoke": "tsx scripts/judgment-track1-poc-smoke.ts",

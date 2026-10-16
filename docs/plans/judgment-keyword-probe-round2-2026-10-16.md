@@ -47,4 +47,29 @@
 pnpm lrs:probe-keywords
 ```
 
-Crawl（**本輪不做**）：`pnpm lrs:save-search-pages --profile-id=...` 待 probe 結果 + Aaron OK。
+## Dual-prefix probe（水電／冷氣／油漆／interior × DCCJ/HCA/LDPD/HCSA）
+
+全部 **≤500** — **唔使年份分片**；見 `scripts/output/lrs-round2-dual-prefix-probe.json`。
+
+| id | hitsJu |
+|----|--------|
+| dccj-水電 | 162 |
+| hca-水電 | 141 |
+| ldpd-水電 | 86 |
+| hcsa-水電 | 25 |
+| dccj-冷氣 | 125 |
+| hca-冷氣 | 126 |
+| ldpd-冷氣 | 38 |
+| hcsa-冷氣 | 28 |
+| dccj-油漆 | 107 |
+| hca-油漆 | 68 |
+| ldpd-油漆 | 9 |
+| hcsa-油漆 | 22 |
+| dccj-interior | 310 |
+| hca-interior | 455 |
+| ldpd-interior | 15 |
+| hcsa-interior | 23 |
+
+**2026-10-16 夜：** Round 2 crawl 已完成（22 profiles）；D2 v3d → **897** 候選 · **112** keep · 遠端 `legalref-lrs-ju` **112**。
+
+Crawl：`pnpm lrs:save-search-pages --profile-id=...`（profiles 已入 `lrs-ingestion-profiles.json`）。

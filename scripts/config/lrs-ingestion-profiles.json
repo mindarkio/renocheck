@@ -144,6 +144,205 @@
       "maxPagesDefault": 10
     },
     {
+      "id": "phrase-判頭",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "判頭",
+      "observedHitsJu": 396,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl 2026-10-16."
+    },
+    {
+      "id": "phrase-浴室",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "浴室",
+      "observedHitsJu": 490,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "phrase-廚櫃",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "廚櫃",
+      "observedHitsJu": 71,
+      "maxPagesDefault": 12,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "phrase-防水",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "防水",
+      "observedHitsJu": 392,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "phrase-拆卸",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "拆卸",
+      "observedHitsJu": 431,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "phrase-室內設計",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "室內設計",
+      "observedHitsJu": 183,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "dccj-水電",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "水電",
+      "observedHitsJu": 162,
+      "maxPagesDefault": 15,
+      "note": "Round 2 dual-prefix probe; all ≤500."
+    },
+    {
+      "id": "hca-水電",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "水電",
+      "observedHitsJu": 141,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "ldpd-水電",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "水電",
+      "observedHitsJu": 86,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "hcsa-水電",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "水電",
+      "observedHitsJu": 25,
+      "maxPagesDefault": 5
+    },
+    {
+      "id": "dccj-冷氣",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "冷氣",
+      "observedHitsJu": 125,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "hca-冷氣",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "冷氣",
+      "observedHitsJu": 126,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "ldpd-冷氣",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "冷氣",
+      "observedHitsJu": 38,
+      "maxPagesDefault": 7
+    },
+    {
+      "id": "hcsa-冷氣",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "冷氣",
+      "observedHitsJu": 28,
+      "maxPagesDefault": 5
+    },
+    {
+      "id": "dccj-油漆",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "油漆",
+      "observedHitsJu": 107,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "hca-油漆",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "油漆",
+      "observedHitsJu": 68,
+      "maxPagesDefault": 12
+    },
+    {
+      "id": "ldpd-油漆",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "油漆",
+      "observedHitsJu": 9,
+      "maxPagesDefault": 2
+    },
+    {
+      "id": "hcsa-油漆",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "油漆",
+      "observedHitsJu": 22,
+      "maxPagesDefault": 4
+    },
+    {
+      "id": "dccj-interior",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "interior",
+      "observedHitsJu": 310,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "hca-interior",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "interior",
+      "observedHitsJu": 455,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "ldpd-interior",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "interior",
+      "observedHitsJu": 15,
+      "maxPagesDefault": 3
+    },
+    {
+      "id": "hcsa-interior",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "interior",
+      "observedHitsJu": 23,
+      "maxPagesDefault": 4
+    },
+    {
       "id": "anywords-裝修",
       "tier": "C",
       "mode": "anywords",
