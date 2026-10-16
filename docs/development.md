@@ -33,6 +33,9 @@ Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm d
 | `pnpm lint` | ESLint |
 | `pnpm test` | Vitest（`src/lib/**/*.test.ts`） |
 | `pnpm test:watch` | 監聽模式 |
+| `pnpm import:judgments` | 匯入 `official_legal_events`（見 [supabase.md](supabase.md)） |
+| `pnpm legal:lookup-smoke` | 僅 DB 判詞 lookup（唔食 Serp／LLM） |
+| `pnpm judgment:poc-smoke` | J3 PoC：10 條 local seed lookup + 可選 `--api-base=http://localhost:3000` 三場景 full search |
 
 ## 健康檢查
 
@@ -75,7 +78,11 @@ curl -s -X POST http://localhost:3000/api/search \
 
 ### Smoke（電話 / BR / 公司名）
 
-`pnpm dev` 運行中，用 `refresh: true` 略過 cache；報告應含 `reportVersion` `2.2.0`、`evaluation`（雙軌骨架，DEC-0007）、`entity.searchLabelUsed`、`signals.boundHitCount`、`signals.retrievalEvidence`（檢索層 SSOT，DEC-0006）、`signals.contractChecklist`（即使零討論）。
+`pnpm dev` 運行中，用 `refresh: true` 略過 cache；報告應含 `reportVersion` `2.4.0`、`evaluation`（雙軌骨架，DEC-0007）、`entity.searchLabelUsed`、`signals.boundHitCount`、`signals.retrievalEvidence`（檢索層 SSOT，DEC-0006）、`signals.contractChecklist`（即使零討論）。
+
+**Track 1 判詞（DEC-0012）：** 本地 `pnpm dev` **預設開啟** lookup（除非 `LEGAL_EVENTS_ENABLED=0`）；Vercel 正式環境須設 `LEGAL_EVENTS_ENABLED=1`。先 `pnpm import:judgments`。改 env 後要**重啟** dev server。Lookup 自測：`pnpm legal:lookup-smoke "示例裝修工程有限公司"`（預期 1 宗 `DCCJ 9001/2020`）。完整報告 smoke：`POST /api/search` + `{"companyName":"示例裝修工程有限公司","refresh":true}` — 回應為 `{ report, fingerprint, cacheHit, meta }`；讀 `report.official.legalEvents`（非空）、`report.evaluation.riskBandZh`（合成 fixture 至少「風險中等」）。真實 seed 一鍵（與 `judgments-seed.local.json` 行數同步）：`pnpm judgment:poc-smoke --api-base=http://localhost:3000`（預期 `lookupAllHit` + `apiAllHaveLegalEvents`；輸出 `scripts/output/judgment-poc-smoke-2026-10-16.json`）。
+
+**判詞建庫（離線 D1，唔用 Serp）：** 見 [`judgment-ingestion-execution.md`](plans/judgment-ingestion-execution.md)。單案號發現（唔在 keyword 分頁內時）：`pnpm lrs:discover-case --case=HCSA59/2014`（可 `--write-candidates` 合併入 `judgment-candidates.json`）。**Lookup 別名／MWC BR：** `pnpm enrich:judgments-seed`（`--write` 更新 `lookupAliases`；MWC 0 hit 時靠商號／parties 別名）→ `pnpm import:judgments`。Tier A 候選池（≥50 `caseRef`）：`pnpm d1:tier-a`（= `discover` + `lrs:save-search-pages --tier=A --max-pages=6` + `build:judgment-candidates`；LRS 慢時用 `lrs:save-search-pages`，唔靠 `fetch:judgments` 短 timeout）。人手 D2 編 `scripts/fixtures/judgments-seed.local.json` → `pnpm validate:judgments-seed --min-renovation=5` → `pnpm import:judgments --file=...`。
 
 **Release gold（DEC-0009）：** `docs/design/release-gold-set.md`；發版前 `pnpm eval:report-quality --live --gate`（blocking 8 條）。
 

@@ -1,8 +1,11 @@
 # DEC-0012: Track 1 司法判詞（Renocheck v1.0.0）
 
-- **Status:** proposed（實作 PR 開工前維持 proposed；GA v1.0.0 時改 accepted）
+- **Status:** proposed（GA v1.0.0 時改 **accepted**；見下 beta scope）
+- **Beta scope (owner):** **accepted** 2026-10-16 — [`owner-attestation-track1-beta.md`](../checklists/owner-attestation-track1-beta.md) 確認表 1–5（內測／preview；**唔**等同 v1.0.0 商業 GA 或法律意見）
 - **Date:** 2026-10-15
-- **Related:** [`track1-official-extensions-roadmap.md`](../phases/track1-official-extensions-roadmap.md)（v1.1.0 海關、v1.2.0 清盤）、[`pipeline-ssot.md`](../design/pipeline-ssot.md)、MVP §2.2 Track 1 延伸、DEC-0011（官方區塊 SSOT 敘事）
+- **Amendment 2026-10-16 (a):** Track 1 **入庫／lookup 僅 MWC 被告**；**原告 pass** — **superseded in part** by (b)  below。
+- **Amendment 2026-10-16 (b) — Aaron / 商業 launch 建庫 [accepted]：** 離線索引 **所有公司被告**（裝修委聘相關候選），**唔限 MWC**；MWC／RGBC 名冊匹配改為 **報告內正面信號（enrich）**，唔作入庫 hard gate。**自然人／独资（未審）** → `review`／唔自動 live。**原告** 仍 pass。**Search-time LRS** 仍禁止（離線 only）。執行：[`judgment-topic-crawl-v2-aaron-2026-10-16.md`](../plans/judgment-topic-crawl-v2-aaron-2026-10-16.md)、D2 `company_defendant_v2`。
+- **Related:** [`track1-official-extensions-roadmap.md`](../phases/track1-official-extensions-roadmap.md)（v1.1.0 海關、v1.2.0 清盤）、[`track1-v1-0-execution.md`](../plans/track1-v1-0-execution.md)（實作 P0–P7）、[`pipeline-ssot.md`](../design/pipeline-ssot.md)、MVP §2.2 Track 1 延伸、DEC-0011（官方區塊 SSOT 敘事）
 
 ## Context
 
@@ -49,7 +52,7 @@ Renocheck 現有 **Track 1** 以 MWC 名冊為主；**Track 2** 靠合規網搜�
    - **Calibration：** 新增或擴展 `risk-report-calibration-v2`（或 `legal-event-calibration.ts`）在論壇／L1 信號之後套用 **法律紀錄下限（floor）／爭議級別下限**；`riskBandZh` 取 **較嚴重** 者。具體矩陣見 **Appendix B** — **發布 v1.0 前須合規 + grading human sign-off**（同 DEC-0010）。
    - **MWC `licenseStatus`** 不因判詞自動改（名冊仍獨立）；法律信號進 **`evaluation` 新欄或擴展 `reputationTrack`／`legalTrack`**（實作時選一，同步 schema）。
    - UI：除要點 + 連結外，顯示 **判決類型標籤**（用戶可理解「咩類型官司」）及一句 **程式生成** 說明（如「公開紀錄顯示與工程／裝修合約相關之民事程序」），唔用 LLM 臆測案情。
-4. **紀錄範圍（產品過濾）：** 匯入庫只收 **與裝修委聘情境相關** 之案件（實作：import 時 `topic_tags` 或人工 seed 標記，例如裝修／工程合約、小型工程、相關民事糾紛）；**唔**承諾「公司一切官司」。查詢時只返回已標記且 match 之紀錄。
+4. **紀錄範圍（產品過濾，2026-10-16 (b)）：** 離線入庫以 **公司被告** 為主（`partyRole=defendant` + D2 `company_defendant_v2`）；**裝修／工程相關信號** 或優先案號前綴；**`matchConfidence=high`** 方自動 `import:judgments`（自然人／独资／弱信號 → review）。**MWC 非必須** — 有則 enrich 及報告「政府名冊有登記」。**原告 pass**（唔 import／唔 lookup／唔升檔）。文案仍 **唔** 暗示「無官司」或全港覆蓋；未登記裝修公司亦可能入庫（用戶查商號時對照 `company_name_normalized`／alias）。
 5. **Entity match：**
    - 優先：**BR**（判詞或匯入欄位）、**normalized 公司名**（與 `searchLabelUsed`／MWC 名冊名、既有 L1 括號／NFKC 規則一致）。
    - 同名／弱 match → 唔顯示該條；必要時在 report 層標 `legalMatchAmbiguous: true`（若 schema 加入），**唔**猜。
@@ -198,13 +201,14 @@ flowchart LR
 | `other_civil` | 中性 | `historical_isolated` | 介於勞資與合約之間，定稿可調 |
 | `unknown` | — | — | 唔改分檔 |
 
-### B.2 原告（公司主動告人）
+### B.2 原告（公司主動告人）— **2026-10-16 修訂：不納入庫**
 
-| 情況 | 升檔 |
+| 情況 | 處理 |
 |------|------|
-| `plaintiff` + `renovation_engineering_civil` / `general_contract_debt` / `small_claims_debt` | **唔** 升至風險偏高；可選 **中性** + 展示（追客戶款，唔等同「黑店」） |
-| `plaintiff` + 其他類別 | 維持論壇／L1；只展示法律區 |
-| 任何 `plaintiff` | **唔** 單憑「有官司」當風險偏高 |
+| 任何 `plaintiff`（相對於 MWC／查證公司 match） | **唔** `import:judgments`；runtime **唔** 返回 `official.legalEvents`；**唔** 套用本 Appendix 升檔 |
+| 歷史 PoC 已入庫之原告行 | D2 重跑或 `purge:legal-events` 後剔除 |
+
+**Superseded（2026-10-15 原文）：** 原告「中性 + 展示、唔升風險偏高」— 僅適用於 **曾考慮展示原告** 之設計；owner 2026-10-16 收窄覆蓋為 **被告 only**（[`judgment-d2-mwc-defendant-scope.md`](../plans/judgment-d2-mwc-defendant-scope.md)）。
 
 ### B.3 與 DEC-0010 的例外
 
@@ -222,6 +226,12 @@ flowchart LR
 | `procedureStage === final_judgment` \| `appeal` | 用足 B.1 |
 | `eventDate` 超過 **10 年** | `disputeLevel` 上限 `historical_isolated`；`riskBandZh` **唔** 高於 **風險中等**（舊案唔當近期高風險） |
 | 同名歧義 match | 唔顯示、唔升檔 |
+
+## Amendments log
+
+| 日期 | 變更 |
+|------|------|
+| 2026-10-16 | **原告 pass：** 入庫／lookup／calibration 僅 **被告**；覆蓋目標 = 盡量 MWC 被告案（非 exhaustive） |
 
 ## Consequences
 

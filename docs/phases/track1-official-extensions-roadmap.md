@@ -81,6 +81,8 @@ flowchart TB
 
 **長遠：** 需要 **定時 cron**（或 GitHub Actions／Vercel Cron）跑 import 腳本刷新法律庫；v1.0 可人手，穩定後週期匯入 + `legalRegistryAsOf` 顯示於報告。唔在用戶 search 時下載。
 
+**實作步驟（詳）：** [`plans/track1-v1-0-execution.md`](../plans/track1-v1-0-execution.md)（P0–P7、驗收、檔案清單）。
+
 ### 建議工程順序
 
 1. Schema + migration + 空 lookup（feature flag）

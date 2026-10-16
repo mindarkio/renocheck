@@ -47,6 +47,7 @@ pnpm db:link
 已套用（remote）：
 
 - `20261012202625_initial_mvp_schema.sql` — `mwc_contractors`, `search_cache`, `search_events` + RLS
+- `20261016120000_official_legal_events.sql` — `official_legal_events`（DEC-0012；僅 service_role）
 
 ```bash
 pnpm supabase migration new your_change
@@ -67,6 +68,20 @@ pnpm import:mwc
 ```
 
 腳本會篩選 `MWC` / `MWC(W)`，按 `REGISTRATION_NUMBER` 去重後 upsert 至 `mwc_contractors`（含 `expiry_date`、`primary_signatory_name` 供報告「政府名冊」展示）。
+
+## 司法判詞匯入（DEC-0012）
+
+1. `pnpm db:push`（含 `official_legal_events` migration）。
+2. 編輯或擴充 [`scripts/fixtures/judgments-seed.json`](../scripts/fixtures/judgments-seed.json)；真實案可放 `scripts/fixtures/judgments-seed.local.json`（勿 commit 未授權內容）。
+3. 來源說明見 [`docs/sourcedata/judgments-sources.md`](sourcedata/judgments-sources.md)。
+4. 執行：
+
+```bash
+pnpm import:judgments
+# 預覽：pnpm import:judgments --dry-run
+```
+
+5. 在 Vercel／`.env.local` 設 `LEGAL_EVENTS_ENABLED=1` 後，`POST /api/search` 才會 lookup 並在報告顯示 `official.legalEvents`。
 
 ## 本地 Supabase（可選）
 

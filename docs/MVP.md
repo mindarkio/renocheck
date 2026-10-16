@@ -155,6 +155,16 @@ interface RiskReport {
       authorizedSignatory?: string;
       registryDataAsOf?: string;
     };
+    /** DEC-0012 — 已匯入判詞要點 + sourceUrl；唔入 LLM */
+    legalEvents?: Array<{
+      caseRef: string;
+      judgmentCategory: string;
+      partyRole: string;
+      hearingKeyPointsZh: string[];
+      sourceUrl: string;
+      matchReasonZh: string;
+    }>;
+    legalRegistryAsOf?: string;
   };
   signals: {
     discussionCount: number;

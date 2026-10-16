@@ -9,6 +9,9 @@
 1c. [`docs/design/pipeline-ssot.md`](docs/design/pipeline-ssot.md) — pipeline 可靠與報告 SSOT（north star）  
 1d. [`docs/plans/pipeline-v2.2.0-practical-landing.md`](docs/plans/pipeline-v2.2.0-practical-landing.md) — v2.2.0 雙軌評分／Q3／校準（draft）  
 1e. [`docs/phases/track1-official-extensions-roadmap.md`](docs/phases/track1-official-extensions-roadmap.md) — Track 1 法律延伸 v1.0.0 判詞／v1.1.0 海關／v1.2.0 清盤  
+1f. [`docs/plans/judgment-ingestion-execution.md`](docs/plans/judgment-ingestion-execution.md) — 判詞來源獲取與 DB 入庫（D1–D3 執行 SSOT）  
+1g. [`docs/plans/judgment-j5-mwc-parties-coverage.md`](docs/plans/judgment-j5-mwc-parties-coverage.md) — J5：~16k MWC Parties 軸  
+1h. [`docs/plans/track1-v1-0-execution.md`](docs/plans/track1-v1-0-execution.md) — Renocheck 1.0 判詞實作計劃（P0–P7）  
 2. [Notion spec](https://app.notion.com/p/3f63e97febe9809ebb29c1fb43c3c331)  
 3. [`docs/phases/V2-roadmap.md`](docs/phases/V2-roadmap.md) — what not to build early  
 4. [`docs/development.md`](docs/development.md) — `pnpm dev` / test  
