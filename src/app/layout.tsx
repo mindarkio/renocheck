@@ -24,13 +24,8 @@ export const metadata = {
       { url: "/logo/favicon-16.svg", sizes: "16x16", type: "image/svg+xml" },
       { url: "/logo/favicon-32.svg", sizes: "32x32", type: "image/svg+xml" },
     ],
-    apple: [
-      {
-        url: "/logo/mark-color-on-white.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    shortcut: "/logo/favicon-32.svg",
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: "/favicon.ico",
   },
 };
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site-metadata";
 import {
   ContentCard,
   ContentPage,
@@ -9,12 +10,12 @@ import {
   ContentSection,
 } from "@/components/ContentPage";
 import { DISCLAIMER_VERSION } from "@/lib/constants";
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/legal/disclaimer",
   title: "免責聲明與資料來源",
   description:
     "Renocheck 免責聲明、風險參考分檔說明、非信貸報告聲明及個人資料（私隱）摘要。",
-  alternates: { canonical: "/legal/disclaimer" },
-};
+});
 
 const NAV_LINKS = [{ href: "/", label: "返回搜尋" }] as const;
 

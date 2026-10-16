@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site-metadata";
 import {
   ContentCard,
   ContentPage,
@@ -8,12 +9,12 @@ import {
   ContentSection,
 } from "@/components/ContentPage";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/how-it-works",
   title: "點樣運作",
   description:
     "Renocheck 如何整合 MWC 名冊與公開網上討論摘要，產生裝修風險參考報告（含 7 日快取說明）。",
-  alternates: { canonical: "/how-it-works" },
-};
+});
 
 const NAV_LINKS = [
   { href: "/faq", label: "常見問題" },

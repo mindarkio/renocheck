@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site-metadata";
 import {
   ContentCard,
   ContentPage,
@@ -8,12 +9,12 @@ import {
 } from "@/components/ContentPage";
 import { SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/about",
   title: "關於我們",
   description:
     "Renocheck 裝修點評的使命：為香港業主提供裝修承辦商公開資料風險參考，非政府機構、非信貸報告。",
-  alternates: { canonical: "/about" },
-};
+});
 
 const NAV_LINKS = [
   { href: "/how-it-works", label: "點樣運作" },

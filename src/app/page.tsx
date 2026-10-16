@@ -10,7 +10,17 @@ import { getLandingPublicStats } from "@/lib/landing-public-stats";
 import { JsonLd } from "@/components/JsonLd";
 import { getSiteUrl } from "@/lib/site-url";
 import { BRAND_TAGLINE, BRAND_TAGLINE_LINES } from "@/lib/constants";
-import { SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
+import type { Metadata } from "next";
+import {
+  HOME_DESCRIPTION,
+  pageMetadata,
+  SITE_CONTACT_EMAIL,
+} from "@/lib/site-metadata";
+
+export const metadata: Metadata = pageMetadata({
+  path: "/",
+  description: HOME_DESCRIPTION,
+});
 
 export default async function Home() {
   const landingStats = await getLandingPublicStats();
@@ -30,7 +40,7 @@ export default async function Home() {
         name: "Renocheck",
         alternateName: "裝修點評",
         url: siteUrl,
-        logo: `${siteUrl}/logo/mark-color-on-white.svg`,
+        logo: `${siteUrl}/logo/mark-color-on-white.png`,
         email: SITE_CONTACT_EMAIL,
       },
     ],
