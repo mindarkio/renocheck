@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { BrandMenuMark } from "@/components/BrandMenuMark";
 
 const HOME_NAV = [
+  { href: "/guides", label: "裝修指南" },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/faq", label: "常見問題" },
   { href: "/about", label: "關於" },

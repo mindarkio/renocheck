@@ -33,6 +33,17 @@ Identical queries may return a cached report snapshot for about **7 days**; see 
 - /faq — frequently asked questions
 - /about — about the project
 - /legal/disclaimer — disclaimer, data sources, privacy summary
+- /guides — homeowner renovation guides (zh-HK), citing official HK sources
+
+## Guides (zh-HK)
+
+- https://renocheck.homes/guides/check-renovation-contractor-licence — 點樣查裝修公司有冇牌？屋宇署承建商名冊查法
+- https://renocheck.homes/guides/minor-works-class-1-2-3 — 小型工程第 I、II、III 級係咩？業主要知嘅程序
+- https://renocheck.homes/guides/renovation-abandoned-what-to-do — 裝修爛尾點算？業主追討步驟（消委會、小額錢債審裁處）
+- https://renocheck.homes/guides/renovation-contract-checklist — 裝修合約要寫咩？簽約前清單
+- https://renocheck.homes/guides/questions-before-hiring-contractor — 揀裝修公司前要問嘅 10 條問題
+- https://renocheck.homes/guides/business-registration-number-search — 商業登記號碼點查？商業登記同公司註冊有咩分別
+- https://renocheck.homes/guides/how-to-read-renovation-quotation — 裝修報價點睇？報價單要列明嘅重點
 
 ## Crawling
 

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { GUIDES } from "@/lib/guides";
 import { getSiteUrl } from "@/lib/site-url";
 
 /** Bump the date when a page's content materially changes. */
@@ -8,6 +9,8 @@ const STATIC_PAGES: ReadonlyArray<{ path: string; lastModified: string }> = [
   { path: "/faq", lastModified: "2026-10-16" },
   { path: "/how-it-works", lastModified: "2026-10-16" },
   { path: "/legal/disclaimer", lastModified: "2026-10-16" },
+  { path: "/guides", lastModified: "2026-10-16" },
+  ...GUIDES.map((g) => ({ path: `/guides/${g.slug}`, lastModified: g.dateModified })),
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

@@ -14,11 +14,12 @@ export const metadata: Metadata = pageMetadata({
   path: "/faq",
   title: "常見問題",
   description:
-    "Renocheck 裝修點評：如何查裝修公司、風險參考分檔、快取、是否信貸報告等常見問題。",
+    "香港業主裝修常見問題：點查裝修公司牌照、小型工程級別、裝修爛尾追討、小額錢債上限、合約與報價，以及 Renocheck 風險參考點運作。",
 });
 
 const NAV_LINKS = [
   { href: "/", label: "返回搜尋" },
+  { href: "/guides", label: "裝修指南" },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/legal/disclaimer", label: "免責聲明" },
 ] as const;
@@ -27,6 +28,7 @@ export default function FaqPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
+    inLanguage: "zh-HK",
     mainEntity: FAQ_ITEMS.map((item) => ({
       "@type": "Question",
       name: item.question,

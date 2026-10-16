@@ -5,6 +5,7 @@ import { APP_VERSION, FOOTER_DISCLAIMER } from "@/lib/constants";
 import { SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
 
 const FOOTER_PRIMARY_LINKS = [
+  { href: "/guides", label: "裝修指南" },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/faq", label: "常見問題" },
   { href: "/about", label: "關於" },
