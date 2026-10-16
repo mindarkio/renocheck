@@ -70,9 +70,6 @@ export function hasRenovationEngineeringSignal(input: {
   defendantLabel: string;
 }): boolean {
   if (RENOVATION_ENGINEERING_RE.test(input.partiesLine)) return true;
-  if (input.profileId && RENOVATION_ENGINEERING_RE.test(input.profileId)) {
-    return true;
-  }
   if (defendantHasEngineeringKeyword(input.defendantLabel)) return true;
   return false;
 }

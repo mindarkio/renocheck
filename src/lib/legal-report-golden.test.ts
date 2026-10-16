@@ -48,7 +48,7 @@ describe("legal report golden", () => {
       eventDate: "2021-03-15",
       judgmentCategory: "renovation_engineering_civil",
       partyRole: "defendant",
-      outcomeHint: "judgment_against_defendant",
+      outcomeHint: "defendant_liable",
       procedureStage: "final_judgment",
       hearingKeyPointsZh: ["合成 golden"],
       sourceUrl: "https://example.com/j",

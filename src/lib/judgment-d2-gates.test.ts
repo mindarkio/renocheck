@@ -75,6 +75,21 @@ describe("runD2Gates", () => {
     expect(r.matchConfidence).toBe("high");
   });
 
+  it("keeps CACV 131/2005 IOC v contractor (owners_corporation_vs_contractor)", () => {
+    const r = runD2Gates({
+      row: baseRow(
+        "THE INCORPORATED OWNERS OF THE COLONNADES 訴 GORDON TSO & CO LTD",
+        "CACV 131/2005",
+      ),
+      skipPrefixes: skip,
+      priorityPrefixes: priority,
+      mwcLeft: null,
+      mwcRight: null,
+    });
+    expect(r.disposition).toBe("keep");
+    expect(r.reasons).toContain("owners_corporation_vs_contractor");
+  });
+
   it("keeps CACV when defendant has engineering keyword", () => {
     const r = runD2Gates({
       row: baseRow("業主 對 名富工程服務有限公司", "CACV 12/2020"),

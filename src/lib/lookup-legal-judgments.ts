@@ -2,11 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type OfficialLegalEvent,
   judgmentCategorySchema,
-  outcomeHintSchema,
   partyRoleSchema,
   procedureStageSchema,
   type JudgmentCategory,
 } from "./legal-event-schema";
+import { parseOutcomeHint } from "./outcome-hint";
 import {
   legalRowMatchReasonZh,
   legalRowMatchesSearchLabel,
@@ -105,7 +105,7 @@ function rowToEvent(
     partyRole,
     ...(row.outcome_hint
       ? (() => {
-          const v = parseEnum(outcomeHintSchema, row.outcome_hint);
+          const v = parseOutcomeHint(row.outcome_hint);
           return v ? { outcomeHint: v } : {};
         })()
       : {}),

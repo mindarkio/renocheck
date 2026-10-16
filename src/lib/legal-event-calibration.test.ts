@@ -76,13 +76,13 @@ describe("computeLegalFloors", () => {
     expect(floors).toBeNull();
   });
 
-  it("dismissed_or_withdrawn does not floor", () => {
+  it("defendant_not_liable does not floor", () => {
     const floors = computeLegalFloors(
       [
         ev({
           judgmentCategory: "renovation_engineering_civil",
           partyRole: "defendant",
-          outcomeHint: "dismissed_or_withdrawn",
+          outcomeHint: "defendant_not_liable",
         }),
       ],
       0,
@@ -127,7 +127,7 @@ describe("computeLegalFloors", () => {
           judgmentCategory: "renovation_engineering_civil",
           partyRole: "defendant",
           eventDate: "2010-01-01",
-          outcomeHint: "judgment_against_defendant",
+          outcomeHint: "defendant_liable",
         }),
       ],
       0,

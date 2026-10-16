@@ -29,8 +29,18 @@ function looksLikeEnglishPersonalName(label: string): boolean {
   );
 }
 
+/** Strip co-party suffixes before entity classification. */
+export function normalizeDefendantLabelForEntity(defendantLabel: string): string {
+  return defendantLabel
+    .trim()
+    .replace(/\s*(及另一人|及另\d+人)\s*$/u, "")
+    .replace(/\s+AND\s+OTHERS?\s*$/i, "")
+    .replace(/\s+AND\s+ANOTHER\s*$/i, "")
+    .trim();
+}
+
 export function classifyDefendantEntity(defendantLabel: string): DefendantEntityKind {
-  const raw = defendantLabel.trim();
+  const raw = normalizeDefendantLabelForEntity(defendantLabel);
   if (raw.length < 2) return "unknown";
 
   if (SOLE_PROP_PATTERN.test(raw)) {
@@ -53,7 +63,11 @@ export function classifyDefendantEntity(defendantLabel: string): DefendantEntity
     return "company";
   }
 
-  if (raw.length >= 6 && /[A-Za-z]/.test(raw)) {
+  if (
+    raw.length >= 6 &&
+    /[A-Za-z]/.test(raw) &&
+    /\b(LTD|LIMITED|LLC|INC|CO\.|COMPANY|CORP)\b/i.test(raw)
+  ) {
     return "company";
   }
 

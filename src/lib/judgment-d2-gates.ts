@@ -5,6 +5,10 @@ import {
 } from "./judgment-d2-entity";
 import { autoImportEligibility, defendantHasEngineeringKeyword } from "./judgment-d2-case-policy";
 import {
+  defendantRenovationScopeDropReason,
+  plaintiffIsOwnersCorporation,
+} from "./judgment-d2-defendant-exclusions";
+import {
   manualDropReason,
   manualKeepOverride,
 } from "./judgment-d2-manual-triage";
@@ -219,11 +223,17 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
 
   const entityKind = classifyDefendantEntity(defendantLabel);
   const priority = prefixPriority(row.caseRef, priorityPrefixes);
-  const confidence = defendantMatchConfidence(
+  let confidence = defendantMatchConfidence(
     entityKind,
     renovationRelevantSuggested,
     priority,
   );
+  if (
+    entityKind === "company" &&
+    plaintiffIsOwnersCorporation(plaintiffLabel)
+  ) {
+    confidence = "high";
+  }
 
   let mwcMatch: MwcMatchSummary | undefined;
   if (rightHit && defendantMwcPlausible(defendantLabel, rightHit)) {
@@ -235,6 +245,25 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
     return {
       disposition: "drop",
       reasons: [...reasons, "natural_person_defendant"],
+      defendantLabel,
+      plaintiffLabel,
+      mwcMatch,
+      renovationRelevantSuggested,
+      defendantEntityKind: entityKind,
+    };
+  }
+
+  const scopeDrop = defendantRenovationScopeDropReason({
+    caseRef: row.caseRef,
+    defendantLabel,
+    plaintiffLabel,
+    partiesLine: row.partiesLine,
+    entityKind,
+  });
+  if (scopeDrop) {
+    return {
+      disposition: "drop",
+      reasons: [...reasons, scopeDrop],
       defendantLabel,
       plaintiffLabel,
       mwcMatch,
@@ -352,6 +381,22 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
       plaintiffLabel,
       mwcMatch,
       renovationRelevantSuggested,
+      defendantEntityKind: entityKind,
+    };
+  }
+
+  if (
+    entityKind === "company" &&
+    plaintiffIsOwnersCorporation(plaintiffLabel)
+  ) {
+    return {
+      disposition: "keep",
+      reasons: [...reasons, "owners_corporation_vs_contractor"],
+      defendantLabel,
+      plaintiffLabel,
+      mwcMatch,
+      renovationRelevantSuggested,
+      matchConfidence: "high",
       defendantEntityKind: entityKind,
     };
   }

@@ -88,7 +88,8 @@ function eventContributesFloor(
   ev: OfficialLegalEvent,
   boundHitCount: number,
 ): { band: RiskBandZh; dispute: DisputeLevel } | null {
-  if (ev.outcomeHint === "dismissed_or_withdrawn") return null;
+  if (ev.outcomeHint === "defendant_not_liable") return null;
+  if (ev.outcomeHint === "procedural_only") return null;
   if (ev.partyRole === "plaintiff") return null;
   if (ev.partyRole !== "defendant") return null;
 
@@ -105,7 +106,7 @@ function eventContributesFloor(
   let band = base.band;
   let dispute = base.dispute;
 
-  if (ev.outcomeHint === "settled") {
+  if (ev.outcomeHint === "unclear") {
     band = downgradeBand(band);
     if (band === "中性") dispute = "historical_isolated";
   }
@@ -151,12 +152,12 @@ export function computeLegalFloors(
 
   const effectiveDefendant = events.filter((ev) => {
     if (ev.partyRole !== "defendant") return false;
-    if (ev.outcomeHint === "dismissed_or_withdrawn") return false;
+    if (ev.outcomeHint === "defendant_not_liable") return false;
     return true;
   });
 
   const recentAgainst = effectiveDefendant.filter((ev) => {
-    if (ev.outcomeHint !== "judgment_against_defendant") return false;
+    if (ev.outcomeHint !== "defendant_liable") return false;
     return yearsSince(ev.eventDate, generatedAt) <= 5;
   });
 

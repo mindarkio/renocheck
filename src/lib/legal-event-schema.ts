@@ -26,13 +26,9 @@ export const partyRoleSchema = z.enum([
   "unknown",
 ]);
 
-export const outcomeHintSchema = z.enum([
-  "judgment_against_defendant",
-  "dismissed_or_withdrawn",
-  "settled",
-  "partial_liability",
-  "unknown",
-]);
+import { outcomeHintSchema, type OutcomeHint } from "./outcome-hint";
+
+export { outcomeHintSchema, type OutcomeHint };
 
 export const procedureStageSchema = z.enum([
   "final_judgment",
@@ -44,7 +40,6 @@ export const procedureStageSchema = z.enum([
 
 export type JudgmentCategory = z.infer<typeof judgmentCategorySchema>;
 export type PartyRole = z.infer<typeof partyRoleSchema>;
-export type OutcomeHint = z.infer<typeof outcomeHintSchema>;
 export type ProcedureStage = z.infer<typeof procedureStageSchema>;
 
 export const legalEventReviewStatusSchema = z.enum(["auto", "human_verified"]);

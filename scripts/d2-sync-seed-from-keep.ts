@@ -104,7 +104,7 @@ function seedRowFromKeep(
     ...(aliases.length ? { lookupAliases: aliases } : {}),
     judgmentCategory: "renovation_engineering_civil",
     partyRole: "defendant",
-    outcomeHint: "unknown",
+    outcomeHint: "unclear",
     procedureStage: "unknown",
     hearingKeyPointsZh: priorVerified
       ? priorPoints

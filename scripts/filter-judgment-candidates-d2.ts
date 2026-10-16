@@ -157,6 +157,59 @@ async function main() {
 
   const keeps = entries.filter((e) => e.disposition === "keep");
 
+  const reportPriorDrops = process.argv.includes("--report-prior-keep-drops");
+  if (reportPriorDrops) {
+    try {
+      const priorRaw = readFileSync(OUT_KEEPS, "utf8");
+      const prior = JSON.parse(priorRaw) as Array<{ caseRef: string }>;
+      const priorKeys = new Set(
+        prior.map((p) => p.caseRef.replace(/\s+/g, "").toUpperCase()),
+      );
+      const droppedFromPrior = entries.filter((e) => {
+        const key = String(e.caseRef ?? "").replace(/\s+/g, "").toUpperCase();
+        return priorKeys.has(key) && e.disposition === "drop";
+      });
+      const outPath = resolve(
+        process.cwd(),
+        "scripts/output/d2-prior-keep-drops.json",
+      );
+      mkdirSync(resolve(outPath, ".."), { recursive: true });
+      writeFileSync(
+        outPath,
+        `${JSON.stringify(
+          {
+            generatedAt,
+            priorKeepCount: prior.length,
+            newKeepCount: keeps.length,
+            droppedFromPrior: droppedFromPrior.map((e) => ({
+              caseRef: e.caseRef,
+              reasons: e.reasons,
+              defendantLabel: e.defendantLabel,
+              plaintiffLabel: e.plaintiffLabel,
+            })),
+          },
+          null,
+          2,
+        )}\n`,
+        "utf8",
+      );
+      console.info(
+        JSON.stringify({
+          event: "d2_prior_keep_drops_report",
+          path: outPath,
+          droppedCount: droppedFromPrior.length,
+        }),
+      );
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          event: "d2_prior_keep_drops_report_failed",
+          error: String(err),
+        }),
+      );
+    }
+  }
+
   if (!dryRun) {
     mkdirSync(resolve(process.cwd(), "scripts/output"), { recursive: true });
     writeFileSync(OUT_QUEUE, `${JSON.stringify(queue, null, 2)}\n`, "utf8");

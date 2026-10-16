@@ -46,6 +46,7 @@ pnpm db:link
 
 已套用（remote）：
 
+- `20261012202411_initial_schema.sql` — placeholder（remote `statements` 為空；無 DDL）
 - `20261012202625_initial_mvp_schema.sql` — `mwc_contractors`, `search_cache`, `search_events` + RLS
 - `20261016120000_official_legal_events.sql` — `official_legal_events`（DEC-0012；僅 service_role）
 

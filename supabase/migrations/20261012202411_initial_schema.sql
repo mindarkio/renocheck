@@ -1,0 +1,3 @@
+-- Remote: supabase_migrations.schema_migrations version 20261012202411 (name: initial_schema).
+-- statements[] is empty on remote; no DDL in this revision.
+-- MVP tables: 20261012202625_initial_mvp_schema.sql

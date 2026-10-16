@@ -125,6 +125,7 @@ flowchart TB
 | 驗證 seed | `pnpm validate:judgments-seed` | ✅ |
 | 入庫 | `pnpm import:judgments --file=…` | ✅ |
 | Smoke | `pnpm judgment:poc-smoke` / `legal:lookup-smoke` | ✅ |
+| 要點 dry-run CSV（20 宗） | `pnpm judgment:summary-dryrun` → `judgment-summary-dryrun.csv` | ✅（唔寫 DB） |
 
 **建議 offline 中間檔：** `scripts/output/judgment-d2-queue.json`（`keep` | `drop` | `review` + reason）。
 

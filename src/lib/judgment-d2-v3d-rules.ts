@@ -12,7 +12,8 @@ export const AUTO_DROP_CASE_PREFIXES_V3D = new Set([
   "FACC",
 ]);
 
-const FORCE_KEEP_RAW = ["HCSA 18/2025", "CACV 131/2005", "CACV 82/2015"];
+/** CACV 131/2005 已核對：被告 GORDON TSO & CO LTD（承建商），走一般 company+工程規則。 */
+const FORCE_KEEP_RAW = ["HCSA 18/2025", "CACV 82/2015"];
 
 export function normalizeCaseRefKey(caseRef: string): string {
   const c = caseRef.replace(/\s+/g, "").toUpperCase();
