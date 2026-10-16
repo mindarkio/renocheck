@@ -5,6 +5,7 @@ import {
   isWebSearchConfigured,
   resolveWebSearchProvider,
 } from "@/lib/search-provider";
+import { isLegalEventsEnabled } from "@/lib/legal-events-config";
 
 export function GET() {
   const supabaseAdmin = isSupabaseAdminConfigured();

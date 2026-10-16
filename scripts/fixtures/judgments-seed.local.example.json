@@ -1,0 +1,21 @@
+[
+  {
+    "sourceCatalogId": "judiciary-lrs",
+    "caseRef": "REPLACE_ME",
+    "court": "District Court",
+    "eventDate": "2020-01-01",
+    "partyNames": ["真實公司全名"],
+    "brNormalized": "00000000",
+    "companyNameNormalized": "真實公司全名",
+    "judgmentCategory": "renovation_engineering_civil",
+    "partyRole": "defendant",
+    "outcomeHint": "judgment_against_defendant",
+    "procedureStage": "final_judgment",
+    "hearingKeyPointsZh": [
+      "人手撰寫要點一（唔貼全文）",
+      "要點二"
+    ],
+    "sourceUrl": "https://legalref.judiciary.hk/lrs/common/ju/judgment.jsp?REPLACE",
+    "renovationRelevant": true
+  }
+]

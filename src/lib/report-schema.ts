@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { nameAlignmentSchema } from "./entity-report-context";
+import {
+  legalTrackSchema,
+  officialLegalEventSchema,
+} from "./legal-event-schema";
 
 export const gradeSchema = z.enum(["A", "B", "C", "D", "E", "F"]);
 export const confidenceSchema = z.enum(["high", "medium", "low"]);
@@ -100,6 +104,8 @@ export const evaluationSchema = z.object({
   dataSaturation: dataSaturationSchema,
   complianceTrack: complianceTrackSchema,
   reputationTrack: reputationTrackSchema,
+  /** DEC-0012 — display/debug; grading uses deterministic floors */
+  legalTrack: legalTrackSchema.optional(),
 });
 
 export type Evaluation = z.infer<typeof evaluationSchema>;
@@ -138,6 +144,9 @@ const riskReportBaseSchema = z.object({
         registryDataAsOf: z.string().datetime().optional(),
       })
       .optional(),
+    /** DEC-0012 Track 1 court judgments (structured; not LLM) */
+    legalEvents: z.array(officialLegalEventSchema).max(10).optional(),
+    legalRegistryAsOf: z.string().datetime().optional(),
   }),
   signals: z.object({
     discussionCount: z.number().int().nonnegative(),

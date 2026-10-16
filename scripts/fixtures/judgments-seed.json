@@ -1,0 +1,44 @@
+[
+  {
+    "sourceType": "court_judgment",
+    "sourceCatalogId": "judiciary-lrs-fixture",
+    "caseRef": "DCCJ 9001/2020",
+    "court": "District Court",
+    "eventDate": "2021-03-15",
+    "partyNames": ["示例裝修工程有限公司"],
+    "brNormalized": "12345678",
+    "companyNameNormalized": "示例裝修工程有限公司",
+    "judgmentCategory": "renovation_engineering_civil",
+    "partyRole": "defendant",
+    "outcomeHint": "judgment_against_defendant",
+    "procedureStage": "final_judgment",
+    "hearingKeyPointsZh": [
+      "原訴人指被告未完成約定裝修工程",
+      "法庭就工程合約爭議作出裁斷（合成測試資料）"
+    ],
+    "sourceUrl": "https://legalref.judiciary.hk/lrs/common/ju/judgment.jsp?example-fixture-1",
+    "renovationRelevant": true,
+    "reviewStatus": "human_verified"
+  },
+  {
+    "sourceType": "court_judgment",
+    "sourceCatalogId": "judiciary-lrs-fixture",
+    "caseRef": "HCSA 42/2019",
+    "court": "Small Claims Tribunal",
+    "eventDate": "2020-06-01",
+    "partyNames": ["勞資示例有限公司"],
+    "brNormalized": "87654321",
+    "companyNameNormalized": "勞資示例有限公司",
+    "judgmentCategory": "employment_labour",
+    "partyRole": "defendant",
+    "outcomeHint": "unknown",
+    "procedureStage": "final_judgment",
+    "hearingKeyPointsZh": [
+      "勞資審裁處程序（合成測試資料）",
+      "僅用於測試勞資類別唔預設升檔"
+    ],
+    "sourceUrl": "https://legalref.judiciary.hk/lrs/common/ju/judgment.jsp?example-fixture-2",
+    "renovationRelevant": true,
+    "reviewStatus": "human_verified"
+  }
+]

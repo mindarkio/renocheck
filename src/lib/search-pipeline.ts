@@ -38,6 +38,10 @@ import {
   computeNameAlignment,
   resolveAuthoritativeSearchLabel,
 } from "./entity-report-context";
+import { lookupLegalJudgments } from "./lookup-legal-judgments";
+import { isLegalEventsEnabled } from "./legal-events-config";
+import { applyLegalEventFloors } from "./legal-event-calibration";
+import type { OfficialLegalEvent } from "./legal-event-schema";
 
 export type SearchPipelineResult = {
   fingerprint: string;
@@ -107,13 +111,16 @@ export async function runSearchPipeline(
     mwcLookup.ambiguous,
   );
 
-  const serpStart = performance.now();
-  const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, mwcOpts);
-
-  const tokens = entityMatchTokens(input, {
-    mwcCompanyName: mwc?.company_name,
-    phoneNormalized: input.phone,
-  });
+  const legalEnabled = isLegalEventsEnabled();
+  const legalLookupPromise = legalEnabled
+    ? lookupLegalJudgments(supabase, {
+        searchLabelUsed,
+        br: input.br,
+      })
+    : Promise.resolve({
+        events: [] as OfficialLegalEvent[],
+        registryAsOf: undefined,
+      });
   const phoneForL1 = normalizeHongKongPhone(input.phone) ?? undefined;
   const l1Opts = {
     mustIncludeAny: entityL1MustIncludeAny(searchLabelUsed),
