@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { pageMetadata } from "@/lib/site-metadata";
 import {
   ContentCard,
@@ -17,6 +18,7 @@ export const metadata: Metadata = pageMetadata({
 });
 
 const NAV_LINKS = [
+  { href: "/guides", label: "裝修指南" },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/faq", label: "常見問題" },
   { href: "/legal/disclaimer", label: "免責聲明" },
@@ -36,6 +38,18 @@ export default function AboutPage() {
             我們<strong>不是</strong>政府部門、<strong>不是</strong>裝修配對或廣告平台，亦
             <strong>不提供</strong>信貸評分或 TransUnion 類產品。我們<strong>不</strong>
             對任何公司作出「黑店」等定性指控；報告為算法與公開來源整理，請你自行核實合約與牌照。
+          </p>
+          <h2 className="text-sm font-semibold text-primary">誰營運本網站</h2>
+          <p>
+            本網站由 <strong>Renocheck</strong> 營運，與任何裝修公司、政府部門或信貸資料機構均無從屬關係，亦不向裝修公司收取刊登或排名費用。
+          </p>
+          <h2 className="text-sm font-semibold text-primary">資料點嚟</h2>
+          <p>
+            報告整合屋宇署小型工程承建商名冊等官方公開資料，以及可檢索的公開網上討論摘要；方法詳見
+            <Link href="/how-it-works" className="mx-1">點樣運作</Link>
+            。我們亦整理咗
+            <Link href="/guides" className="mx-1">業主裝修指南</Link>
+            ，內容引用官方來源。
           </p>
           <p>
             聯絡：
