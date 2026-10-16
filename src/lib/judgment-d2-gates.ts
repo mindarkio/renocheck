@@ -207,7 +207,7 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
   const rightHit = mwcRight && !mwcRight.ambiguous ? mwcRight : null;
   const leftHit = mwcLeft && !mwcLeft.ambiguous ? mwcLeft : null;
 
-  if (leftHit) {
+  if (leftHit && !defendantHasEngineeringKeyword(defendantLabel)) {
     return {
       disposition: "drop",
       reasons: ["mwc_plaintiff_only_pass"],

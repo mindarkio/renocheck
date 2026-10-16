@@ -114,7 +114,7 @@ describe("runD2Gates", () => {
     expect(r.reasons).toContain("sole_proprietor_engineering_keep");
   });
 
-  it("drops MWC plaintiff only", () => {
+  it("drops MWC plaintiff only when defendant lacks engineering keyword", () => {
     const r = runD2Gates({
       row: baseRow("陳國新經營燊記裝修水電工程 對 徐益民"),
       skipPrefixes: skip,
@@ -128,5 +128,21 @@ describe("runD2Gates", () => {
     });
     expect(r.disposition).toBe("drop");
     expect(r.reasons).toContain("mwc_plaintiff_only_pass");
+  });
+
+  it("keeps when plaintiff MWC hit but defendant label has engineering keyword", () => {
+    const r = runD2Gates({
+      row: baseRow("郭振強及另一人 對 陳國新經營燊記裝修水電工程"),
+      skipPrefixes: skip,
+      priorityPrefixes: priority,
+      mwcLeft: {
+        companyName: "郭振強",
+        registrationNo: "MWC1/2020",
+        ambiguous: false,
+      },
+      mwcRight: null,
+    });
+    expect(r.disposition).not.toBe("drop");
+    expect(r.reasons).not.toContain("mwc_plaintiff_only_pass");
   });
 });

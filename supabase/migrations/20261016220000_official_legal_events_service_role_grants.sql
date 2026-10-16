@@ -1,5 +1,5 @@
 -- DEC-0012: explicit grants — service_role only (pipeline + import).
--- NOT applied on remote until owner approves. Pair with down file if rolled back.
+-- Applied on remote 2026-10-16 (pipeline uses SUPABASE_SERVICE_ROLE_KEY). Pair with down file if rolled back.
 
 revoke all on table public.official_legal_events from anon, authenticated;
 
