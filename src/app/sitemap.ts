@@ -1,19 +1,19 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/site-url";
 
-const STATIC_PATHS = [
-  "/",
-  "/about",
-  "/faq",
-  "/how-it-works",
-  "/legal/disclaimer",
-] as const;
+/** Bump the date when a page's content materially changes. */
+const STATIC_PAGES: ReadonlyArray<{ path: string; lastModified: string }> = [
+  { path: "/", lastModified: "2026-10-16" },
+  { path: "/about", lastModified: "2026-10-16" },
+  { path: "/faq", lastModified: "2026-10-16" },
+  { path: "/how-it-works", lastModified: "2026-10-16" },
+  { path: "/legal/disclaimer", lastModified: "2026-10-16" },
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = getSiteUrl();
-  const lastModified = new Date();
-  return STATIC_PATHS.map((path) => ({
-    url: path === "/" ? base : `${base}${path}`,
+  return STATIC_PAGES.map(({ path, lastModified }) => ({
+    url: path === "/" ? `${base}/` : `${base}${path}`,
     lastModified,
     changeFrequency: path === "/" ? "weekly" : "monthly",
     priority: path === "/" ? 1 : 0.7,

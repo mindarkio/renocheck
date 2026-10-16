@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site-metadata";
 import {
   ContentCard,
   ContentPage,
@@ -9,12 +10,12 @@ import { JsonLd } from "@/components/JsonLd";
 import { FAQ_ITEMS } from "@/lib/faq-content";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/faq",
   title: "常見問題",
   description:
     "Renocheck 裝修點評：如何查裝修公司、風險參考分檔、快取、是否信貸報告等常見問題。",
-  alternates: { canonical: "/faq" },
-};
+});
 
 const NAV_LINKS = [
   { href: "/", label: "返回搜尋" },
