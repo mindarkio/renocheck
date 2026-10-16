@@ -1,8 +1,7 @@
 /** D2 v3 — auto-import vs review-only case prefixes (Aaron 2026-10-16). */
 
 import { caseRefPrefix } from "./judgment-d2-parties";
-
-const APPEAL_ENGINEERING_KEEP_PREFIXES = new Set(["CACV", "HCSA"]);
+import { APPEAL_ENGINEERING_KEEP_PREFIXES } from "./judgment-d2-appeal-prefixes";
 
 /** Auto `import:judgments` — contract / debt civil only. */
 export const AUTO_IMPORT_CASE_PREFIXES = new Set([

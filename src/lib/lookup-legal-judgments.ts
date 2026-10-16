@@ -11,14 +11,17 @@ import {
   legalRowMatchReasonZh,
   legalRowMatchesSearchLabel,
 } from "./judgment-lookup-match";
+import { soleProprietorDefendantDisplayZh } from "./judgment-sole-prop-import";
 import { normalizeBrDigits } from "./normalize-br";
 import { normalizeIsoDatetimeForSchema } from "./normalize-iso-datetime";
 
 export type LegalJudgmentRow = {
+  id?: string;
   source_type: string;
   case_ref: string;
   court: string;
   event_date: string;
+  party_names?: string[] | null;
   hearing_key_points_zh: string[];
   source_url: string;
   judgment_category: string;
@@ -46,12 +49,26 @@ export type LegalLookupResult = {
 const MAX_EVENTS = 8;
 const FETCH_PAGE_SIZE = 500;
 
+const MATCH_SELECT =
+  "id, case_ref, company_name_normalized, lookup_aliases, topic_tags";
+const FULL_SELECT =
+  "id, source_type, case_ref, court, event_date, party_names, hearing_key_points_zh, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
+
 function parseEnum<T extends string>(
   schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
   value: string,
 ): T | undefined {
   const r = schema.safeParse(value);
   return r.success ? r.data : undefined;
+}
+
+function partyNamesArray(row: LegalJudgmentRow): string[] | null {
+  const raw = row.party_names;
+  if (!raw) return null;
+  if (Array.isArray(raw)) {
+    return raw.filter((p) => typeof p === "string" && p.trim());
+  }
+  return null;
 }
 
 function rowToEvent(
@@ -75,6 +92,9 @@ function rowToEvent(
 
   const reviewStatus =
     row.review_status === "human_verified" ? "human_verified" : "auto";
+
+  const parties = partyNamesArray(row);
+  const soleDisplay = soleProprietorDefendantDisplayZh(parties);
 
   return {
     sourceType: "court_judgment",
@@ -100,10 +120,10 @@ function rowToEvent(
     matchReasonZh,
     sourceLabel: "司法機構刊憲",
     reviewStatus,
-    ...(row.topic_tags?.includes("sole_proprietorship")
+    ...(row.topic_tags?.includes("sole_proprietorship") && soleDisplay
       ? {
           businessForm: "sole_proprietorship" as const,
-          defendantDisplayNameZh: row.company_name_normalized,
+          defendantDisplayNameZh: soleDisplay,
         }
       : {}),
   };
@@ -140,21 +160,26 @@ function strongestCategory(events: OfficialLegalEvent[]): JudgmentCategory | und
 
 export { strongestCategory };
 
-async function fetchAllRenovationLegalRows(
+type LegalMatchRow = Pick<
+  LegalJudgmentRow,
+  "id" | "case_ref" | "company_name_normalized" | "lookup_aliases" | "topic_tags"
+>;
+
+async function fetchMatchRows(
   supabase: SupabaseClient,
-  selectCols: string,
-): Promise<LegalJudgmentRow[]> {
+): Promise<LegalMatchRow[]> {
   let from = 0;
-  const out: LegalJudgmentRow[] = [];
+  const out: LegalMatchRow[] = [];
   while (true) {
     const { data, error } = await supabase
       .from("official_legal_events")
-      .select(selectCols)
+      .select(MATCH_SELECT)
       .eq("renovation_relevant", true)
       .order("event_date", { ascending: false })
+      .order("id", { ascending: false })
       .range(from, from + FETCH_PAGE_SIZE - 1);
     if (error) throw error;
-    const batch = (data ?? []) as LegalJudgmentRow[];
+    const batch = (data ?? []) as LegalMatchRow[];
     out.push(...batch);
     if (batch.length < FETCH_PAGE_SIZE) break;
     from += FETCH_PAGE_SIZE;
@@ -162,18 +187,31 @@ async function fetchAllRenovationLegalRows(
   return out;
 }
 
+async function fetchRowsByIds(
+  supabase: SupabaseClient,
+  ids: string[],
+): Promise<LegalJudgmentRow[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from("official_legal_events")
+    .select(FULL_SELECT)
+    .in("id", ids);
+  if (error) throw error;
+  return (data ?? []) as LegalJudgmentRow[];
+}
+
 export async function lookupLegalJudgments(
   supabase: SupabaseClient,
   ctx: LegalLookupContext,
 ): Promise<LegalLookupResult> {
-  const selectCols =
-    "source_type, case_ref, court, event_date, hearing_key_points_zh, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
-
-  const { data: metaRows } = await supabase
+  const { data: metaRows, error: metaError } = await supabase
     .from("official_legal_events")
     .select("imported_at")
+    .eq("renovation_relevant", true)
     .order("imported_at", { ascending: false })
     .limit(1);
+
+  if (metaError) throw metaError;
 
   const registryAsOf = normalizeIsoDatetimeForSchema(
     metaRows?.[0]?.imported_at as string | undefined,
@@ -182,15 +220,18 @@ export async function lookupLegalJudgments(
   const br = normalizeBrDigits(ctx.br);
   const matched: OfficialLegalEvent[] = [];
   const seenCase = new Set<string>();
+  const matchedIds: string[] = [];
 
   if (br) {
-    const { data } = await supabase
+    const { data, error: brError } = await supabase
       .from("official_legal_events")
-      .select(selectCols)
+      .select(FULL_SELECT)
       .eq("br_normalized", br)
       .eq("renovation_relevant", true)
       .order("event_date", { ascending: false })
       .limit(MAX_EVENTS + 2);
+
+    if (brError) throw brError;
 
     for (const row of data ?? []) {
       const r = row as LegalJudgmentRow;
@@ -200,22 +241,32 @@ export async function lookupLegalJudgments(
       if (!ev) continue;
       seenCase.add(r.case_ref);
       matched.push(ev);
+      if (r.id) matchedIds.push(r.id);
       if (matched.length >= MAX_EVENTS) break;
     }
   }
 
   if (matched.length < MAX_EVENTS) {
     const label = ctx.searchLabelUsed.trim();
-    const allRows = await fetchAllRenovationLegalRows(supabase, selectCols);
+    const slimRows = await fetchMatchRows(supabase);
+    const hitIds: string[] = [];
 
-    for (const row of allRows) {
-      const r = row as LegalJudgmentRow;
+    for (const r of slimRows) {
       if (seenCase.has(r.case_ref)) continue;
-      if (shouldSkipLegalRow(r)) continue;
       if (!legalRowMatchesSearchLabel(label, r)) continue;
+      if (!r.id) continue;
+      hitIds.push(r.id);
+      seenCase.add(r.case_ref);
+      if (matched.length + hitIds.length >= MAX_EVENTS) break;
+    }
+
+    const fullRows = await fetchRowsByIds(supabase, hitIds);
+    const byId = new Map(fullRows.map((r) => [r.id!, r]));
+    for (const id of hitIds) {
+      const r = byId.get(id);
+      if (!r || shouldSkipLegalRow(r)) continue;
       const ev = rowToEvent(r, legalRowMatchReasonZh(label, r));
       if (!ev) continue;
-      seenCase.add(r.case_ref);
       matched.push(ev);
       if (matched.length >= MAX_EVENTS) break;
     }

@@ -47,9 +47,12 @@ flowchart TB
 | `database !== Judgments` | **drop** |
 | `caseRef` 前綴 ∈ `CACC`, `HCMA`, `DCCC`（`lrs-ingestion-profiles.json` `caseRefSkipPrefixes`） | **drop** |
 | 無 `caseRef` 或無 `eventDate` | **drop**（或入 `needs-review` 隊列，預設 drop） |
-| 前綴 `HCSA`, `DCCJ`, `LDPD`, `LDBM` | **keep**（優先） |
-| `HCA`, `HCPI` | **review**（預設 drop 直至 D2 有要點） |
-| 其他 | **review** |
+| 前綴 `DCCJ`, `HCA` | **keep** 若 v3e 工程／合約信號（被告商號或 parties） |
+| 前綴 `HCSA`, `CACV` | **keep** 僅當被告商號含工程字眼（`defendantHasEngineeringKeyword`）；否則 **drop** |
+| 前綴 `LDBM` | **keep** 僅當被告商號含工程字眼；否則 **drop**（`ldbm_defendant_name_no_engineering`） |
+| 前綴 `LDPD` | **keep** 若合約／欠款信號（`suggestsContractOrDebtCase`）；唔用寬鬆 renovation 捷徑 |
+| `HCPI`, `DCPI`, `HCB` 等 | **drop**（v3e `case_prefix_v3e_drop` 或 manual triage） |
+| 其他 | 多為 **drop**；僅 `parties_unparsed`／`mwc_defendant_ambiguous` → **review**（v3e） |
 
 `sourceUrl`：優先 `judgmentUrl`；否則用 `caseRef` 建 LRS `ju_frame` / `lrs:discover-case` 核對（人手或腳本）。
 

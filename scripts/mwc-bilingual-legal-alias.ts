@@ -11,7 +11,12 @@ import { createClient } from "@supabase/supabase-js";
 import { normalizeCompanyNameForCompare } from "../src/lib/entity-report-context";
 import { lookupMwcForPartyLabel } from "../src/lib/judgment-d2-mwc-match";
 import { defendantLabelForMwcLookup } from "../src/lib/judgment-defendant-label";
-import { normalizeLookupAliases } from "../src/lib/judgment-lookup-match";
+import { extractSoleProprietorTradeAlias } from "../src/lib/judgment-d2-v3d-rules";
+import { legalRowMatchesSearchLabel, normalizeLookupAliases } from "../src/lib/judgment-lookup-match";
+import {
+  isSoleProprietorshipLegalRow,
+  resolveImportCompanyFields,
+} from "../src/lib/judgment-sole-prop-import";
 import {
   extractMwcBilingualNames,
   mwcBilingualLookupTerms,
@@ -34,6 +39,7 @@ type LegalRow = {
   company_name_normalized: string;
   lookup_aliases: string[] | null;
   br_normalized: string | null;
+  topic_tags: string[] | null;
 };
 
 type SeedRow = {
@@ -105,6 +111,16 @@ function defendantMwcPlausible(defendantLabel: string, mwcCompanyName: string): 
 
 function legalDefendantLabels(legal: LegalRow, seed?: SeedRow): string[] {
   const labels = new Set<string>();
+  if (isSoleProprietorshipLegalRow(legal.topic_tags)) {
+    for (const a of legal.lookup_aliases ?? []) {
+      if (a.trim()) labels.add(a.trim());
+    }
+    if (seed?.companyNameNormalized) {
+      const trade = extractSoleProprietorTradeAlias(seed.companyNameNormalized);
+      if (trade) labels.add(trade);
+    }
+    return [...labels];
+  }
   if (seed?.companyNameNormalized) {
     labels.add(defendantLabelForMwcLookup(seed.companyNameNormalized));
   }
@@ -113,6 +129,22 @@ function legalDefendantLabels(legal: LegalRow, seed?: SeedRow): string[] {
     if (a.trim()) labels.add(a.trim());
   }
   return [...labels];
+}
+
+function mwcMatchesLegalViaLookupRules(mwc: MwcRow, legal: LegalRow): boolean {
+  const names = extractMwcBilingualNames(mwc.company_name);
+  for (const term of mwcBilingualLookupTerms(names)) {
+    if (
+      legalRowMatchesSearchLabel(term, {
+        company_name_normalized: legal.company_name_normalized,
+        lookup_aliases: legal.lookup_aliases,
+        topic_tags: legal.topic_tags,
+      })
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function mwcStrictlyMatchesLegal(
@@ -175,7 +207,7 @@ async function main() {
   const legals = await fetchAllRows<LegalRow>(
     supabase,
     "official_legal_events",
-    "id, case_ref, company_name_normalized, lookup_aliases, br_normalized",
+    "id, case_ref, company_name_normalized, lookup_aliases, br_normalized, topic_tags",
     (q) => q.eq("source_catalog_id", "legalref-lrs-ju"),
   );
 
@@ -214,7 +246,10 @@ async function main() {
     }
 
     for (const mwc of mwcs) {
-      if (mwcStrictlyMatchesLegal(mwc, legal, seed)) {
+      if (
+        mwcStrictlyMatchesLegal(mwc, legal, seed) ||
+        mwcMatchesLegalViaLookupRules(mwc, legal)
+      ) {
         matched.set(mwc.id, mwc);
       }
     }
@@ -235,17 +270,28 @@ async function main() {
       const matched = legalToMwcs.get(legal.id) ?? [];
       if (matched.length === 0) continue;
       const seed = seedByRef.get(normRef(legal.case_ref));
-      const primary =
-        seed?.companyNameNormalized ?? legal.company_name_normalized;
+      const shaped = seed
+        ? resolveImportCompanyFields({
+            companyNameNormalized: seed.companyNameNormalized,
+            partyNames: seed.partyNames,
+            lookupAliases: seed.lookupAliases,
+            topicTags: legal.topic_tags ?? undefined,
+          })
+        : {
+            companyNameNormalized: legal.company_name_normalized,
+            lookupAliases: legal.lookup_aliases ?? [],
+            topicTags: legal.topic_tags ?? [],
+          };
       const extras: string[] = [];
       for (const mwc of matched) {
         extras.push(...bilingualAliasExtras(mwc));
       }
-      const nextAliases = normalizeLookupAliases(primary, [
-        ...(seed?.lookupAliases ?? []),
-        ...(legal.lookup_aliases ?? []),
-        ...extras,
-      ]);
+      const nextAliases = isSoleProprietorshipLegalRow(legal.topic_tags)
+        ? [...new Set([...shaped.lookupAliases, ...extras.map((e) => e)])]
+        : normalizeLookupAliases(shaped.companyNameNormalized, [
+            ...shaped.lookupAliases,
+            ...extras,
+          ]);
       const prev = legal.lookup_aliases ?? [];
       const same =
         nextAliases.length === prev.length &&

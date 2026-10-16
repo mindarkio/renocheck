@@ -27,6 +27,7 @@ create index official_legal_events_br_idx
   on public.official_legal_events (br_normalized)
   where br_normalized is not null;
 
+-- Trade name (獨資商號) or company defendant label; sole prop owner names live in party_names only.
 create index official_legal_events_company_name_idx
   on public.official_legal_events (company_name_normalized);
 

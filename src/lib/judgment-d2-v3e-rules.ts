@@ -18,19 +18,12 @@ export const V3E_AUTO_DROP_PREFIXES = new Set([
 
 export const SOLE_PROP_AUTO_KEEP_PREFIXES = new Set(["DCCJ", "HCA", "HCSA"]);
 
-/** 與 CACV 相同：被告公司名有工程字眼可 keep。 */
-export const APPEAL_ENGINEERING_KEEP_PREFIXES = new Set(["CACV", "HCSA"]);
-
 export function isV3eAutoDropCasePrefix(caseRef: string): boolean {
   return V3E_AUTO_DROP_PREFIXES.has(caseRefPrefix(caseRef));
 }
 
 export function isSolePropAutoKeepCourt(caseRef: string): boolean {
   return SOLE_PROP_AUTO_KEEP_PREFIXES.has(caseRefPrefix(caseRef));
-}
-
-export function isAppealEngineeringKeepPrefix(caseRef: string): boolean {
-  return APPEAL_ENGINEERING_KEEP_PREFIXES.has(caseRefPrefix(caseRef));
 }
 
 export function soleProprietorTradeHasKeepKeyword(defendantLabel: string): boolean {

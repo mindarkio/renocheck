@@ -7,17 +7,9 @@ import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { normalizeCompanyNameForCompare } from "../src/lib/entity-report-context";
-import {
-  normalizeLookupAliases,
-  suggestLookupAliases,
-} from "../src/lib/judgment-lookup-match";
+import { assertLegalrefJudgmentSourceUrl } from "../src/lib/legal-event-source-url";
+import { resolveImportCompanyFields } from "../src/lib/judgment-sole-prop-import";
 import { brNormalizedFromSeedField } from "../src/lib/normalize-br";
-import { classifyDefendantEntity } from "../src/lib/judgment-d2-entity";
-import {
-  extractSoleProprietorOwnerName,
-  extractSoleProprietorTradeAlias,
-} from "../src/lib/judgment-d2-v3d-rules";
 
 const DEFAULT_SEED = resolve(
   process.cwd(),
@@ -81,24 +73,14 @@ function contentHash(row: SeedRow): string {
 }
 
 function toDbRow(row: SeedRow) {
-  let companyLabel = row.companyNameNormalized;
-  const topicTags = [...(row.topicTags ?? [])];
-  const aliasExtras = [
-    ...suggestLookupAliases(row.companyNameNormalized, row.partyNames),
-    ...(row.lookupAliases ?? []),
-  ];
-  if (classifyDefendantEntity(companyLabel) === "sole_proprietor") {
-    const owner = extractSoleProprietorOwnerName(companyLabel);
-    const trade = extractSoleProprietorTradeAlias(companyLabel);
-    if (owner) companyLabel = owner;
-    if (trade) aliasExtras.push(trade);
-    if (!topicTags.includes("sole_proprietorship")) {
-      topicTags.push("sole_proprietorship");
-    }
-  }
-  const company = normalizeCompanyNameForCompare(companyLabel);
+  const shaped = resolveImportCompanyFields({
+    companyNameNormalized: row.companyNameNormalized,
+    partyNames: row.partyNames,
+    lookupAliases: row.lookupAliases,
+    topicTags: row.topicTags,
+  });
   const br = brNormalizedFromSeedField(row.brNormalized);
-  const lookup_aliases = normalizeLookupAliases(companyLabel, aliasExtras);
+  const source_url = assertLegalrefJudgmentSourceUrl(row.sourceUrl);
   return {
     source_type: row.sourceType ?? "court_judgment",
     source_catalog_id: row.sourceCatalogId,
@@ -107,17 +89,17 @@ function toDbRow(row: SeedRow) {
     event_date: row.eventDate,
     party_names: row.partyNames ?? [row.companyNameNormalized],
     hearing_key_points_zh: row.hearingKeyPointsZh,
-    source_url: row.sourceUrl,
+    source_url,
     source_published_at: row.sourcePublishedAt ?? null,
     br_normalized: br ?? null,
-    company_name_normalized: company,
-    lookup_aliases,
+    company_name_normalized: shaped.companyNameNormalized,
+    lookup_aliases: shaped.lookupAliases,
     judgment_category: row.judgmentCategory,
     party_role: row.partyRole,
     outcome_hint: row.outcomeHint ?? null,
     procedure_stage: row.procedureStage ?? null,
     renovation_relevant: row.renovationRelevant ?? true,
-    topic_tags: topicTags,
+    topic_tags: shaped.topicTags,
     source_content_hash: contentHash(row),
     review_status: row.reviewStatus ?? "auto",
   };

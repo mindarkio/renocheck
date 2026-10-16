@@ -1,4 +1,5 @@
 import { normalizeCompanyNameForCompare } from "./entity-report-context";
+import { isSoleProprietorshipLegalRow } from "./judgment-sole-prop-import";
 import { mwcCompanyNameLookupTerms } from "./mwc-company-search-terms";
 
 /** Deterministic alias suggestions from import party / company label (D2 assist). */
@@ -55,7 +56,35 @@ export function normalizeLookupAliases(
 export type LegalRowMatchFields = {
   company_name_normalized: string;
   lookup_aliases?: string[] | null;
+  topic_tags?: string[] | null;
 };
+
+const normsMatch = (a: string, b: string) => {
+  if (a === b && a.length >= 2) return true;
+  return (
+    a.length >= 4 &&
+    b.length >= 4 &&
+    (a.includes(b) || b.includes(a))
+  );
+};
+
+function matchViaAliasesOnly(
+  searchLabelUsed: string,
+  aliasNorms: string[],
+): boolean {
+  for (const term of mwcCompanyNameLookupTerms(searchLabelUsed)) {
+    const termNorm = normalizeCompanyNameForCompare(term);
+    if (termNorm.length < 2) continue;
+    for (const an of aliasNorms) {
+      if (normsMatch(termNorm, an)) return true;
+    }
+  }
+  const labelNorm = normalizeCompanyNameForCompare(searchLabelUsed);
+  for (const an of aliasNorms) {
+    if (normsMatch(labelNorm, an)) return true;
+  }
+  return false;
+}
 
 /** Whether user search label matches this imported row (company + aliases). */
 export function legalRowMatchesSearchLabel(
@@ -65,19 +94,15 @@ export function legalRowMatchesSearchLabel(
   const labelNorm = normalizeCompanyNameForCompare(searchLabelUsed);
   if (labelNorm.length < 2) return false;
 
-  const rowNorm = normalizeCompanyNameForCompare(row.company_name_normalized);
   const aliasNorms = (row.lookup_aliases ?? []).map((a) =>
     normalizeCompanyNameForCompare(a),
   );
 
-  const normsMatch = (a: string, b: string) => {
-    if (a === b && a.length >= 2) return true;
-    return (
-      a.length >= 4 &&
-      b.length >= 4 &&
-      (a.includes(b) || b.includes(a))
-    );
-  };
+  if (isSoleProprietorshipLegalRow(row.topic_tags)) {
+    return matchViaAliasesOnly(searchLabelUsed, aliasNorms);
+  }
+
+  const rowNorm = normalizeCompanyNameForCompare(row.company_name_normalized);
 
   for (const term of mwcCompanyNameLookupTerms(searchLabelUsed)) {
     const termNorm = normalizeCompanyNameForCompare(term);
@@ -85,7 +110,6 @@ export function legalRowMatchesSearchLabel(
     if (normsMatch(termNorm, rowNorm)) return true;
     for (const an of aliasNorms) {
       if (normsMatch(termNorm, an)) return true;
-      if (normsMatch(termNorm, rowNorm)) return true;
     }
   }
 
@@ -107,14 +131,20 @@ export function legalRowMatchReasonZh(
   const aliasNorms = (row.lookup_aliases ?? []).map((a) =>
     normalizeCompanyNameForCompare(a),
   );
-  const normsMatch = (a: string, b: string) => {
-    if (a === b && a.length >= 2) return true;
-    return (
-      a.length >= 4 &&
-      b.length >= 4 &&
-      (a.includes(b) || b.includes(a))
-    );
-  };
+
+  if (isSoleProprietorshipLegalRow(row.topic_tags)) {
+    for (const term of mwcCompanyNameLookupTerms(searchLabelUsed)) {
+      const termNorm = normalizeCompanyNameForCompare(term);
+      if (termNorm.length < 2) continue;
+      for (const an of aliasNorms) {
+        if (normsMatch(termNorm, an)) return "商號與匯入紀錄一致";
+      }
+    }
+    if (aliasNorms.some((an) => normsMatch(labelNorm, an))) {
+      return "商號與匯入紀錄一致";
+    }
+    return "商號與匯入紀錄一致";
+  }
 
   for (const term of mwcCompanyNameLookupTerms(searchLabelUsed)) {
     const termNorm = normalizeCompanyNameForCompare(term);

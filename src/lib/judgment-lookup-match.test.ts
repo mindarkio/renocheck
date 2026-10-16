@@ -17,20 +17,23 @@ describe("suggestLookupAliases", () => {
 });
 
 describe("legalRowMatchesSearchLabel", () => {
-  it("matches trade-name alias not equal to full company field", () => {
+  it("matches trade via aliases for sole proprietorship rows", () => {
     const row = {
-      company_name_normalized: "楊國聰經營新寶燈飾裝修工程公司",
+      company_name_normalized: "新寶燈飾裝修工程公司",
       lookup_aliases: ["新寶燈飾裝修工程公司"],
+      topic_tags: ["sole_proprietorship"],
     };
     expect(legalRowMatchesSearchLabel("新寶燈飾裝修工程公司", row)).toBe(true);
+    expect(legalRowMatchesSearchLabel("楊國聰", row)).toBe(false);
   });
 
-  it("matches substring of stored company without aliases", () => {
+  it("matches company row via company_name_normalized", () => {
     const row = {
-      company_name_normalized: "陳國新經營燊記裝修水電工程",
+      company_name_normalized: "名富裝修工程有限公司",
       lookup_aliases: [],
+      topic_tags: [],
     };
-    expect(legalRowMatchesSearchLabel("燊記裝修水電工程", row)).toBe(true);
+    expect(legalRowMatchesSearchLabel("名富裝修工程", row)).toBe(true);
   });
 
   it("matches MWC(W) individual name (3 CJK chars)", () => {
