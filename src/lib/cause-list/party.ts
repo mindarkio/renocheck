@@ -34,9 +34,20 @@ function mapRoleLabel(label: string): CauseListPartyRole {
   return "unknown";
 }
 
+/** A comma before a corporate suffix, optionally with one bracket group in between, stays in the name. */
+const CORPORATE_COMMA_GUARD_RE =
+  /^\s*(?:[(（][^()（）]*[)）]\s*)?(?:CO\b|COMPANY\b|LTD|LIMITED|INC)\b/i;
+
+/** Former-name and trading-as clauses are part of the previous party, not a new defendant. */
+const MERGED_CLAUSE_RE = /^(?:FORMERLY\b|F\/K\/A\b|前稱|T\/A\b|TRADING\s+AS\b|經營)/i;
+
+/** A wrapped line that is only the regional suffix of the previous party. */
+const BRACKET_SUFFIX_LINE_RE =
+  /^\s*[(（][^()（）]*[)）]\s*(?:CO\b|COMPANY\b|LTD|LIMITED|INC)\b/i;
+
 /**
  * Split a party line on commas that are outside brackets.
- * A comma immediately before LTD / LIMITED / INC stays inside the name (`CO., LTD.`).
+ * A comma immediately before LTD / LIMITED / INC, or before a bracket then those words, stays inside the name.
  */
 export function splitTopLevelPartyCommas(line: string): string[] {
   const parts: string[] = [];
@@ -48,7 +59,7 @@ export function splitTopLevelPartyCommas(line: string): string[] {
     else if ((ch === ")" || ch === "）") && depth > 0) depth -= 1;
     else if (depth === 0 && (ch === "," || ch === "，")) {
       const rest = line.slice(i + 1);
-      if (/^\s*(LTD|LIMITED|INC)\b/i.test(rest)) continue;
+      if (CORPORATE_COMMA_GUARD_RE.test(rest)) continue;
       const chunk = line.slice(start, i).trim();
       if (chunk) parts.push(chunk);
       start = i + 1;
@@ -56,7 +67,31 @@ export function splitTopLevelPartyCommas(line: string): string[] {
   }
   const tail = line.slice(start).trim();
   if (tail) parts.push(tail);
-  return parts.length > 0 ? parts : [];
+  return mergeClauseSegments(parts);
+}
+
+function joinBracketSuffixLines(lines: string[]): string[] {
+  const joined: string[] = [];
+  for (const line of lines) {
+    if (joined.length > 0 && BRACKET_SUFFIX_LINE_RE.test(line)) {
+      joined[joined.length - 1] = `${joined[joined.length - 1]} ${line}`.trim();
+      continue;
+    }
+    joined.push(line);
+  }
+  return joined;
+}
+
+function mergeClauseSegments(parts: string[]): string[] {
+  const merged: string[] = [];
+  for (const part of parts) {
+    if (merged.length > 0 && MERGED_CLAUSE_RE.test(part)) {
+      merged[merged.length - 1] = `${merged[merged.length - 1]}, ${part}`;
+      continue;
+    }
+    merged.push(part);
+  }
+  return merged;
 }
 
 function stripTrailingBrackets(name: string): string {
@@ -71,9 +106,42 @@ function stripTrailingBrackets(name: string): string {
 
 function stripFormerNameClause(name: string): string {
   return name
-    .replace(/\s+\bFORMERLY\s+KNOWN\s+AS\b[\s\S]*$/i, "")
-    .replace(/\s*前稱[\s\S]*$/u, "")
+    .replace(/(^|\s+)FORMERLY\s+KNOWN\s+AS\b[\s\S]*$/i, "")
+    .replace(/(^|\s+)F\/K\/A\b[\s\S]*$/i, "")
+    .replace(/(^|\s*)前稱[\s\S]*$/u, "")
+    .replace(/[,，]\s*$/u, "")
     .trim();
+}
+
+const KEPT_TRAILING_BRACKET_RE =
+  /LIMITED|LTD\.?|有限公司|有限責任公司|IN\s+LIQUIDATION|清盤|HONG\s+KONG|H\.K\.|香港|中國|國際|亞洲|(?:^|[^A-Z0-9])HK(?:[^A-Z0-9]|$)/i;
+
+function trailingBracket(name: string): { start: number; inner: string } | null {
+  const trimmed = name.trimEnd();
+  if (!trimmed.endsWith(")") && !trimmed.endsWith("）")) return null;
+  let depth = 0;
+  for (let i = trimmed.length - 1; i >= 0; i--) {
+    const ch = trimmed[i];
+    if (ch === ")" || ch === "）") depth += 1;
+    else if (ch === "(" || ch === "（") {
+      depth -= 1;
+      if (depth === 0) {
+        return { start: i, inner: trimmed.slice(i + 1, trimmed.length - 1) };
+      }
+    }
+  }
+  return null;
+}
+
+/** Drop trailing notes. Keep alias, region, and liquidation brackets. */
+export function stripNonAliasTrailingBrackets(name: string): string {
+  let cleaned = name.trim();
+  for (;;) {
+    const span = trailingBracket(cleaned);
+    if (!span) return cleaned;
+    if (KEPT_TRAILING_BRACKET_RE.test(span.inner)) return cleaned;
+    cleaned = cleaned.slice(0, span.start).trim();
+  }
 }
 
 /** Split a multi-party block on role lines; optional inline AND split (M5). */
@@ -83,10 +151,12 @@ export function splitPartyBlock(
   options: SplitPartyBlockOptions = {},
 ): CauseListParty[] {
   const splitInlineAnd = options.splitInlineAnd ?? false;
-  const lines = block
-    .split(/\n+/)
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const lines = joinBracketSuffixLines(
+    block
+      .split(/\n+/)
+      .map((l) => l.trim())
+      .filter(Boolean),
+  );
   const parties: CauseListParty[] = [];
 
   const pushChunk = (chunk: string, role: CauseListPartyRole) => {
@@ -199,7 +269,7 @@ export function parseCorporateParties(
     const raw = stripLiquidationSuffix(p.rawName.replace(STRIP_CLAUSE_RE, "").trim());
     if (!raw) continue;
     const { legalName, tradeName, formerlyTradedAs } = splitTradingAs(raw);
-    const legalNameClean = stripLiquidationSuffix(legalName);
+    const legalNameClean = stripFormerNameClause(stripLiquidationSuffix(legalName));
 
     if (!legalNameIsMatchableCorporate(legalNameClean)) {
       continue;

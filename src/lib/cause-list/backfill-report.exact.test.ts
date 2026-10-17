@@ -6,6 +6,7 @@ import {
   buildBackfillSummary,
   publicBackfillError,
 } from "./backfill-report";
+import { stripNonAliasTrailingBrackets } from "./party";
 import { CAUSE_LIST_COMPANY_FIXTURES } from "./fixtures/companies.fixture";
 import type { ParsedCauseListCase } from "./types";
 
@@ -87,6 +88,7 @@ describe("cause-list backfill rows", () => {
       to: "2024-11-30",
       generatedAt: "2026-10-17T00:00:00.000Z",
       complete: true,
+      cdxMode: "global",
       mwcMode: "offline-public-register",
       corporateCompanies: 1,
       snapshots: [
@@ -132,7 +134,78 @@ describe("cause-list backfill rows", () => {
     expect(summary.pages.noHearing).toBe(0);
     expect(summary.pages.notFetched).toBe(0);
     expect(summary.pages.truncated).toBe(0);
+    expect(summary.cdxMode).toBe("global");
+    expect(summary.complete).toBe(true);
     expect(JSON.stringify(summary)).not.toContain(PERSON_A);
+  });
+
+  it("marks a legacy snapshot list incomplete", () => {
+    const summary = buildBackfillSummary({
+      from: "2024-11-01",
+      to: "2024-11-30",
+      generatedAt: "2026-10-17T00:00:00.000Z",
+      complete: true,
+      cdxMode: "legacy-chunked",
+      mwcMode: "offline-public-register",
+      corporateCompanies: 1,
+      snapshots: [],
+      fetchedKeys: new Set(),
+      rowsParsed: { SMT: 0, DC: 0, CACFI: 0, LANDS: 0 },
+      corporateRenovationRelevantRows: { SMT: 0, DC: 0, CACFI: 0, LANDS: 0 },
+      rows: [],
+      pages: {
+        empty: 0,
+        unsupported: 0,
+        legacyFormat: 0,
+        parseFailures: 0,
+        fetchFailures: 0,
+        noHearing: 0,
+        truncated: 0,
+        notFetched: 0,
+        parsed: 0,
+      },
+      parseFailures: [],
+    });
+    expect(summary.cdxMode).toBe("legacy-chunked");
+    expect(summary.complete).toBe(false);
+  });
+
+  it("strips a trailing procedural note and keeps a corporate alias", () => {
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (BY ORIGINAL ACTION)")).toBe(
+      "SYNTH ALPHA LIMITED",
+    );
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (HK)")).toBe(
+      "SYNTH ALPHA LIMITED (HK)",
+    );
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (IN LIQUIDATION)")).toBe(
+      "SYNTH ALPHA LIMITED (IN LIQUIDATION)",
+    );
+    const { rows } = aggregateCorporateDefendantRows(
+      [
+        smtCase("SCTC 2/2099", "2024-11-06", "SYNTH ALPHA LIMITED (BY ORIGINAL ACTION)"),
+        smtCase("SCTC 3/2099", "2024-11-06", "SYNTH ALPHA LIMITED ( 合成甲有限公司 )"),
+      ],
+      [],
+    );
+    expect(rows.map((row) => row.companyName)).toEqual([
+      "SYNTH ALPHA LIMITED",
+      "SYNTH ALPHA LIMITED ( 合成甲有限公司 )",
+    ]);
+    expect(() =>
+      assertCorporateBackfillRows([
+        {
+          court: "DC",
+          caseNo: "DCCJ 1/2099",
+          firstHearingDate: "2024-11-06",
+          lastHearingDate: "2024-11-06",
+          claimNature: "Work Done",
+          companyName: "SYNTH ALPHA LIMITED (BY ORIGINAL ACTION)",
+          role: "defendant",
+          matchLevel: "unmatched",
+          matchedCompanyId: "",
+        },
+      ]),
+    ).toThrow("refusing non-alias trailing bracket DC DCCJ 1/2099");
   });
 
   it("rejects a company field that still contains a non-corporate segment", () => {

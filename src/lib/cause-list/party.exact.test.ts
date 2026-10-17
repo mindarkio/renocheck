@@ -57,6 +57,42 @@ describe("cause-list party splitter (exact)", () => {
     expect(isCorporateEntityName("ABC (HK) LIMITED")).toBe(true);
   });
 
+  it("keeps a regional suffix and a former-name clause inside one company", () => {
+    const regional = parseCorporateParties(
+      splitPartyBlock("SYNTH ALPHA ENGINEERING CO., (HK) LIMITED", "defendant"),
+    );
+    expect(regional).toHaveLength(1);
+    expect(regional[0]?.legalName).toBe("SYNTH ALPHA ENGINEERING CO., (HK) LIMITED");
+
+    const dotted = parseCorporateParties(
+      splitPartyBlock("SYNTH ALPHA CO., (H.K.) LTD.", "defendant"),
+    );
+    expect(dotted).toHaveLength(1);
+    expect(dotted[0]?.legalName).toBe("SYNTH ALPHA CO., (H.K.) LTD.");
+
+    const former = parseCorporateParties(
+      splitPartyBlock(
+        "SYNTH ALPHA LIMITED, FORMERLY KNOWN AS SYNTH BETA CO., LTD.",
+        "defendant",
+      ),
+    );
+    expect(former).toHaveLength(1);
+    expect(former[0]?.legalName).toBe("SYNTH ALPHA LIMITED");
+    expect(isCorporateEntityName("FORMERLY KNOWN AS SYNTH BETA LIMITED")).toBe(false);
+
+    const person = parseCorporateParties(
+      splitPartyBlock("SYNTH ALPHA LIMITED, FICTIVE PERSON", "defendant"),
+    );
+    expect(person).toHaveLength(1);
+    expect(person[0]?.legalName).toBe("SYNTH ALPHA LIMITED");
+
+    const wrapped = parseCorporateParties(
+      splitPartyBlock("R2: SYNTH EXPRESS\n(HONG KONG) CO., LIMITED", "respondent"),
+    );
+    expect(wrapped).toHaveLength(1);
+    expect(wrapped[0]?.legalName).toBe("SYNTH EXPRESS (HONG KONG) CO., LIMITED");
+  });
+
   it("keeps one corporate party from a comma-separated list", () => {
     const parties = splitPartyBlock(
       "SYNTH ALPHA LIMITED ( 合成甲有限公司 ), FICTIVE PERSON ( 虛構人 )",

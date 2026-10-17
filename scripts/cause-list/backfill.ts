@@ -150,9 +150,9 @@ async function loadReportSnapshots(
   cachePath: string,
   from: string,
   to: string,
-): Promise<CauseListSnapshot[]> {
+): Promise<{ snapshots: CauseListSnapshot[]; cdxMode: BackfillSummary["cdxMode"] }> {
   const global = await loadCdxState(cachePath, from, to, false);
-  if (global) return global;
+  if (global) return { snapshots: global, cdxMode: "global" };
   try {
     const parsed = JSON.parse(await readFile(cachePath, "utf8")) as {
       from?: string;
@@ -160,12 +160,12 @@ async function loadReportSnapshots(
       snapshots?: CauseListSnapshot[];
     };
     if (parsed.from === from && parsed.to === to && Array.isArray(parsed.snapshots)) {
-      return parsed.snapshots;
+      return { snapshots: parsed.snapshots, cdxMode: "legacy-chunked" };
     }
   } catch {
     // no cache
   }
-  return [];
+  return { snapshots: [], cdxMode: "legacy-chunked" };
 }
 
 async function fetchSnapshots(
@@ -258,6 +258,7 @@ async function writeReport(input: {
   from: string;
   to: string;
   complete: boolean;
+  cdxMode: BackfillSummary["cdxMode"];
   companies: CauseListCompanyFixture[];
   mwcMode: BackfillSummary["mwcRegistry"]["mode"];
   retrievedAt: string | null;
@@ -297,6 +298,7 @@ async function writeReport(input: {
     to: input.to,
     generatedAt: new Date().toISOString(),
     complete: input.complete,
+    cdxMode: input.cdxMode,
     mwcMode: input.mwcMode,
     corporateCompanies: input.companies.length,
     retrievedAt: input.retrievedAt,
@@ -319,6 +321,7 @@ async function writeReport(input: {
   log({
     event: "backfill_report",
     complete: summary.complete,
+    cdxMode: summary.cdxMode,
     dedupedCases: summary.totals.dedupedCases,
     distinctCompaniesA: summary.totals.distinctCompaniesA,
     distinctCompaniesB: summary.totals.distinctCompaniesB,
@@ -352,6 +355,7 @@ async function main(): Promise<number> {
 
   let archiveRules: string[] = [];
   let snapshots: CauseListSnapshot[] = [];
+  let cdxMode: BackfillSummary["cdxMode"] = "global";
   let fetchFailures = 0;
   let stoppedReason: BackfillSummary["stoppedReason"];
 
@@ -373,13 +377,16 @@ async function main(): Promise<number> {
     );
     snapshots = await fetchSnapshots(cacheDir, from, to, refreshCdx, archiveRules);
   } else {
-    snapshots = await loadReportSnapshots(path.join(cacheDir, "backfill-cdx.json"), from, to);
+    const loaded = await loadReportSnapshots(path.join(cacheDir, "backfill-cdx.json"), from, to);
+    snapshots = loaded.snapshots;
+    cdxMode = loaded.cdxMode;
   }
 
   const byCourt = emptyRowsParsed();
   for (const snap of snapshots) byCourt[snap.court] += 1;
   log({
     event: "cdx_ready",
+    cdxMode,
     snapshots: snapshots.length,
     SMT: byCourt.SMT,
     DC: byCourt.DC,
@@ -424,6 +431,7 @@ async function main(): Promise<number> {
     from,
     to,
     complete,
+    cdxMode,
     companies,
     mwcMode,
     retrievedAt,

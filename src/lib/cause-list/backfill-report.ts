@@ -9,7 +9,12 @@ import {
   normalizeEnglishCompanyName,
   splitBilingualCompanyRaw,
 } from "./normalize";
-import { isCorporateEntityName, parseCorporateParties, splitTopLevelPartyCommas } from "./party";
+import {
+  isCorporateEntityName,
+  parseCorporateParties,
+  splitTopLevelPartyCommas,
+  stripNonAliasTrailingBrackets,
+} from "./party";
 import type {
   CauseListCourtCode,
   MatchConfidence,
@@ -128,7 +133,7 @@ function addCorporateDefendantCases(
           firstHearingDate: caseRow.hearingDate,
           lastHearingDate: caseRow.hearingDate,
           claimNature: nature,
-          companyName: party.legalName,
+          companyName: stripNonAliasTrailingBrackets(party.legalName),
           role: party.role,
           matchLevel,
           matchedCompanyId,
@@ -140,7 +145,7 @@ function addCorporateDefendantCases(
       if (caseRow.hearingDate < existing.firstHearingDate) {
         existing.firstHearingDate = caseRow.hearingDate;
         existing.role = party.role;
-        existing.companyName = party.legalName;
+        existing.companyName = stripNonAliasTrailingBrackets(party.legalName);
       }
       if (caseRow.hearingDate > existing.lastHearingDate) {
         existing.lastHearingDate = caseRow.hearingDate;
@@ -200,6 +205,9 @@ export function assertCorporateBackfillRows(rows: BackfillRow[]): void {
     if (segments.length === 0 || segments.some((segment) => !isCorporateEntityName(segment))) {
       throw new Error(`refusing non-corporate output row ${row.court} ${row.caseNo}`);
     }
+    if (stripNonAliasTrailingBrackets(row.companyName) !== row.companyName.trim()) {
+      throw new Error(`refusing non-alias trailing bracket ${row.court} ${row.caseNo}`);
+    }
     if (row.role !== "defendant" && row.role !== "respondent") {
       throw new Error(`refusing non-defendant output row ${row.court} ${row.caseNo}`);
     }
@@ -237,11 +245,15 @@ export type CourtBackfillSummary = {
   unmatched: number;
 };
 
+export type CauseListCdxMode = "global" | "legacy-chunked";
+
 export type BackfillSummary = {
   from: string;
   to: string;
   generatedAt: string;
   complete: boolean;
+  /** `legacy-chunked` is the pre-global month list. It cannot be a complete backfill. */
+  cdxMode: CauseListCdxMode;
   mwcRegistry: {
     source: string;
     corporateCompanies: number;
@@ -287,6 +299,7 @@ export function buildBackfillSummary(input: {
   to: string;
   generatedAt: string;
   complete: boolean;
+  cdxMode: CauseListCdxMode;
   mwcMode: BackfillSummary["mwcRegistry"]["mode"];
   corporateCompanies: number;
   snapshots: CauseListSnapshot[];
@@ -348,7 +361,8 @@ export function buildBackfillSummary(input: {
     from: input.from,
     to: input.to,
     generatedAt: input.generatedAt,
-    complete: input.complete && input.pages.truncated === 0,
+    complete: input.complete && input.pages.truncated === 0 && input.cdxMode === "global",
+    cdxMode: input.cdxMode,
     mwcRegistry: {
       source: ".cache/bd-register/registers_full_list.csv",
       corporateCompanies: input.corporateCompanies,
