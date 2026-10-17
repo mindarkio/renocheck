@@ -38,10 +38,8 @@ import {
   computeNameAlignment,
   resolveAuthoritativeSearchLabel,
 } from "./entity-report-context";
-import { lookupLegalJudgments } from "./lookup-legal-judgments";
-import { isLegalEventsEnabled } from "./legal-events-config";
 import { applyLegalEventFloors } from "./legal-event-calibration";
-import type { OfficialLegalEvent } from "./legal-event-schema";
+import { startLegalLookupForSearch } from "./search-pipeline-legal-lookup";
 
 export type SearchPipelineResult = {
   fingerprint: string;
@@ -111,21 +109,13 @@ export async function runSearchPipeline(
     mwcLookup.ambiguous,
   );
 
-  const legalEnabled = isLegalEventsEnabled();
+  const legalLookupPromise = startLegalLookupForSearch(supabase, {
+    searchLabelUsed,
+    br: input.br,
+  });
+
   const serpStart = performance.now();
-  const [serpResult, legalLookup] = await Promise.all([
-    fetchWebSearchHitsForEntity(input, mwcOpts),
-    legalEnabled
-      ? lookupLegalJudgments(supabase, {
-          searchLabelUsed,
-          br: input.br,
-        })
-      : Promise.resolve({
-          events: [] as OfficialLegalEvent[],
-          registryAsOf: undefined,
-        }),
-  ]);
-  const { hits: serpHits } = serpResult;
+  const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, mwcOpts);
 
   const tokens = entityMatchTokens(input, {
     mwcCompanyName: mwc?.company_name,
@@ -166,6 +156,7 @@ export async function runSearchPipeline(
   }
 
   const serpMs = Math.round(performance.now() - serpStart);
+  const legalLookup = await legalLookupPromise;
 
   const webHitsForLlm = filterWebSearchHitsForLlm(rawHits, tokens, l1Opts);
   const boundHitCount = webHitsForLlm.length;
