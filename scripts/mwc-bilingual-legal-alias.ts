@@ -22,6 +22,10 @@ import {
   extractMwcBilingualNames,
   mwcBilingualLookupTerms,
 } from "../src/lib/mwc-bilingual-company-names";
+import {
+  assertJudgmentSeedAllowedForRemoteImport,
+  officialLegalEventSourceCatalogAllowlistValues,
+} from "../src/lib/judgment-import-catalog-guard";
 
 const SEED_PATH = resolve(
   process.cwd(),
@@ -45,6 +49,7 @@ type LegalRow = {
 };
 
 type SeedRow = {
+  sourceCatalogId: string;
   caseRef: string;
   companyNameNormalized: string;
   partyNames?: string[];
@@ -195,6 +200,7 @@ function loadSeedByCaseRef(): Map<string, SeedRow> {
   const map = new Map<string, SeedRow>();
   if (!existsSync(SEED_PATH)) return map;
   const rows = JSON.parse(readFileSync(SEED_PATH, "utf8")) as SeedRow[];
+  assertJudgmentSeedAllowedForRemoteImport(rows);
   for (const row of rows) {
     map.set(normRef(row.caseRef), row);
   }
@@ -228,7 +234,11 @@ async function main() {
     supabase,
     "official_legal_events",
     "id, case_ref, company_name_normalized, party_names, lookup_aliases, br_normalized, topic_tags",
-    (q) => q.eq("source_catalog_id", "legalref-lrs-ju"),
+    (q) =>
+      q.in(
+        "source_catalog_id",
+        officialLegalEventSourceCatalogAllowlistValues(),
+      ),
   );
 
   const mwcByReg = new Map<string, MwcRow>();

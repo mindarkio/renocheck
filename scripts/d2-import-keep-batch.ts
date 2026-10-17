@@ -14,6 +14,10 @@ import {
 } from "../src/lib/judgment-lookup-match";
 import { brNormalizedFromSeedField } from "../src/lib/normalize-br";
 import { HEARING_SUMMARY_AUTO_PLACEHOLDER_ZH } from "../src/lib/judgment-hearing-summary";
+import {
+  assertJudgmentSeedAllowedForRemoteImport,
+  DEFAULT_OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ID,
+} from "../src/lib/judgment-import-catalog-guard";
 
 const KEEP_PATH = resolve(
   process.cwd(),
@@ -82,7 +86,9 @@ function main() {
 
   const existing = JSON.parse(readFileSync(SEED_PATH, "utf8")) as Array<{
     caseRef: string;
+    sourceCatalogId: string;
   }>;
+  assertJudgmentSeedAllowedForRemoteImport(existing);
   const seedByRef = new Map(existing.map((r) => [normRef(r.caseRef), r]));
 
   const added: string[] = [];
@@ -106,7 +112,7 @@ function main() {
 
     const row = {
       sourceType: "court_judgment",
-      sourceCatalogId: "legalref-lrs-ju",
+      sourceCatalogId: DEFAULT_OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ID,
       caseRef,
       court:
         courtFromCaseRef(caseRef, prefixes) ??
@@ -142,6 +148,7 @@ function main() {
 
   if (dryRun || added.length === 0) return;
 
+  assertJudgmentSeedAllowedForRemoteImport(existing);
   writeFileSync(SEED_PATH, `${JSON.stringify(existing, null, 2)}\n`, "utf8");
   execSync("pnpm validate:judgments-seed --min-renovation=5", {
     stdio: "inherit",

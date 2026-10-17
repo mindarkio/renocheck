@@ -1,40 +1,54 @@
 import { describe, expect, it } from "vitest";
 import {
   assertJudgmentSeedAllowedForRemoteImport,
-  findRemoteBlockedJudgmentSeedRows,
-  isRemoteBlockedJudgmentCatalog,
+  assertOfficialLegalEventCatalogAllowed,
+  assertOfficialLegalEventRowsCatalogAllowed,
+  isOfficialLegalEventSourceCatalogAllowed,
 } from "./judgment-import-catalog-guard";
 
 describe("judgment-import-catalog-guard", () => {
-  it("blocks judiciary-lrs-fixture for remote import", () => {
-    expect(isRemoteBlockedJudgmentCatalog("judiciary-lrs-fixture")).toBe(true);
-    expect(isRemoteBlockedJudgmentCatalog("legalref-lrs-ju")).toBe(false);
-  });
-
-  it("finds blocked rows in a mixed seed", () => {
-    const rows = [
-      { sourceCatalogId: "legalref-lrs-ju", caseRef: "DCCJ 1/2020" },
-      { sourceCatalogId: "judiciary-lrs-fixture", caseRef: "DCCJ 9001/2020" },
-    ];
-    expect(findRemoteBlockedJudgmentSeedRows(rows)).toHaveLength(1);
-    expect(findRemoteBlockedJudgmentSeedRows(rows)[0].caseRef).toBe(
-      "DCCJ 9001/2020",
+  it("re-exports allowlist check", () => {
+    expect(isOfficialLegalEventSourceCatalogAllowed("legalref-lrs-ju")).toBe(
+      true,
+    );
+    expect(isOfficialLegalEventSourceCatalogAllowed("judiciary-lrs-fixture")).toBe(
+      false,
     );
   });
 
-  it("assert throws when fixture catalog present", () => {
+  it("rejects seed rows outside allowlist", () => {
     expect(() =>
       assertJudgmentSeedAllowedForRemoteImport([
-        { sourceCatalogId: "judiciary-lrs-fixture", caseRef: "HCSA 42/2019" },
+        { sourceCatalogId: "legalref-lrs-ju", caseRef: "DCCJ 1/2020" },
+        { sourceCatalogId: "judiciary-lrs-fixture", caseRef: "DCCJ 9001/2020" },
       ]),
-    ).toThrow(/fixture-only catalog/);
+    ).toThrow(/not allowlisted for remote/);
   });
 
-  it("assert passes for legalref-lrs-ju only seed", () => {
+  it("accepts legalref-lrs-ju-only seed", () => {
     expect(() =>
       assertJudgmentSeedAllowedForRemoteImport([
         { sourceCatalogId: "legalref-lrs-ju", caseRef: "DCCJ 1/2020" },
       ]),
     ).not.toThrow();
+  });
+
+  it("assertOfficialLegalEventCatalogAllowed throws for unknown catalog", () => {
+    expect(() =>
+      assertOfficialLegalEventCatalogAllowed("judiciary-lrs"),
+    ).toThrow(/not allowlisted/);
+  });
+
+  it("assertOfficialLegalEventRowsCatalogAllowed guards batch rows", () => {
+    expect(() =>
+      assertOfficialLegalEventRowsCatalogAllowed([
+        { source_catalog_id: "legalref-lrs-ju", case_ref: "DCCJ 1/2020" },
+      ]),
+    ).not.toThrow();
+    expect(() =>
+      assertOfficialLegalEventRowsCatalogAllowed([
+        { source_catalog_id: "judiciary-lrs-fixture", case_ref: "HCSA 42/2019" },
+      ]),
+    ).toThrow(/not allowlisted/);
   });
 });

@@ -9,6 +9,10 @@ import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { normalizeCompanyNameForCompare } from "../src/lib/entity-report-context";
+import {
+  assertOfficialLegalEventRowsCatalogAllowed,
+  officialLegalEventSourceCatalogAllowlistValues,
+} from "../src/lib/judgment-import-catalog-guard";
 
 function loadEnvLocal() {
   try {
@@ -69,8 +73,9 @@ async function main() {
   let q = supabase
     .from("official_legal_events")
     .select(
-      "id, case_ref, company_name_normalized, source_content_hash, imported_at",
-    );
+      "id, case_ref, company_name_normalized, source_content_hash, imported_at, source_catalog_id",
+    )
+    .in("source_catalog_id", officialLegalEventSourceCatalogAllowlistValues());
   if (company) {
     const norm = normalizeCompanyNameForCompare(company);
     q = q.eq("company_name_normalized", norm);
@@ -84,6 +89,7 @@ async function main() {
   }
 
   const rows = data ?? [];
+  assertOfficialLegalEventRowsCatalogAllowed(rows);
   console.info(
     JSON.stringify({ event: "purge_legal_events_matched", count: rows.length, rows }),
   );

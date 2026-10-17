@@ -7,6 +7,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  assertJudgmentSeedAllowedForRemoteImport,
+  assertOfficialLegalEventRowsCatalogAllowed,
+  officialLegalEventSourceCatalogAllowlistValues,
+} from "../src/lib/judgment-import-catalog-guard";
 
 const SEED_PATH = resolve(
   process.cwd(),
@@ -44,8 +49,10 @@ async function main() {
   loadEnvLocal();
   const dryRun = process.argv.includes("--dry-run");
   const seed = JSON.parse(readFileSync(SEED_PATH, "utf8")) as Array<{
+    sourceCatalogId: string;
     caseRef: string;
   }>;
+  assertJudgmentSeedAllowedForRemoteImport(seed);
   const allowed = new Set(seed.map((r) => normRef(r.caseRef)));
 
   const url =
@@ -63,15 +70,18 @@ async function main() {
   const { data, error } = await supabase
     .from("official_legal_events")
     .select("id, case_ref, source_catalog_id")
-    .eq("source_catalog_id", "legalref-lrs-ju");
+    .in("source_catalog_id", officialLegalEventSourceCatalogAllowlistValues());
 
   if (error) {
     console.error(error);
     process.exit(1);
   }
 
-  const orphans =
-    data?.filter((r) => !allowed.has(normRef(r.case_ref as string))) ?? [];
+  const rows = data ?? [];
+  assertOfficialLegalEventRowsCatalogAllowed(rows);
+  const orphans = rows.filter(
+    (r) => !allowed.has(normRef(r.case_ref as string)),
+  );
 
   console.info(
     JSON.stringify({

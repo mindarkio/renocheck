@@ -16,6 +16,14 @@ const seed = {
 };
 
 describe("buildJudgmentImportDbRow", () => {
+  it("normalizes case_ref for storage", () => {
+    const row = buildJudgmentImportDbRow({
+      ...seed,
+      caseRef: "dccj1/2020",
+    });
+    expect(row.case_ref).toBe("DCCJ 1/2020");
+  });
+
   it("sets placeholder hearing fields for new rows", () => {
     const row = buildJudgmentImportDbRow(seed);
     expect(row.hearing_points_source).toBe("placeholder");

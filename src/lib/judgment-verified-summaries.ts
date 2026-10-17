@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { isLegalrefJudgmentSourceUrl } from "./legal-event-source-url";
+import { judgmentCaseRefKey } from "./judgment-case-ref";
 import { outcomeHintSchema } from "./outcome-hint";
 
 const legalrefSourceUrlSchema = z
@@ -44,7 +45,7 @@ export type VerifiedSummaryRow = {
 };
 
 export function normCaseRefKey(caseRef: string): string {
-  return caseRef.replace(/\s+/g, "").toUpperCase();
+  return judgmentCaseRefKey(caseRef);
 }
 
 export function sortVerifiedPoints(points: VerifiedSummaryPoint[]): VerifiedSummaryPoint[] {

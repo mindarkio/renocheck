@@ -7,13 +7,22 @@ import {
 } from "./judgment-hearing-summary";
 import { brNormalizedFromSeedField } from "./normalize-br";
 import type { HearingPointsSource } from "./legal-event-schema";
+import {
+  judgmentCaseRefKey,
+  normalizeJudgmentCaseRefForStorage,
+} from "./judgment-case-ref";
+
+export {
+  judgmentCaseRefKey,
+  judgmentCaseRefStorageDrift,
+  normalizeJudgmentCaseRefForStorage,
+} from "./judgment-case-ref";
 
 export function judgmentImportRowKey(
   sourceCatalogId: string,
   caseRef: string,
 ): string {
-  const ref = caseRef.replace(/\s+/g, "").toUpperCase();
-  return `${sourceCatalogId}|${ref}`;
+  return `${sourceCatalogId}|${judgmentCaseRefKey(caseRef)}`;
 }
 
 export type JudgmentSeedRow = {
@@ -52,7 +61,7 @@ const PRESERVED_HEARING_SOURCES = new Set(["ai_verified", "manual"]);
 
 export function judgmentSeedContentHash(row: JudgmentSeedRow): string {
   const payload = JSON.stringify({
-    caseRef: row.caseRef,
+    caseRef: normalizeJudgmentCaseRefForStorage(row.caseRef),
     sourceUrl: row.sourceUrl,
     eventDate: row.eventDate,
     companyNameNormalized: row.companyNameNormalized,
@@ -78,11 +87,12 @@ export function buildJudgmentImportDbRow(
   const br = brNormalizedFromSeedField(row.brNormalized);
   const source_url = assertLegalrefJudgmentSourceUrl(row.sourceUrl);
   const seedPoints = row.hearingKeyPointsZh ?? [];
+  const case_ref = normalizeJudgmentCaseRefForStorage(row.caseRef);
 
   const base = {
     source_type: row.sourceType ?? "court_judgment",
     source_catalog_id: row.sourceCatalogId,
-    case_ref: row.caseRef,
+    case_ref,
     court: row.court,
     event_date: row.eventDate,
     party_names: row.partyNames ?? [row.companyNameNormalized],

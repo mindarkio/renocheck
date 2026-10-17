@@ -46,7 +46,22 @@ pnpm db:link
 
 **治理：** 任何新 migration 須先經 **Aaron** 批准再 `db push`／套用 remote（`hearing_key_point_quotes_zh` 2026-10-17 為事後補批）。
 
-**Track 1 判詞欄位（remote 版本號）：** `20261017101908`（`hearing_points_source`）、`20261017110920`（`hearing_key_point_quotes_zh`）、`20261017114049`（`(source_catalog_id, case_ref)` unique + `ai_verified` 降級 trigger）。本地 migration 檔名與 remote history 對齊。
+**Track 1 判詞欄位（remote 版本號）：** `20261017101908`（`hearing_points_source`）、`20261017110920`（`hearing_key_point_quotes_zh`）、`20261017114049`（`(source_catalog_id, case_ref)` unique + `ai_verified` 降級 trigger）、`20261017145500`（trigger function `set search_path = ''`）。`pnpm supabase migration list --linked` 應 local = remote。
+
+### `hearing_points_source = ai_verified` 降級（runbook）
+
+Trigger `official_legal_events_hearing_source_downgrade` 會 **拒絕** 將已 `ai_verified` 嘅行改做 `placeholder`／`manual`／其他值（exception：`hearing_points_source_downgrade_blocked`）。
+
+**正常操作：** 用 `pnpm import:judgment-verified-summaries --apply` 或人手 SQL **只升級** 至 `ai_verified`；`import:judgments` 對現有 `ai_verified` 行會保留 hearing 欄位。
+
+**若必須撤回核對（罕有，需 Aaron／法務 sign-off）：**
+
+1. 記低 `case_ref` 與原因（audit trail）。
+2. 暫停寫入：唔跑 `import:judgments` 針對該案。
+3. 在 Dashboard SQL（service role）**先** `drop trigger official_legal_events_hearing_source_downgrade on public.official_legal_events;`，再 `update` 目標行（例如改 `hearing_points_source`、要點／引文），最後 `create trigger … execute function public.block_official_legal_events_hearing_source_downgrade();`（定義同 migration `20261017114049`／`20261017145500`）。
+4. 勿用 `migration repair` 掩蓋；若改 function 定義，走新 migration + `db:push`。
+
+**`case_ref` 正規化：** 入庫前統一 `normalizeJudgmentCaseRefForStorage`（與 `judgmentImportRowKey` 共用 `judgmentCaseRefKey`）。`pnpm import:judgments` **必須** `--file=…`；開跑前會 audit remote 所有 allowlist 行，若 `case_ref` 與正規化結果唔同會 **exit 1** 並列出 drift。
 
 已套用（remote）：
 
@@ -82,7 +97,7 @@ pnpm import:mwc
 **Remote `official_legal_events`（cloud）：** 僅保留 D2 keep **`legalref-lrs-ju`（70 行）**。曾誤入嘅合成測試 catalog `judiciary-lrs-fixture`（`DCCJ 9001/2020`、`HCSA 42/2019`）已自 remote 刪除；唔會再經匯入腳本寫回。
 
 1. `pnpm db:push`（含 `official_legal_events` migration）。
-2. **Production / remote 匯入：** 用 `scripts/fixtures/judgments-seed.local.json`（gitignore）或已核准嘅 `legalref-lrs-ju` seed；`pnpm import:judgments` 會 **拒絕** `judiciary-lrs-fixture`（見 `src/lib/judgment-import-catalog-guard.ts`）。
+2. **Production / remote 匯入：** 用 `scripts/fixtures/judgments-seed.local.json`（gitignore）；`sourceCatalogId` 必須屬 **`OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ALLOWLIST`**（現僅 `legalref-lrs-ju`，與 `lookupLegalJudgments` 共用，見 `src/lib/legal-event-catalog-allowlist.ts`）。`import:judgments`、`d2:import-keep`、`prune:*`、`purge:*`、`mwc:bilingual-legal-match` 均經 `judgment-import-catalog-guard`。
 3. **Fixture only：** [`scripts/fixtures/judgments-seed.json`](../scripts/fixtures/judgments-seed.json) 內 `judiciary-lrs-fixture` 兩行僅供 **單元測試／本地 fixture**，不可 `--file` 指向 cloud。
 4. 來源說明見 [`docs/sourcedata/judgments-sources.md`](sourcedata/judgments-sources.md)。
 5. 執行：

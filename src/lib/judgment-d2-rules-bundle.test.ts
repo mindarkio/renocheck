@@ -10,6 +10,10 @@ describe("listD2RulesBundleFiles", () => {
     expect(files).toContain("src/lib/judgment-d2-gates.ts");
     expect(files).toContain("src/lib/judgment-d2-manual-triage.ts");
     expect(files).toContain("scripts/config/court-from-case-ref.json");
+    expect(files).toContain("src/lib/entity-report-context.ts");
+    expect(files).toContain("src/lib/mwc-company-search-terms.ts");
+    expect(files).toContain("src/lib/mwc-contractors-memory-index.ts");
+    expect(files).toContain("src/lib/court-from-case-ref.ts");
     expect(files.some((f) => f.endsWith(".test.ts"))).toBe(false);
   });
 

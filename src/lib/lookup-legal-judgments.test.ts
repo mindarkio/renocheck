@@ -56,6 +56,7 @@ function mockSupabase(options: {
 const baseRow = {
   id: "id-1",
   source_type: "court_judgment",
+  source_catalog_id: "legalref-lrs-ju",
   court: "District Court",
   hearing_key_points_zh: ["要點 A"],
   source_url: "https://legalref.judiciary.hk/lrs/common/ju/ju_frame.jsp?DIS=1&TP=JU",
@@ -121,6 +122,28 @@ describe("lookupLegalJudgments", () => {
     });
     expect(result.events).toHaveLength(1);
     expect(result.events[0]?.caseRef).toBe("DCCJ 1/1999");
+  });
+
+  it("drops rows with non-allowlisted source_catalog_id", async () => {
+    const supabase = mockSupabase({
+      meta: [{ imported_at: "2026-10-16T08:00:00.000Z" }],
+      brRows: [
+        {
+          ...baseRow,
+          source_catalog_id: "judiciary-lrs-fixture",
+          br_normalized: "11112222",
+          company_name_normalized: "Fixture 公司",
+        },
+      ],
+      matchRows: [],
+      fullRows: [],
+    });
+
+    const result = await lookupLegalJudgments(supabase, {
+      searchLabelUsed: "x",
+      br: "11112222",
+    });
+    expect(result.events).toEqual([]);
   });
 
   it("drops rows with non-legalref source_url", async () => {

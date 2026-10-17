@@ -11,3 +11,4 @@ Pair each file with the matching migration under `supabase/migrations/`. Run on 
 | `20261017101908_official_legal_events_hearing_points_source.down.sql` | `20261017101908_official_legal_events_hearing_points_source.sql` |
 | `20261017110920_official_legal_events_hearing_key_point_quotes_zh.down.sql` | `20261017110920_official_legal_events_hearing_key_point_quotes_zh.sql` |
 | `20261017114049_official_legal_events_catalog_case_ref_and_hearing_guard.down.sql` | `20261017114049_official_legal_events_catalog_case_ref_and_hearing_guard.sql` |
+| `20261017145500_official_legal_events_hearing_guard_search_path.down.sql` | `20261017145500_official_legal_events_hearing_guard_search_path.sql` |

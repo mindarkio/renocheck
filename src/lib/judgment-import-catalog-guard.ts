@@ -1,38 +1,60 @@
-/**
- * Catalog IDs allowed only in repo fixtures / unit tests — never upserted to cloud remote.
- * See docs/supabase.md §司法判詞匯入.
- */
-export const REMOTE_BLOCKED_JUDGMENT_CATALOG_IDS = [
-  "judiciary-lrs-fixture",
-] as const;
+import {
+  DEFAULT_OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ID,
+  isOfficialLegalEventSourceCatalogAllowed,
+  OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ALLOWLIST,
+  officialLegalEventSourceCatalogAllowlistValues,
+} from "./legal-event-catalog-allowlist";
 
-export type RemoteBlockedJudgmentCatalogId =
-  (typeof REMOTE_BLOCKED_JUDGMENT_CATALOG_IDS)[number];
+export {
+  DEFAULT_OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ID,
+  OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ALLOWLIST,
+  isOfficialLegalEventSourceCatalogAllowed,
+  officialLegalEventSourceCatalogAllowlistValues,
+};
 
-export function isRemoteBlockedJudgmentCatalog(
-  sourceCatalogId: string,
-): boolean {
-  return (REMOTE_BLOCKED_JUDGMENT_CATALOG_IDS as readonly string[]).includes(
-    sourceCatalogId,
-  );
-}
-
-export function findRemoteBlockedJudgmentSeedRows<
-  T extends { sourceCatalogId: string; caseRef: string },
->(rows: T[]): T[] {
-  return rows.filter((r) => isRemoteBlockedJudgmentCatalog(r.sourceCatalogId));
-}
-
-/** Throws if any seed row targets a fixture-only catalog (cloud import scripts). */
+/** Throws if any seed row uses a catalog outside the lookup/import allowlist. */
 export function assertJudgmentSeedAllowedForRemoteImport<
   T extends { sourceCatalogId: string; caseRef: string },
 >(rows: T[]): void {
-  const blocked = findRemoteBlockedJudgmentSeedRows(rows);
-  if (blocked.length === 0) return;
-  const refs = blocked.map((r) => `${r.sourceCatalogId}:${r.caseRef}`);
-  throw new Error(
-    `Judgment import blocked for fixture-only catalog(s) on remote: ${refs.join(
-      ", ",
-    )}. Use judgments-seed.json in tests only; production seed must use legalref-lrs-ju (or other approved catalogs).`,
+  const disallowed = rows.filter(
+    (r) => !isOfficialLegalEventSourceCatalogAllowed(r.sourceCatalogId),
   );
+  if (disallowed.length === 0) return;
+  const refs = disallowed.map((r) => `${r.sourceCatalogId}:${r.caseRef}`);
+  const allowed = OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ALLOWLIST.join(", ");
+  throw new Error(
+    `Judgment seed catalog not allowlisted for remote: ${refs.join(
+      ", ",
+    )}. Allowed: ${allowed}. Fixture-only rows stay in judgments-seed.json for unit tests.`,
+  );
+}
+
+export function assertOfficialLegalEventCatalogAllowed(
+  sourceCatalogId: string,
+  context?: string,
+): void {
+  if (isOfficialLegalEventSourceCatalogAllowed(sourceCatalogId)) return;
+  const allowed = OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ALLOWLIST.join(", ");
+  const prefix = context ? `${context}: ` : "";
+  throw new Error(
+    `${prefix}source_catalog_id "${sourceCatalogId}" is not allowlisted (allowed: ${allowed}).`,
+  );
+}
+
+/** After SELECT — refuse deletes/updates on non-allowlisted catalogs. */
+export function assertOfficialLegalEventRowsCatalogAllowed(
+  rows: Array<{ source_catalog_id?: string | null; case_ref?: string }>,
+): void {
+  for (const row of rows) {
+    const catalog = row.source_catalog_id;
+    if (!catalog) {
+      throw new Error(
+        `official_legal_events row missing source_catalog_id (case_ref=${row.case_ref ?? "?"})`,
+      );
+    }
+    assertOfficialLegalEventCatalogAllowed(
+      catalog,
+      row.case_ref ? `case_ref ${row.case_ref}` : undefined,
+    );
+  }
 }

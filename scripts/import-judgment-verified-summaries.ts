@@ -16,12 +16,13 @@ import {
   type VerifiedSummaryRow,
   verifiedRowToDbUpdate,
 } from "../src/lib/judgment-verified-summaries";
+import { DEFAULT_OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ID } from "../src/lib/judgment-import-catalog-guard";
 
 const DEFAULT_FILE = resolve(
   process.cwd(),
   "scripts/fixtures/judgment-summaries-verified.json",
 );
-const CATALOG_ID = "legalref-lrs-ju";
+const CATALOG_ID = DEFAULT_OFFICIAL_LEGAL_EVENT_SOURCE_CATALOG_ID;
 
 const SELECT_FIELDS =
   "id, case_ref, hearing_key_points_zh, hearing_key_point_quotes_zh, outcome_hint, hearing_points_source, review_status";

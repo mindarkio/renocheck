@@ -13,6 +13,10 @@ import {
   legalRowMatchesSearchLabel,
 } from "./judgment-lookup-match";
 import { soleProprietorDefendantDisplayZh } from "./judgment-sole-prop-import";
+import {
+  isOfficialLegalEventSourceCatalogAllowed,
+  officialLegalEventSourceCatalogAllowlistValues,
+} from "./legal-event-catalog-allowlist";
 import { isLegalrefJudgmentSourceUrl } from "./legal-event-source-url";
 import { normalizeBrDigits } from "./normalize-br";
 import { normalizeIsoDatetimeForSchema } from "./normalize-iso-datetime";
@@ -20,6 +24,7 @@ import { normalizeIsoDatetimeForSchema } from "./normalize-iso-datetime";
 export type LegalJudgmentRow = {
   id?: string;
   source_type: string;
+  source_catalog_id?: string | null;
   case_ref: string;
   court: string;
   event_date: string;
@@ -57,7 +62,9 @@ const FETCH_PAGE_SIZE = 500;
 const MATCH_SELECT =
   "id, case_ref, company_name_normalized, lookup_aliases, topic_tags";
 const FULL_SELECT =
-  "id, source_type, case_ref, court, event_date, party_names, hearing_key_points_zh, hearing_key_point_quotes_zh, hearing_points_source, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
+  "id, source_type, source_catalog_id, case_ref, court, event_date, party_names, hearing_key_points_zh, hearing_key_point_quotes_zh, hearing_points_source, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
+
+const LOOKUP_CATALOG_IDS = officialLegalEventSourceCatalogAllowlistValues();
 
 function parseEnum<T extends string>(
   schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
@@ -80,6 +87,12 @@ function rowToEvent(
   row: LegalJudgmentRow,
   matchReasonZh: string,
 ): OfficialLegalEvent | null {
+  if (
+    row.source_catalog_id &&
+    !isOfficialLegalEventSourceCatalogAllowed(row.source_catalog_id)
+  ) {
+    return null;
+  }
   if (!isLegalrefJudgmentSourceUrl(row.source_url)) return null;
 
   const judgmentCategory = parseEnum(judgmentCategorySchema, row.judgment_category);
@@ -197,6 +210,7 @@ async function fetchMatchRows(
     const { data, error } = await supabase
       .from("official_legal_events")
       .select(MATCH_SELECT)
+      .in("source_catalog_id", LOOKUP_CATALOG_IDS)
       .eq("renovation_relevant", true)
       .order("event_date", { ascending: false })
       .order("id", { ascending: false })
@@ -230,6 +244,7 @@ export async function lookupLegalJudgments(
   const { data: metaRows, error: metaError } = await supabase
     .from("official_legal_events")
     .select("imported_at")
+    .in("source_catalog_id", LOOKUP_CATALOG_IDS)
     .eq("renovation_relevant", true)
     .order("imported_at", { ascending: false })
     .limit(1);
@@ -249,6 +264,7 @@ export async function lookupLegalJudgments(
     const { data, error: brError } = await supabase
       .from("official_legal_events")
       .select(FULL_SELECT)
+      .in("source_catalog_id", LOOKUP_CATALOG_IDS)
       .eq("br_normalized", br)
       .eq("renovation_relevant", true)
       .order("event_date", { ascending: false })
