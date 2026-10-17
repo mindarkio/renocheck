@@ -3,6 +3,8 @@
  *
  *   pnpm judgment:summary-dryrun
  *   pnpm judgment:summary-dryrun --limit=20 --file=scripts/fixtures/judgments-seed.local.json
+ *   pnpm judgment:summary-dryrun --case-ref="DCCJ 5986/2008"
+ *   pnpm judgment:summary-dryrun --limit=200  # all pending in seed
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
@@ -14,6 +16,7 @@ import {
   draftJudgmentSummaryWithRetry,
   type JudgmentSummaryDraftPoint,
 } from "../src/lib/judgment-summary-draft";
+import { applySeedOutcomeOverride } from "../src/lib/judgment-seed-outcome-overrides";
 import {
   hearingSummaryPendingForEvent,
   isHearingSummaryPlaceholder,
@@ -83,6 +86,19 @@ function intArg(name: string, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function stringArg(name: string): string | undefined {
+  const a = process.argv.find((x) => x.startsWith(`--${name}=`));
+  if (!a) return undefined;
+  const raw = a.slice(name.length + 3);
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"))
+  ) {
+    return raw.slice(1, -1);
+  }
+  return raw;
+}
+
 function csvEscape(value: string): string {
   if (/[",\n\r]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`;
@@ -138,13 +154,28 @@ async function main() {
     // optional
   }
 
-  const pending = seed.filter((r) =>
-    hearingSummaryPendingForEvent(
-      r.hearingKeyPointsZh,
-      r.reviewStatus,
-    ),
+  const caseRefFilter = stringArg("case-ref");
+  const allSeed = process.argv.includes("--all-seed");
+  let pool = seed;
+  if (caseRefFilter) {
+    const key = normRef(caseRefFilter);
+    pool = seed.filter((r) => normRef(r.caseRef) === key);
+    if (pool.length === 0) {
+      throw new Error(`case_ref_not_in_seed: ${caseRefFilter}`);
+    }
+  } else if (!allSeed) {
+    pool = seed.filter((r) =>
+      hearingSummaryPendingForEvent(
+        r.hearingKeyPointsZh,
+        r.reviewStatus,
+      ),
+    );
+  }
+  const batch = pool.slice(
+    0,
+    caseRefFilter || allSeed ? pool.length : limit,
   );
-  const batch = pending.slice(0, limit);
+  const forceLlm = Boolean(caseRefFilter) || allSeed;
 
   const headers = [
     "caseRef",
@@ -173,7 +204,10 @@ async function main() {
       keep?.defendantLabel?.trim() || row.companyNameNormalized;
     const partiesLine = partiesLineForRow(row, keepByRef);
 
-    if (!hearingSummaryPendingForEvent(row.hearingKeyPointsZh, row.reviewStatus)) {
+    if (
+      !forceLlm &&
+      !hearingSummaryPendingForEvent(row.hearingKeyPointsZh, row.reviewStatus)
+    ) {
       for (const { outcomeHint, point } of existingPointsToRows(
         row,
         sourceUrl,
@@ -200,7 +234,10 @@ async function main() {
         partiesLine,
         sourcePlainText: text,
       });
-      const outcome = draft.outcomeHint;
+      const outcome = applySeedOutcomeOverride(
+        row.caseRef,
+        draft.outcomeHint,
+      );
       for (const point of draft.points) {
         lines.push(
           [

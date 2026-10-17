@@ -143,6 +143,21 @@ flowchart LR
 
 **與 `search_cache`：** 法律庫更新 **唔** 自動令舊 fingerprint 失效（同 MWC 更新）；用戶要最新法律區可 `refresh` 或等 cache TTL。報告應顯示法律紀錄 **摘錄截至** 時間。
 
+#### Phase 4 — 公司可靠度來源
+
+**[Certain] v1.0 GA 唔包含** 下列來源嘅自動化匯入；本階段僅 **產品／合規文件** 定方向，實作須 **新 DEC** 或 roadmap minor 版本。
+
+**定位：** Track 1 延伸為 **「官方紀錄查核」**，**唔**係對承建商嘅綜合評分。UI 必須說明：**在本次已匯入／已對照嘅公開紀錄中** 未見相關項目，**唔**代表該公司「一定可靠」或「從無問題」。
+
+| 來源 | Phase 4 建議 | 備註 |
+|------|----------------|------|
+| **屋宇署註冊承建商名冊** | 與現有 **MWC** 名冊並用，查有冇牌 | 待 PSI／import 路線與來源表 |
+| **公司註冊處 ICRIS** | **4a：** 深度連結，用戶自行查冊；**4b：** 處長 **書面同意** 後方做自動化 | 條款限制轉售產品；查冊須聲明用途 + PDPO |
+| **消委會** | 公開譴責、新聞稿（量少、逐單準） | 人手／半自動 manifest + 審核 |
+| **新聞、Google 評論** | **最後**；若展示須標 **可靠度較低** | 唔混入 Track 1 official SSOT |
+
+詳細執行筆記：[`track1-phase4-company-reliability-sources.md`](../plans/track1-phase4-company-reliability-sources.md)。
+
 ### 技術骨架（實作指引，非本 DEC 強制表名）
 
 - 新 migration：`official_legal_events`（或等價）— `source_type`, `source_catalog_id`, `case_ref`, `court`, `event_date`, `party_names`, `hearing_key_points_zh`（jsonb `string[]`）, `source_url`, `source_published_at`, `br_normalized`, `company_name_normalized`, `topic_tags`（或 `renovation_relevant` bool）, `imported_at`, `source_content_hash`（去重）。
@@ -247,6 +262,7 @@ flowchart LR
 |------|------|
 | 2026-10-16 | **原告 pass：** 入庫／lookup／calibration 僅 **被告**；覆蓋目標 = 盡量 MWC 被告案（非 exhaustive） |
 | 2026-10-16 | **Phase 3 Daily Cause List：** v1.0 後 ingestion；先 archive 後日更 cron；小額錢債主渠道（見上文 Phase 3 小節） |
+| 2026-10-17 | **Phase 4 公司可靠度來源：** 官方查核定位、ICRIS 連結先行、消委會／新聞優先序 — 文件 only（見 Phase 4 小節） |
 
 ## Consequences
 

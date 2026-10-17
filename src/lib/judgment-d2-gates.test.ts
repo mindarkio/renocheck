@@ -75,6 +75,35 @@ describe("runD2Gates", () => {
     expect(r.matchConfidence).toBe("high");
   });
 
+  it("drops LDBM when OC applicant and defendant lacks engineering trade", () => {
+    const r = runD2Gates({
+      row: baseRow(
+        "北角建業大廈業主立案法團 對 PROFIT WISDOM INVESTMENT LTD 及另一人",
+        "LDBM 211/2014",
+      ),
+      skipPrefixes: skip,
+      priorityPrefixes: priority,
+      mwcLeft: null,
+      mwcRight: null,
+    });
+    expect(r.disposition).toBe("drop");
+    expect(r.reasons).toContain("ldbm_oc_applicant_defendant_not_contractor");
+  });
+
+  it("keeps LDBM when OC applicant and defendant is engineering contractor", () => {
+    const r = runD2Gates({
+      row: baseRow(
+        "德昌大廈業主立案法團(炮台街) 訴 成龍工程有限公司",
+        "LDBM 6/1998",
+      ),
+      skipPrefixes: skip,
+      priorityPrefixes: priority,
+      mwcLeft: null,
+      mwcRight: null,
+    });
+    expect(r.disposition).toBe("keep");
+  });
+
   it("keeps CACV 131/2005 IOC v contractor (owners_corporation_vs_contractor)", () => {
     const r = runD2Gates({
       row: baseRow(

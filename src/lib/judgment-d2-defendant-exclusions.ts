@@ -1,4 +1,19 @@
 import { caseRefPrefix } from "./judgment-d2-parties";
+
+/**
+ * LDBM：申請人為業主立案法團、被告非裝修／工程承建商（含業主／投資／物業方）→ drop。
+ * 被告商號含工程字眼則仍可 keep（例：LDBM 6/1998 成龍工程有限公司）。
+ */
+export function ldbmOcApplicantNonContractorDropReason(input: {
+  caseRef: string;
+  plaintiffLabel: string;
+  defendantLabel: string;
+}): string | null {
+  if (caseRefPrefix(input.caseRef) !== "LDBM") return null;
+  if (!plaintiffIsOwnersCorporation(input.plaintiffLabel)) return null;
+  if (defendantHasEngineeringKeyword(input.defendantLabel)) return null;
+  return "ldbm_oc_applicant_defendant_not_contractor";
+}
 import { defendantHasEngineeringKeyword } from "./judgment-d2-case-policy";
 import type { DefendantEntityKind } from "./judgment-d2-entity";
 

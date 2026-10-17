@@ -18,6 +18,7 @@ import {
   HEARING_SUMMARY_AUTO_PLACEHOLDER_ZH,
   isHearingSummaryPlaceholder,
 } from "../src/lib/judgment-hearing-summary";
+import { seedOutcomeOverride } from "../src/lib/judgment-seed-outcome-overrides";
 
 const KEEP_PATH = resolve(
   process.cwd(),
@@ -104,7 +105,10 @@ function seedRowFromKeep(
     ...(aliases.length ? { lookupAliases: aliases } : {}),
     judgmentCategory: "renovation_engineering_civil",
     partyRole: "defendant",
-    outcomeHint: "unclear",
+    outcomeHint:
+      seedOutcomeOverride(caseRef) ??
+      (typeof prior?.outcomeHint === "string" ? prior.outcomeHint : undefined) ??
+      "unclear",
     procedureStage: "unknown",
     hearingKeyPointsZh: priorVerified
       ? priorPoints

@@ -42,6 +42,7 @@ const SYSTEM = `你是香港司法公開紀錄的摘要助手（Renocheck Track 
 每個 keyPointZh ≤120 字；sourceQuoteZh 必須為摘錄中的原文連續片段（可含英文），勿改寫。
 outcomeHint（以裝修公司／被告角度）：defendant_liable | defendant_not_liable | partial | procedural_only | unclear。
 反申索成立、申索被駁回、被告勝訴 → defendant_not_liable。程序性裁決（上訴許可等）→ procedural_only。
+若裁決僅為拒絕上訴許可／不上訴法庭，outcomeHint 須跟原審對被告之結果（例：原審判被告敗訴 → defendant_liable），唔好僅因屬上訴程序而標 procedural_only。
 摘要內金額或數字必須在對應 sourceQuoteZh 原文出現；否則勿寫該數字。`;
 
 export async function draftJudgmentSummaryFromPlainText(params: {

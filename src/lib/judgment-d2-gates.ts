@@ -6,6 +6,7 @@ import {
 import { autoImportEligibility, defendantHasEngineeringKeyword } from "./judgment-d2-case-policy";
 import {
   defendantRenovationScopeDropReason,
+  ldbmOcApplicantNonContractorDropReason,
   plaintiffIsOwnersCorporation,
 } from "./judgment-d2-defendant-exclusions";
 import {
@@ -377,6 +378,23 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
     return {
       disposition: "drop",
       reasons: [...reasons, "weak_renovation_signal"],
+      defendantLabel,
+      plaintiffLabel,
+      mwcMatch,
+      renovationRelevantSuggested,
+      defendantEntityKind: entityKind,
+    };
+  }
+
+  const ldbmOcDrop = ldbmOcApplicantNonContractorDropReason({
+    caseRef: row.caseRef,
+    plaintiffLabel,
+    defendantLabel,
+  });
+  if (ldbmOcDrop) {
+    return {
+      disposition: "drop",
+      reasons: [...reasons, ldbmOcDrop],
       defendantLabel,
       plaintiffLabel,
       mwcMatch,

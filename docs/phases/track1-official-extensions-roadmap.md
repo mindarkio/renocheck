@@ -27,6 +27,7 @@
 | **v1.0.0** | 司法判詞（結構化匯入 + lookup） | [DEC-0012](../decision-log/DEC-0012-track1-court-judgments-v1-0-0.md) | Pipeline SSOT gate；schema + import + UI 官方法律區 |
 | **v1.1.0** | 海關檢控／相關政府公佈 | DEC-0013（待寫） | v1.0.0 表結構／`source_type` 穩定 |
 | **v1.2.0** | 公司清盤公告 | DEC-0014（待寫） | v1.1.0 運維模式（import、監控）成熟 |
+| **Phase 4（文件）** | 公司可靠度來源（MWC+承建商名冊、ICRIS 連結、消委會、新聞最後） | 待 DEC | v1.0 判詞穩定；見 DEC-0012 Phase 4、[track1-phase4-company-reliability-sources.md](../plans/track1-phase4-company-reliability-sources.md) |
 
 ```mermaid
 flowchart TB
