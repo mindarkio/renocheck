@@ -8,13 +8,12 @@ import { createClient } from "@supabase/supabase-js";
 import { parse } from "csv-parse/sync";
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+import { assertCacheFileFresh } from "../src/lib/cause-list/cache-ttl";
+import { BD_REGISTER_CSV_PATH } from "../src/lib/bd-register/paths";
 import { parseBdRegistryExpiryDate } from "../src/lib/mwc-registry-display";
 import { normalizeHongKongPhone } from "../src/lib/normalize-phone";
 
-const CSV_PATH = resolve(
-  process.cwd(),
-  "docs/sourcedata/registers_full_list.csv",
-);
+const CSV_PATH = BD_REGISTER_CSV_PATH;
 
 const MWC_TYPES = new Set(["MWC", "MWC(W)"]);
 
@@ -109,6 +108,7 @@ async function main() {
     process.exit(1);
   }
 
+  await assertCacheFileFresh(CSV_PATH, "BD registers CSV (run pnpm bd-register:fetch)");
   const csvText = readFileSync(CSV_PATH, "utf8");
   const allRows = parse(csvText, {
     columns: true,
