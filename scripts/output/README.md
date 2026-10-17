@@ -9,5 +9,6 @@
 | `lrs-fetch-manifest.json` | 同上 |
 | `judgment-candidates.json` | `pnpm build:judgment-candidates` |
 | `judgment-summary-dryrun.csv` | `pnpm judgment:summary-dryrun`（預設 20 宗；唔寫 DB） |
+| `cause-list-backfill.csv` / `cause-list-backfill-summary.json` | `pnpm cause-list:backfill`（法人被告／答辯人；唔寫 DB） |
 
 格式範例（在 repo）：[`../fixtures/judgment-source-urls.example.json`](../fixtures/judgment-source-urls.example.json)

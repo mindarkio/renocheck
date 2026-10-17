@@ -59,6 +59,7 @@
     "mwc:spot-check": "tsx scripts/mwc-spot-check.ts",
     "cause-list:verify-samples": "tsx scripts/cause-list/verify-real-samples.ts",
     "cause-list:export-mwc": "tsx scripts/cause-list/export-mwc-verify-snapshot.ts",
+    "cause-list:backfill": "tsx scripts/cause-list/backfill.ts",
     "bd-register:fetch": "tsx scripts/bd-register/fetch.ts",
     "bd-register:dry-run": "tsx scripts/bd-register/dry-run-mwc-compare.ts"
   },

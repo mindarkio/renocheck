@@ -129,4 +129,69 @@ describe("cause-list matcher (exact)", () => {
     expect(yesMatch[0].companyId).toBe("fixture-mega-eng");
     expect(yesMatch[0].party.formerlyTradedAs).toBe(true);
   });
+
+  it("does not treat a Latin prefix of a Chinese corporate name as a strict key", () => {
+    const jia = [{ id: "synth-jia", namesEn: [] as string[], namesZh: ["ABC合成甲有限公司"] }];
+    const yi = matchCauseListCases(
+      [smtDefendantCase("SCTC 11/2099", "ABC合成乙有限公司")],
+      jia,
+    );
+    expect(yi[0]?.confidence).toBe("C");
+    expect(yi[0]?.reviewOnly).toBe(true);
+
+    const hk = matchCauseListCases(
+      [smtDefendantCase("SCTC 12/2099", "288合成甲（香港）有限公司")],
+      [{ id: "synth-288", namesEn: [], namesZh: ["288合成甲有限公司"] }],
+    );
+    expect(hk[0]?.confidence).toBe("C");
+    expect(hk[0]?.reviewOnly).toBe(true);
+
+    const exact = matchCauseListCases(
+      [smtDefendantCase("SCTC 13/2099", "ABC合成甲有限公司")],
+      jia,
+    );
+    expect(exact[0]?.confidence).toBe("A");
+    expect(exact[0]?.reviewOnly).toBe(false);
+
+    const bilingual = matchCauseListCases(
+      [smtDefendantCase("SCTC 14/2099", "SYNTH ALPHA LIMITED 合成甲有限公司")],
+      [{ id: "synth-bi", namesEn: ["SYNTH ALPHA LIMITED"], namesZh: ["合成甲有限公司"] }],
+    );
+    expect(bilingual[0]?.confidence).toBe("A");
+
+    const zhOnly = matchCauseListCases(
+      [smtDefendantCase("SCTC 15/2099", "SYNTH ALPHA LIMITED 合成甲有限公司")],
+      [{ id: "synth-zh", namesEn: [], namesZh: ["合成甲有限公司"] }],
+    );
+    expect(zhOnly[0]?.confidence).toBe("A");
+  });
+
+  it("treats a bracketed bilingual name as a corporate pair", () => {
+    const matches = matchCauseListCases(
+      [smtDefendantCase("SCTC 17/2099", "SYNTH ALPHA LIMITED ( 合成甲有限公司 )")],
+      [
+        {
+          id: "synth-hk",
+          namesEn: ["SYNTH ALPHA (HK) LIMITED"],
+          namesZh: ["合成甲（香港）有限公司"],
+        },
+      ],
+    );
+    expect(matches[0]?.confidence).toBe("C");
+    expect(matches[0]?.reviewOnly).toBe(true);
+  });
+
+  it("downgrades a strict key shared by two companies to review-only C", () => {
+    const matches = matchCauseListCases(
+      [smtDefendantCase("SCTC 16/2099", "合成甲有限公司")],
+      [
+        { id: "synth-1", namesEn: [], namesZh: ["合成甲有限公司"] },
+        { id: "synth-2", namesEn: [], namesZh: ["合成甲有限公司"] },
+      ],
+    );
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.confidence).toBe("C");
+    expect(matches[0]?.reviewOnly).toBe(true);
+    expect(matches[0]?.ambiguous).toBe(true);
+  });
 });

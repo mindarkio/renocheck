@@ -63,4 +63,6 @@ export type CauseListMatch = {
   party: CauseListMatchParty;
   matchedOn: string;
   reviewOnly: boolean;
+  /** Strict key is shared by more than one registry id. */
+  ambiguous?: boolean;
 };

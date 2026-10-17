@@ -40,6 +40,7 @@ Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm d
 | `pnpm tsx scripts/cause-list/dry-run-report.ts --from DDMMYYYY --to DDMMYYYY` | Phase 3a：解析 cache + fixture 公司名，輸出 A/B/C 摘要 CSV 至 `scripts/output/` |
 | `pnpm cause-list:export-mwc` | Phase 3a（本地，可選）：MWC 快照供 `dry-run-report`；`.cache/cause-list/mwc-companies-verify.json`（gitignored；勿 commit） |
 | `pnpm cause-list:verify-samples` | Phase 3a（本地）：解析 `~/renocheck-review/samples/view_en_*.html`；只印 rows／kept（裝修相關且含法人被告／答辯人）與案件編號 |
+| `pnpm cause-list:backfill` | Phase 3a（本地）：Wayback CDX 回補 2024-11-01 至今 SMT／DC／CACFI／LANDS；法人被告列寫入 `scripts/output/cause-list-backfill.csv`（可續跑；唔寫 DB）。名冊讀 `.cache/bd-register/`（7 日 TTL，先 `pnpm bd-register:fetch`）；冇名冊就失敗，唔會靜默 unmatched |
 | `pnpm bd-register:fetch` | Phase 4：下載屋宇署名冊 CSV → `.cache/bd-register/`（7 日 TTL） |
 | `pnpm bd-register:dry-run` | Phase 4：`.cache` baseline vs candidate MWC 比對 → `scripts/output/`（見 [bd-register/sources.md](bd-register/sources.md)） |
 

@@ -2,6 +2,7 @@ import { extractMwcBilingualNames } from "../mwc-bilingual-company-names";
 import { isDefendantSideRole, isRenovationRelevantCase } from "./filter";
 import {
   buildCompanyRegistryIndex,
+  corporateBilingualHalves,
   partyLookupTerms,
   type CompanyRegistryIndex,
 } from "./match-registry";
@@ -48,35 +49,65 @@ function bilingualPairMatches(
   return enHit && zhHit;
 }
 
+type PartyHit = {
+  confidence: MatchConfidence;
+  companyId: string;
+  matchedOn: string;
+  ambiguous?: boolean;
+};
+
+function strictIdsHit(ids: string[] | undefined, legalName: string): PartyHit | null {
+  if (!ids || ids.length === 0) return null;
+  if (ids.length > 1) {
+    return {
+      confidence: "C",
+      companyId: ids[0],
+      matchedOn: legalName,
+      ambiguous: true,
+    };
+  }
+  return { confidence: "A", companyId: ids[0], matchedOn: legalName };
+}
+
 function lookupStrictMatch(
   index: CompanyRegistryIndex,
   legalName: string,
-): { confidence: MatchConfidence; companyId: string; matchedOn: string } | null {
+): PartyHit | null {
   for (const term of partyLookupTerms(legalName)) {
     const en = normalizeEnglishCompanyName(term).normStrict;
     const zh = normalizeChineseCompanyName(term).normStrict;
-    const aEn = index.strictEnToId.get(en);
-    if (aEn) return { confidence: "A", companyId: aEn, matchedOn: legalName };
-    const aZh = index.strictZhToId.get(zh);
-    if (aZh) return { confidence: "A", companyId: aZh, matchedOn: legalName };
+    const aEn = strictIdsHit(index.strictEnToId.get(en), legalName);
+    if (aEn) return aEn;
+    const aZh = strictIdsHit(index.strictZhToId.get(zh), legalName);
+    if (aZh) return aZh;
     const bAlias = index.aliasStrictToId.get(en) ?? index.aliasStrictToId.get(zh);
     if (bAlias) return { confidence: "B", companyId: bAlias, matchedOn: legalName };
   }
   return null;
 }
 
+function partyHasBilingualPair(legalName: string): boolean {
+  const bi = splitBilingualCompanyRaw(legalName);
+  if (bi.en && bi.zh) return true;
+  const paren = extractMwcBilingualNames(legalName);
+  return Boolean(paren.en && paren.zh);
+}
+
 function lookupFuzzyMatch(
   index: CompanyRegistryIndex,
   legalName: string,
   companies: CompanyRegistry,
-): { confidence: MatchConfidence; companyId: string; matchedOn: string } | null {
-  const bi = splitBilingualCompanyRaw(legalName);
+): PartyHit | null {
+  const bi = corporateBilingualHalves(legalName);
   const en = normalizeEnglishCompanyName(bi.en ?? legalName);
   const zh = normalizeChineseCompanyName(bi.zh ?? legalName);
 
-  for (let i = 0; i < companies.length; i++) {
-    if (bilingualPairMatches(legalName, companies[i])) {
-      return { confidence: "B", companyId: companies[i].id, matchedOn: legalName };
+  // Same result as scanning every company: a non-bilingual party never pairs.
+  if (partyHasBilingualPair(legalName)) {
+    for (let i = 0; i < companies.length; i++) {
+      if (bilingualPairMatches(legalName, companies[i])) {
+        return { confidence: "B", companyId: companies[i].id, matchedOn: legalName };
+      }
     }
   }
 
@@ -89,20 +120,33 @@ function lookupFuzzyMatch(
     return { confidence: "C", companyId: coreZhHit, matchedOn: legalName };
   }
 
-  for (const [core, id] of index.coreZhToId) {
-    if (cjkEditDistance(zh.normCore, core) <= 1 && zh.normCore.length >= 4) {
-      return { confidence: "C", companyId: id, matchedOn: legalName };
+  // Edit distance ≤ 1 implies |len(a) − len(b)| ≤ 1. Skip the rest.
+  if ([...zh.normCore].length >= 4) {
+    const zhLen = [...zh.normCore].length;
+    for (const [core, id] of index.coreZhToId) {
+      if (Math.abs([...core].length - zhLen) > 1) continue;
+      if (cjkEditDistance(zh.normCore, core) <= 1) {
+        return { confidence: "C", companyId: id, matchedOn: legalName };
+      }
     }
   }
 
   return null;
 }
 
+export function matchCorporateParty(
+  party: ParsedCorporateParty,
+  index: CompanyRegistryIndex,
+  companies: CompanyRegistry,
+): PartyHit | null {
+  return matchPartyToCompany(party, index, companies);
+}
+
 function matchPartyToCompany(
   party: ParsedCorporateParty,
   index: CompanyRegistryIndex,
   companies: CompanyRegistry,
-): { confidence: MatchConfidence; companyId: string; matchedOn: string } | null {
+): PartyHit | null {
   const strict = lookupStrictMatch(index, party.legalName);
   if (strict) return strict;
 
@@ -158,7 +202,8 @@ export function matchCauseListCases(
         case: toMatchCase(caseRow),
         party: toMatchParty(party),
         matchedOn: hit.matchedOn,
-        reviewOnly: hit.confidence === "C",
+        reviewOnly: hit.confidence === "C" || hit.ambiguous === true,
+        ...(hit.ambiguous ? { ambiguous: true } : {}),
       };
 
       const key = dedupeKey(match);

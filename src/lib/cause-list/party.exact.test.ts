@@ -4,6 +4,7 @@ import {
   isCorporateEntityName,
   parseCorporateParties,
   splitPartyBlock,
+  stripNonAliasTrailingBrackets,
 } from "./party";
 
 describe("cause-list party splitter (exact)", () => {
@@ -55,6 +56,75 @@ describe("cause-list party splitter (exact)", () => {
     expect(isCorporateEntityName("Limited Edition Studio")).toBe(false);
     expect(isCorporateEntityName("甲乙有限責任公司")).toBe(true);
     expect(isCorporateEntityName("ABC (HK) LIMITED")).toBe(true);
+  });
+
+  it("keeps a regional suffix and a former-name clause inside one company", () => {
+    const regional = parseCorporateParties(
+      splitPartyBlock("SYNTH ALPHA ENGINEERING CO., (HK) LIMITED", "defendant"),
+    );
+    expect(regional).toHaveLength(1);
+    expect(regional[0]?.legalName).toBe("SYNTH ALPHA ENGINEERING CO., (HK) LIMITED");
+
+    const dotted = parseCorporateParties(
+      splitPartyBlock("SYNTH ALPHA CO., (H.K.) LTD.", "defendant"),
+    );
+    expect(dotted).toHaveLength(1);
+    expect(dotted[0]?.legalName).toBe("SYNTH ALPHA CO., (H.K.) LTD.");
+
+    const former = parseCorporateParties(
+      splitPartyBlock(
+        "SYNTH ALPHA LIMITED, FORMERLY KNOWN AS SYNTH BETA CO., LTD.",
+        "defendant",
+      ),
+    );
+    expect(former).toHaveLength(1);
+    expect(former[0]?.legalName).toBe("SYNTH ALPHA LIMITED");
+    expect(isCorporateEntityName("FORMERLY KNOWN AS SYNTH BETA LIMITED")).toBe(false);
+
+    const person = parseCorporateParties(
+      splitPartyBlock("SYNTH ALPHA LIMITED, FICTIVE PERSON", "defendant"),
+    );
+    expect(person).toHaveLength(1);
+    expect(person[0]?.legalName).toBe("SYNTH ALPHA LIMITED");
+
+    const wrapped = parseCorporateParties(
+      splitPartyBlock("R2: SYNTH EXPRESS\n(HONG KONG) CO., LIMITED", "respondent"),
+    );
+    expect(wrapped).toHaveLength(1);
+    expect(wrapped[0]?.legalName).toBe("SYNTH EXPRESS (HONG KONG) CO., LIMITED");
+  });
+
+  it("drops an unclosed final bracket and does not keep it as an alias", () => {
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (BY ORIGINAL ACTION")).toBe(
+      "SYNTH ALPHA LIMITED",
+    );
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (合成甲有限公司")).toBe(
+      "SYNTH ALPHA LIMITED",
+    );
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (HK)")).toBe(
+      "SYNTH ALPHA LIMITED (HK)",
+    );
+    expect(isCorporateEntityName("SYNTH ALPHA LIMITED (BY ORIGINAL ACTION")).toBe(true);
+    expect(isCorporateEntityName("SYNTH ALPHA (BY ORIGINAL ACTION")).toBe(false);
+    const parties = parseCorporateParties(
+      splitPartyBlock("SYNTH ALPHA LIMITED (BY ORIGINAL ACTION", "defendant"),
+    );
+    expect(parties).toHaveLength(1);
+    expect(stripNonAliasTrailingBrackets(parties[0]?.legalName ?? "")).toBe("SYNTH ALPHA LIMITED");
+  });
+
+  it("keeps one corporate party from a comma-separated list", () => {
+    const parties = splitPartyBlock(
+      "SYNTH ALPHA LIMITED ( 合成甲有限公司 ), FICTIVE PERSON ( 虛構人 )",
+      "defendant",
+    );
+    const corps = parseCorporateParties(parties);
+    expect(corps).toHaveLength(1);
+    expect(corps[0]?.legalName).toBe("SYNTH ALPHA LIMITED ( 合成甲有限公司 )");
+    expect(isCorporateEntityName("合成甲有限公司虛構名字")).toBe(false);
+    const ltd = parseCorporateParties(splitPartyBlock("SYNTH CO., LTD.", "defendant"));
+    expect(ltd).toHaveLength(1);
+    expect(ltd[0]?.legalName).toBe("SYNTH CO., LTD.");
   });
 
   it("drops person without logging", () => {
