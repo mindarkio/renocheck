@@ -36,6 +36,8 @@ Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm d
 | `pnpm import:judgments` | 匯入 `official_legal_events`（見 [supabase.md](supabase.md)） |
 | `pnpm legal:lookup-smoke` | 僅 DB 判詞 lookup（唔食 Serp／LLM） |
 | `pnpm judgment:poc-smoke` | J3 PoC：10 條 local seed lookup + 可選 `--api-base=http://localhost:3000` 三場景 full search |
+| `pnpm tsx scripts/cause-list/fetch-cause-list.ts --date DDMMYYYY --court SMT` | Phase 3a：抓取 DCL HTML 至 `.cache/cause-list/`（3–5s 間隔；可選 `--wayback`） |
+| `pnpm tsx scripts/cause-list/dry-run-report.ts --from DDMMYYYY --to DDMMYYYY` | Phase 3a：解析 cache + fixture 公司名，輸出 A/B/C 摘要 CSV 至 `scripts/output/` |
 
 ## 健康檢查
 
