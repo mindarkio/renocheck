@@ -24,11 +24,22 @@
 
 ## 使用條款與合規重點
 
-1. **用途**：名冊供公眾查閱以符合《建築物條例》；須遵守 [DATA.GOV.HK 使用條款](https://data.gov.hk/tc-help/usage.html) 及相關開放數據牌照（再使用須標示來源）。
-2. **個人資料**：屋宇署搜尋頁註明名冊內個人資料**不得用於其他目的**（*All personal data found therein should not be used for any other purposes*）。Renocheck 離線解析：**不將獨資／個人承建商姓名寫入 log 或比對輸出**，僅保留公司名與註冊編號（見 `parse.ts`）。
+1. **用途**：名冊供公眾查閱以符合《建築物條例》；須遵守 [DATA.GOV.HK 條款及細則](https://data.gov.hk/tc/terms-and-conditions) 及相關開放數據牌照（再使用須標示來源）。
+2. **個人資料**：屋宇署搜尋頁註明名冊內個人資料**不得用於其他目的**（*All personal data found therein should not be used for any other purposes*），僅限《建築物條例》相關用途。Renocheck 離線解析：**不將獨資／個人承建商姓名寫入 log、錯誤訊息或比對輸出**；`MWC(W)` 與非 limited 公司行只保留註冊編號（見 `parse.ts`）。
 3. **非 BR／非工程紀錄**：此 CSV 為屋宇署註冊，**不是**公司註冊處 BR 或 BRAVO 工程紀錄（見 `docs/sourcedata/README.md`）。
+4. **來源標示（再使用）**：報告或對外說明引用名冊摘錄時，須標示：**資料來源：屋宇署，經 DATA.GOV.HK 提供**／**Source: Buildings Department, via DATA.GOV.HK**（並註明擷取日期，見 `.cache/bd-register/registers_full_list.meta.json` 的 `retrieved_at`）。
+5. **`FLAG` 欄**：解析後存為 `flag`；值 `@` 表示名冊上未填寫狀態，輸出時視為未設定。
+6. **HTTP 下載**：`pnpm bd-register:fetch` 使用 `Accept: text/csv`、120s timeout、binary 寫檔；收到非 CSV（例如 403 XML）**唔**寫入 `.cache/`。部分海外出口曾見 **403 AccessDenied**；須在**香港網絡**驗證 PSI URL 可用性（本 repo 未鎖定「已確認可用」日期，以營運 fetch 成功為準）。
+7. **`robots.txt`**：`checkRobotsAllowsFetch` 若 `robots.txt` 本身返非 2xx（例如 403），行為同 cause-list：**視為允許**繼續 fetch，避免因 robots 端點封鎖而誤判。
 
-## 本地副本
+## 本地副本（gitignored）
 
-- 開發用固定副本：`docs/sourcedata/registers_full_list.csv`（供 `pnpm import:mwc` 與無網路測試）。
-- 抓取腳本寫入：`.cache/bd-register/registers_full_list.csv`（gitignored）。
+| 路徑 | 用途 |
+|------|------|
+| `.cache/bd-register/registers_full_list.csv` | `pnpm bd-register:fetch` 最新下載；`pnpm import:mwc` 讀取 |
+| `.cache/bd-register/registers_full_list.baseline.csv` | MWC dry-run 基線（首次或更新基線：`cp` candidate → baseline） |
+| `.cache/bd-register/registers_full_list.meta.json` | 擷取 metadata（`url`、`retrieved_at`、`sha256` 等） |
+
+上述路徑均套用 **7 日 TTL**（`assertCacheFileFresh`）。勿 commit 完整 CSV；本地用完可刪 `.cache/bd-register/`。
+
+單元測試：`src/lib/bd-register/fixtures/registers.fixture.csv`（合成資料；header 與官方 23 欄一致）。

@@ -1,4 +1,5 @@
 import { parse } from "csv-parse/sync";
+import { isCorporateEntityName } from "../cause-list/party";
 import {
   normalizeChineseCompanyName,
   normalizeEnglishCompanyName,
@@ -8,9 +9,18 @@ import {
   isBdContractorRegisterType,
   isBdIndividualContractorType,
 } from "./sources";
-import type { BdRegisterEntry } from "./types";
+import type { BdParseResult, BdRegisterEntry } from "./types";
 
 export type BdCsvRow = Record<string, string>;
+
+const REQUIRED_HEADERS = [
+  "REGISTRATION_NUMBER",
+  "REGISTRATION_TYPE",
+  "ENGLISH_COMPANY_NAME",
+  "CHINESE_COMPANY_NAME",
+  "EXPIRY_DATE",
+  "FLAG",
+] as const;
 
 const IN_LIQUIDATION_RE = /\s*\(IN\s+LIQUIDATION\)\s*$/i;
 
@@ -31,36 +41,65 @@ function pickCompanyDisplayNames(row: BdCsvRow): { en?: string; zh?: string } {
   };
 }
 
-function hasCompanyName(row: BdCsvRow): boolean {
-  const { en, zh } = pickCompanyDisplayNames(row);
-  return Boolean(en || zh);
+function pickFlag(row: BdCsvRow): string | undefined {
+  const flag = stripHtml(row.FLAG ?? "").trim();
+  if (!flag || flag === "@") return undefined;
+  return flag;
 }
 
-function normalizeCompanyOutput(en?: string, zh?: string): { nameEn?: string; nameZh?: string } {
-  const out: { nameEn?: string; nameZh?: string } = {};
-  if (en) out.nameEn = normalizeEnglishCompanyName(en).normStrict;
-  if (zh) out.nameZh = normalizeChineseCompanyName(zh).normStrict;
-  return out;
+export function assertBdRegisterCsvText(csvText: string): void {
+  if (csvText.includes("\u0000") || /^\s*</.test(csvText)) {
+    throw new Error("BD CSV: not a UTF-8 CSV (UTF-16 or HTML/XML error page)");
+  }
 }
 
-function pickStatus(row: BdCsvRow): string | undefined {
-  const flag = stripHtml(row.FLAG ?? "");
-  return flag || undefined;
+export function parseBdRegisterCsvRows(csvText: string): BdCsvRow[] {
+  assertBdRegisterCsvText(csvText);
+  try {
+    return parse(csvText, {
+      bom: true,
+      skip_empty_lines: true,
+      relax_quotes: true,
+      relax_column_count: false,
+      columns: (headers: string[]) => {
+        const trimmed = headers.map((h) => h.trim());
+        const missing = REQUIRED_HEADERS.filter((r) => !trimmed.includes(r));
+        if (missing.length) {
+          throw new Error(`BD CSV header missing: ${missing.join(",")}`);
+        }
+        return trimmed;
+      },
+    }) as BdCsvRow[];
+  } catch (e) {
+    const err = e as { code?: string; lines?: number; message: string };
+    const prefix = `BD CSV parse error ${err.code ?? ""} at line ${err.lines ?? "?"}`;
+    if (err.message.startsWith("BD CSV")) {
+      throw new Error(`${prefix}: ${err.message}`);
+    }
+    throw new Error(prefix);
+  }
+}
+
+function dedupeEntries(entries: BdRegisterEntry[]): BdRegisterEntry[] {
+  const seen = new Map<string, BdRegisterEntry>();
+  for (const e of entries) {
+    const key = `${e.registerType}|${e.regNo}`;
+    if (!seen.has(key)) seen.set(key, e);
+  }
+  return [...seen.values()];
 }
 
 /**
- * Parse BD registers full-list CSV into contractor rows.
+ * Parse BD registers full-list CSV into contractor rows (de-duplicated by type|regNo).
  * Individual contractors (MWC(W)): regNo only — no personal names in output.
  */
 export function parseBdRegisterCsv(csvText: string): BdRegisterEntry[] {
-  const rows = parse(csvText, {
-    columns: true,
-    skip_empty_lines: true,
-    relax_quotes: true,
-    relax_column_count: true,
-  }) as BdCsvRow[];
+  return parseBdRegisterCsvWithMeta(csvText).entries;
+}
 
-  const out: BdRegisterEntry[] = [];
+export function parseBdRegisterCsvWithMeta(csvText: string): BdParseResult {
+  const rows = parseBdRegisterCsvRows(csvText);
+  const staged: BdRegisterEntry[] = [];
 
   for (const row of rows) {
     const registerType = (row.REGISTRATION_TYPE ?? "").trim();
@@ -70,32 +109,55 @@ export function parseBdRegisterCsv(csvText: string): BdRegisterEntry[] {
     if (!regNo) continue;
 
     const expiryDate = parseBdRegistryExpiryDate(row.EXPIRY_DATE ?? "") ?? undefined;
-    const status = pickStatus(row);
+    const flag = pickFlag(row);
 
-    if (isBdIndividualContractorType(registerType) || !hasCompanyName(row)) {
-      out.push({ registerType, regNo, expiryDate, status });
+    if (isBdIndividualContractorType(registerType)) {
+      staged.push({ registerType, regNo, expiryDate, flag });
       continue;
     }
 
     const { en, zh } = pickCompanyDisplayNames(row);
-    const names = normalizeCompanyOutput(en, zh);
-    out.push({
+    const corporate = Boolean(
+      (en && isCorporateEntityName(en)) || (zh && isCorporateEntityName(zh)),
+    );
+    if (!corporate) {
+      staged.push({
+        registerType,
+        regNo,
+        expiryDate,
+        flag,
+        unincorporated: true,
+      });
+      continue;
+    }
+
+    const normEn = en ? normalizeEnglishCompanyName(en) : undefined;
+    const normZh = zh ? normalizeChineseCompanyName(zh) : undefined;
+    staged.push({
       registerType,
       regNo,
-      ...names,
+      nameEn: en,
+      nameZh: zh,
+      normStrictEn: normEn?.normStrict,
+      normStrictZh: normZh?.normStrict,
+      normCoreEn: normEn?.normCore,
+      normCoreZh: normZh?.normCore,
       expiryDate,
-      status,
+      flag,
     });
   }
 
-  return out;
+  const rawContractorRows = staged.length;
+  return { entries: dedupeEntries(staged), rawContractorRows };
 }
 
-/** MWC company registration numbers for overlap checks (excludes MWC(W)). */
+/** MWC company registration numbers for overlap checks (excludes MWC(W) and unincorporated). */
 export function mwcCompanyRegNos(entries: BdRegisterEntry[]): Set<string> {
   const set = new Set<string>();
   for (const e of entries) {
-    if (e.registerType === "MWC" && (e.nameEn || e.nameZh)) set.add(e.regNo);
+    if (e.registerType === "MWC" && !e.unincorporated && (e.nameEn || e.nameZh)) {
+      set.add(e.regNo);
+    }
   }
   return set;
 }
