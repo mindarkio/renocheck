@@ -6,6 +6,15 @@ import {
   isHearingSummaryPlaceholder,
 } from "./judgment-hearing-summary";
 import { brNormalizedFromSeedField } from "./normalize-br";
+import type { HearingPointsSource } from "./legal-event-schema";
+
+export function judgmentImportRowKey(
+  sourceCatalogId: string,
+  caseRef: string,
+): string {
+  const ref = caseRef.replace(/\s+/g, "").toUpperCase();
+  return `${sourceCatalogId}|${ref}`;
+}
 
 export type JudgmentSeedRow = {
   sourceType?: string;
@@ -27,6 +36,8 @@ export type JudgmentSeedRow = {
   topicTags?: string[];
   lookupAliases?: string[];
   reviewStatus?: "auto" | "human_verified";
+  /** Only explicit `manual` sets DB hearing_points_source to manual on insert. */
+  hearingPointsSource?: HearingPointsSource;
 };
 
 export type ExistingJudgmentHearingRow = {
@@ -103,13 +114,20 @@ export function buildJudgmentImportDbRow(
   }
 
   const placeholder = hearingPointsAllPlaceholder(seedPoints);
+  const hearing_points_source: HearingPointsSource =
+    row.hearingPointsSource === "manual"
+      ? "manual"
+      : placeholder
+        ? "placeholder"
+        : "placeholder";
+
   return {
     ...base,
     hearing_key_points_zh: placeholder
       ? [HEARING_SUMMARY_AUTO_PLACEHOLDER_ZH]
       : seedPoints,
     hearing_key_point_quotes_zh: [],
-    hearing_points_source: placeholder ? "placeholder" : "manual",
+    hearing_points_source,
     outcome_hint: row.outcomeHint ?? null,
     review_status: row.reviewStatus ?? "auto",
   };

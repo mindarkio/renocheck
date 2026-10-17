@@ -16,12 +16,12 @@
 
 | caseRef | drop reason |
 |---------|-------------|
-| CACV 131/2005 | `manual_triage_judgment_correction_notice_only` |
+| CACV 131/2005 | `manual_triage_io_maintenance_fee_recovery_from_owners` |
 | DCCJ 3800/2013 | `manual_triage_defendant_mainland_geotech_not_renovation` |
 | DCCJ 18510/2001 | `manual_triage_general_contractor_as_plaintiff` |
 | DCCJ 2220/2002 | `manual_triage_defendant_marine_freight_not_renovation` |
 | HCA 2269/2007 | `manual_triage_individual_plaintiff_vs_contractor` |
-| LDBM 6/1998 | `manual_triage_ldbm_building_management_dispute` |
+| LDBM 6/1998 | `manual_triage_defendant_contractor_is_owner_in_case` |
 | HCSA 40/2023 | `manual_triage_hcsa_appeal_leave_order_only` |
 | HCA 714/2007 | `manual_triage_defendant_developer_contractor_out_of_scope` |
 | DCCJ 3255/2004 | `manual_triage_defendant_interior_design_not_renovation` |

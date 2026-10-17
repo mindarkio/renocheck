@@ -6,20 +6,9 @@ import type { SplitParties } from "./judgment-d2-parties";
 import type { MwcMatchSummary } from "./judgment-d2-gates";
 import type { D2Disposition } from "./judgment-d2-gates";
 import { manualTriageRevisionHash } from "./judgment-d2-manual-triage";
+import { listD2RulesBundleFiles } from "./judgment-d2-rules-bundle";
 
 export const D2_FILTER_POLICY = "company_defendant_v3e";
-
-const D2_RULE_SOURCE_FILES = [
-  "src/lib/judgment-d2-gates.ts",
-  "src/lib/judgment-d2-defendant-exclusions.ts",
-  "src/lib/judgment-d2-case-policy.ts",
-  "src/lib/judgment-d2-v3d-rules.ts",
-  "src/lib/judgment-d2-v3e-rules.ts",
-  "src/lib/judgment-d2-manual-triage.ts",
-  "src/lib/judgment-d2-entity.ts",
-  "src/lib/judgment-d2-parties.ts",
-  "scripts/config/court-from-case-ref.json",
-] as const;
 
 const LRS_PROFILES_PATH = "scripts/config/lrs-ingestion-profiles.json";
 
@@ -66,8 +55,8 @@ function sha256File(relativePath: string): string {
 }
 
 /** SHA-256 (hex) of D2 gate / rules source bundle. */
-export function d2RulesBundleContentSha(): string {
-  const parts = D2_RULE_SOURCE_FILES.map((p) => sha256File(p));
+export function d2RulesBundleContentSha(cwd = process.cwd()): string {
+  const parts = listD2RulesBundleFiles(cwd).map((p) => sha256File(p));
   return createHash("sha256").update(parts.join("")).digest("hex").slice(0, 16);
 }
 

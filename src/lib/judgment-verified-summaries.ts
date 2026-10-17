@@ -1,19 +1,28 @@
 /** SSOT shape for scripts/fixtures/judgment-summaries-verified.json */
 
 import { z } from "zod";
+import { isLegalrefJudgmentSourceUrl } from "./legal-event-source-url";
+import { outcomeHintSchema } from "./outcome-hint";
+
+const legalrefSourceUrlSchema = z
+  .string()
+  .url()
+  .refine((url) => isLegalrefJudgmentSourceUrl(url), {
+    message: "sourceUrl_must_be_legalref_judiciary_hk",
+  });
 
 export const verifiedSummaryPointSchema = z.object({
-  point_index: z.number().int().positive(),
-  keyPointZh: z.string().min(1),
+  point_index: z.number().int().positive().max(8),
+  keyPointZh: z.string().min(1).max(200),
   sourceQuoteZh: z.string().min(1),
 });
 
 export const verifiedSummaryRowSchema = z.object({
-  caseRef: z.string().min(1),
-  sourceUrl: z.string().url(),
-  outcome_hint: z.string().min(1),
+  caseRef: z.string().min(1).max(80),
+  sourceUrl: legalrefSourceUrlSchema,
+  outcome_hint: outcomeHintSchema,
   hearing_points_source: z.literal("ai_verified"),
-  points: z.array(verifiedSummaryPointSchema).min(1),
+  points: z.array(verifiedSummaryPointSchema).min(1).max(8),
 });
 
 export const verifiedSummariesFileSchema = z

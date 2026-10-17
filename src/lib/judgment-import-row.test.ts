@@ -25,6 +25,23 @@ describe("buildJudgmentImportDbRow", () => {
     ]);
   });
 
+  it("uses placeholder source when seed has text but no explicit manual", () => {
+    const row = buildJudgmentImportDbRow({
+      ...seed,
+      hearingKeyPointsZh: ["已有人手撰寫要點"],
+    });
+    expect(row.hearing_points_source).toBe("placeholder");
+  });
+
+  it("sets manual only when seed hearingPointsSource is manual", () => {
+    const row = buildJudgmentImportDbRow({
+      ...seed,
+      hearingKeyPointsZh: ["人手要點"],
+      hearingPointsSource: "manual",
+    });
+    expect(row.hearing_points_source).toBe("manual");
+  });
+
   it("does not overwrite ai_verified hearing fields on existing row", () => {
     const row = buildJudgmentImportDbRow(seed, {
       hearing_points_source: "ai_verified",

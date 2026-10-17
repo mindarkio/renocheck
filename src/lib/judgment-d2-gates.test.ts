@@ -102,10 +102,10 @@ describe("runD2Gates", () => {
       mwcRight: null,
     });
     expect(r.disposition).toBe("drop");
-    expect(r.reasons).toContain("manual_triage_ldbm_building_management_dispute");
+    expect(r.reasons).toContain("manual_triage_defendant_contractor_is_owner_in_case");
   });
 
-  it("drops CACV 131/2005 (correction notice / out of verified SSOT)", () => {
+  it("drops CACV 131/2005 (IO maintenance fee recovery from owners)", () => {
     const r = runD2Gates({
       row: baseRow(
         "THE INCORPORATED OWNERS OF THE COLONNADES 訴 GORDON TSO & CO LTD",
@@ -117,7 +117,7 @@ describe("runD2Gates", () => {
       mwcRight: null,
     });
     expect(r.disposition).toBe("drop");
-    expect(r.reasons).toContain("manual_triage_judgment_correction_notice_only");
+    expect(r.reasons).toContain("manual_triage_io_maintenance_fee_recovery_from_owners");
   });
 
   it("keeps CACV when defendant has engineering keyword", () => {

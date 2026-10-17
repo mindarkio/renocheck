@@ -8,8 +8,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   buildJudgmentImportDbRow,
+  type ExistingJudgmentHearingRow,
   type JudgmentSeedRow,
-  judgmentSeedContentHash,
+  judgmentImportRowKey,
 } from "../src/lib/judgment-import-row";
 
 const DEFAULT_SEED = resolve(
@@ -17,8 +18,26 @@ const DEFAULT_SEED = resolve(
   "scripts/fixtures/judgments-seed.json",
 );
 
-const EXISTING_SELECT =
-  "source_content_hash, hearing_key_points_zh, hearing_key_point_quotes_zh, hearing_points_source, outcome_hint, review_status";
+const EXISTING_HEARING_SELECT =
+  "source_catalog_id, case_ref, source_content_hash, hearing_key_points_zh, hearing_key_point_quotes_zh, hearing_points_source, outcome_hint, review_status";
+
+const EXISTING_FULL_SELECT =
+  "source_type, source_catalog_id, case_ref, court, event_date, party_names, hearing_key_points_zh, hearing_key_point_quotes_zh, hearing_points_source, source_url, source_published_at, br_normalized, company_name_normalized, lookup_aliases, judgment_category, party_role, outcome_hint, procedure_stage, renovation_relevant, topic_tags, source_content_hash, review_status";
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(value);
+}
+
+function importRowWouldChange(
+  built: Record<string, unknown>,
+  existing: Record<string, unknown> | undefined,
+): boolean {
+  if (!existing) return true;
+  for (const key of Object.keys(built)) {
+    if (stableJson(built[key]) !== stableJson(existing[key])) return true;
+  }
+  return false;
+}
 
 function loadEnvLocal() {
   try {
@@ -43,6 +62,29 @@ function loadEnvLocal() {
   }
 }
 
+async function fetchExistingByCatalogCase(
+  supabase: ReturnType<typeof createClient>,
+  catalogIds: string[],
+  select: string,
+): Promise<Map<string, Record<string, unknown>>> {
+  const map = new Map<string, Record<string, unknown>>();
+  for (const catalogId of catalogIds) {
+    const { data, error } = await supabase
+      .from("official_legal_events")
+      .select(select)
+      .eq("source_catalog_id", catalogId);
+    if (error) throw error;
+    for (const row of data ?? []) {
+      const key = judgmentImportRowKey(
+        row.source_catalog_id as string,
+        row.case_ref as string,
+      );
+      map.set(key, row as Record<string, unknown>);
+    }
+  }
+  return map;
+}
+
 async function main() {
   loadEnvLocal();
   const dryRun = process.argv.includes("--dry-run");
@@ -61,45 +103,33 @@ async function main() {
 
   const raw = readFileSync(seedPath, "utf8");
   const rows = JSON.parse(raw) as JudgmentSeedRow[];
-  const hashes = rows.map((r) => judgmentSeedContentHash(r));
 
   const supabase = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const existingByHash = new Map<
-    string,
-    {
-      hearing_key_points_zh: unknown;
-      hearing_key_point_quotes_zh?: unknown;
-      hearing_points_source: string | null;
-      outcome_hint?: string | null;
-      review_status?: string | null;
-    }
-  >();
-
-  if (!dryRun && hashes.length > 0) {
-    const { data, error } = await supabase
-      .from("official_legal_events")
-      .select(EXISTING_SELECT)
-      .in("source_content_hash", hashes);
-    if (error) {
-      console.error(error);
-      process.exit(1);
-    }
-    for (const row of data ?? []) {
-      const h = row.source_content_hash as string;
-      existingByHash.set(h, row);
-    }
-  }
+  const catalogIds = [...new Set(rows.map((r) => r.sourceCatalogId))];
+  const existingByKey = await fetchExistingByCatalogCase(
+    supabase,
+    catalogIds,
+    dryRun ? EXISTING_FULL_SELECT : EXISTING_HEARING_SELECT,
+  );
 
   const dbRows: ReturnType<typeof buildJudgmentImportDbRow>[] = [];
   let preservedHearing = 0;
+  let wouldChange = 0;
+  const changedCaseRefs: string[] = [];
   for (const row of rows) {
     try {
-      const hash = judgmentSeedContentHash(row);
-      const existing = existingByHash.get(hash);
+      const rowKey = judgmentImportRowKey(row.sourceCatalogId, row.caseRef);
+      const existing = existingByKey.get(rowKey) as
+        | ExistingJudgmentHearingRow
+        | undefined;
       const built = buildJudgmentImportDbRow(row, existing);
+      if (dryRun && importRowWouldChange(built, existingByKey.get(rowKey))) {
+        wouldChange += 1;
+        changedCaseRefs.push(row.caseRef);
+      }
       if (
         existing?.hearing_points_source === "ai_verified" ||
         existing?.hearing_points_source === "manual"
@@ -125,15 +155,20 @@ async function main() {
       JSON.stringify({
         event: "import_judgments_dry_run",
         count: dbRows.length,
+        wouldChange,
+        unchanged: dbRows.length - wouldChange,
         preservedHearing,
+        upsertOn: "source_catalog_id,case_ref",
+        ...(changedCaseRefs.length ? { changedCaseRefs } : {}),
       }),
     );
+    if (wouldChange > 0) process.exit(1);
     return;
   }
 
   const { error: upsertErr } = await supabase
     .from("official_legal_events")
-    .upsert(dbRows, { onConflict: "source_content_hash" });
+    .upsert(dbRows, { onConflict: "source_catalog_id,case_ref" });
 
   if (upsertErr) {
     console.error(upsertErr);
@@ -146,6 +181,7 @@ async function main() {
       count: dbRows.length,
       preservedHearing,
       seed: seedPath,
+      upsertOn: "source_catalog_id,case_ref",
     }),
   );
 }
