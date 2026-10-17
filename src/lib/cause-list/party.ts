@@ -34,6 +34,48 @@ function mapRoleLabel(label: string): CauseListPartyRole {
   return "unknown";
 }
 
+/**
+ * Split a party line on commas that are outside brackets.
+ * A comma immediately before LTD / LIMITED / INC stays inside the name (`CO., LTD.`).
+ */
+export function splitTopLevelPartyCommas(line: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === "(" || ch === "（") depth += 1;
+    else if ((ch === ")" || ch === "）") && depth > 0) depth -= 1;
+    else if (depth === 0 && (ch === "," || ch === "，")) {
+      const rest = line.slice(i + 1);
+      if (/^\s*(LTD|LIMITED|INC)\b/i.test(rest)) continue;
+      const chunk = line.slice(start, i).trim();
+      if (chunk) parts.push(chunk);
+      start = i + 1;
+    }
+  }
+  const tail = line.slice(start).trim();
+  if (tail) parts.push(tail);
+  return parts.length > 0 ? parts : [];
+}
+
+function stripTrailingBrackets(name: string): string {
+  let cleaned = name.trim();
+  let previous = "";
+  while (cleaned !== previous) {
+    previous = cleaned;
+    cleaned = cleaned.replace(/\s*[（(][^（()）]*[）)]\s*$/u, "").trim();
+  }
+  return cleaned;
+}
+
+function stripFormerNameClause(name: string): string {
+  return name
+    .replace(/\s+\bFORMERLY\s+KNOWN\s+AS\b[\s\S]*$/i, "")
+    .replace(/\s*前稱[\s\S]*$/u, "")
+    .trim();
+}
+
 /** Split a multi-party block on role lines; optional inline AND split (M5). */
 export function splitPartyBlock(
   block: string,
@@ -64,33 +106,36 @@ export function splitPartyBlock(
   };
 
   for (const line of lines) {
-    const roleMatch = line.match(
-      /^(Claimant|Defendant|Plaintiff|Respondent|Applicant)\s*(\d+)?\s*[:：]?\s*(.+)$/iu,
-    );
-    if (roleMatch) {
-      const label = roleMatch[1];
-      const role = mapRoleLabel(label);
-      pushChunk(roleMatch[3], role);
-      continue;
-    }
+    const segments = splitTopLevelPartyCommas(line);
+    for (const segment of segments) {
+      const roleMatch = segment.match(
+        /^(Claimant|Defendant|Plaintiff|Respondent|Applicant)\s*(\d+)?\s*[:：]?\s*(.+)$/iu,
+      );
+      if (roleMatch) {
+        const label = roleMatch[1];
+        const role = mapRoleLabel(label);
+        pushChunk(roleMatch[3], role);
+        continue;
+      }
 
-    const posMatch = line.match(ROLE_LINE_RE);
-    if (posMatch) {
-      const pos = posMatch[1].toUpperCase();
-      const role = mapRoleLabel(pos[0]);
-      parties.push({
-        role,
-        position: pos,
-        rawName: posMatch[2].trim(),
-      });
-      continue;
-    }
+      const posMatch = segment.match(ROLE_LINE_RE);
+      if (posMatch) {
+        const pos = posMatch[1].toUpperCase();
+        const role = mapRoleLabel(pos[0]);
+        parties.push({
+          role,
+          position: pos,
+          rawName: posMatch[2].trim(),
+        });
+        continue;
+      }
 
-    if (splitInlineAnd) {
-      const chunks = line.split(/\s+AND\s+|\s+And\s+/);
-      for (const chunk of chunks) pushChunk(chunk, defaultRole);
-    } else {
-      pushChunk(line, defaultRole);
+      if (splitInlineAnd) {
+        const chunks = segment.split(/\s+AND\s+|\s+And\s+/);
+        for (const chunk of chunks) pushChunk(chunk, defaultRole);
+      } else {
+        pushChunk(segment, defaultRole);
+      }
     }
   }
 
@@ -122,10 +167,6 @@ function splitTradingAs(rawName: string): {
   return { legalName: rawName.trim(), formerlyTradedAs: formerly };
 }
 
-function stripBracketedChineseAlias(name: string): string {
-  return name.replace(/\([\u4e00-\u9fff][^)]*\)/gu, "").trim();
-}
-
 /** M1: corporate entity detection (excludes IO, LP, trustee-of, Limited Edition). */
 export function isCorporateEntityName(name: string): boolean {
   let cleaned = stripLiquidationSuffix(name.replace(STRIP_CLAUSE_RE, "").trim());
@@ -134,14 +175,11 @@ export function isCorporateEntityName(name: string): boolean {
   if (LIMITED_PARTNERSHIP_RE.test(cleaned)) return false;
   if (LIMITED_EDITION_RE.test(cleaned)) return false;
 
-  cleaned = stripBracketedChineseAlias(cleaned);
+  cleaned = stripTrailingBrackets(cleaned);
+  cleaned = stripFormerNameClause(cleaned);
+  cleaned = stripTrailingBrackets(cleaned);
 
-  if (/有限責任公司|有限公司/u.test(cleaned)) return true;
-
-  const upper = cleaned.toUpperCase();
-  if (/\b(LIMITED|LTD\.?)\s*$/i.test(upper)) return true;
-
-  return false;
+  return /(LIMITED|LTD\.?|有限公司|有限責任公司)$/iu.test(cleaned);
 }
 
 export function isIncorporatedOwners(name: string): boolean {

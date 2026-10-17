@@ -19,7 +19,11 @@ export type CompanyRegistryIndex = {
 
 /** Use a bilingual split only when both halves are corporate names. */
 export function corporateBilingualHalves(name: string): { en?: string; zh?: string } {
-  const split = splitBilingualCompanyRaw(name);
+  const raw = splitBilingualCompanyRaw(name);
+  const split = {
+    en: raw.en?.replace(/[\s(（]+$/u, "").trim(),
+    zh: raw.zh?.replace(/^[\s(（]+|[\s)）]+$/gu, "").trim(),
+  };
   if (
     split.en &&
     split.zh &&

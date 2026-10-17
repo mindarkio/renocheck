@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregateCorporateDefendantRows,
+  assertCorporateBackfillRows,
   backfillRowsToCsv,
   buildBackfillSummary,
   publicBackfillError,
@@ -108,6 +109,9 @@ describe("cause-list backfill rows", () => {
         parseFailures: 0,
         fetchFailures: 0,
         noHearing: 0,
+        truncated: 0,
+        notFetched: 0,
+        parsed: 1,
       },
       parseFailures: [],
     });
@@ -126,7 +130,46 @@ describe("cause-list backfill rows", () => {
     expect(summary.mwcRegistry.source).toBe(".cache/bd-register/registers_full_list.csv");
     expect(summary.mwcRegistry.note).toContain("historical hearings");
     expect(summary.pages.noHearing).toBe(0);
+    expect(summary.pages.notFetched).toBe(0);
+    expect(summary.pages.truncated).toBe(0);
     expect(JSON.stringify(summary)).not.toContain(PERSON_A);
+  });
+
+  it("rejects a company field that still contains a non-corporate segment", () => {
+    expect(() =>
+      assertCorporateBackfillRows([
+        {
+          court: "CACFI",
+          caseNo: "HCA 1/2099",
+          firstHearingDate: "2024-11-06",
+          lastHearingDate: "2024-11-06",
+          claimNature: "Work Done",
+          companyName: "SYNTH ALPHA LIMITED, FICTIVE PERSON",
+          role: "defendant",
+          matchLevel: "unmatched",
+          matchedCompanyId: "",
+        },
+      ]),
+    ).toThrow("refusing non-corporate output row CACFI HCA 1/2099");
+    try {
+      assertCorporateBackfillRows([
+        {
+          court: "CACFI",
+          caseNo: "HCA 1/2099",
+          firstHearingDate: "2024-11-06",
+          lastHearingDate: "2024-11-06",
+          claimNature: "Work Done",
+          companyName: "SYNTH ALPHA LIMITED, FICTIVE PERSON",
+          role: "defendant",
+          matchLevel: "unmatched",
+          matchedCompanyId: "",
+        },
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      expect(message).not.toContain("FICTIVE");
+      expect(message).not.toContain("SYNTH");
+    }
   });
 
   it("hides unexpected error text", () => {

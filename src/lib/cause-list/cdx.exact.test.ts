@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  calendarMonthChunks,
   cdxCaptureWindow,
   isNoHearingPage,
   isTransientArchiveHtml,
@@ -57,16 +56,7 @@ describe("cause list CDX selection", () => {
     );
   });
 
-  it("splits the backfill window on calendar months and lists weekday gaps", () => {
-    expect(calendarMonthChunks("2024-11-01", "2026-10-17")).toHaveLength(24);
-    expect(calendarMonthChunks("2024-11-01", "2026-10-17")[0]).toEqual({
-      fromIso: "2024-11-01",
-      toIso: "2024-11-30",
-    });
-    expect(calendarMonthChunks("2024-11-01", "2026-10-17").at(-1)).toEqual({
-      fromIso: "2026-10-01",
-      toIso: "2026-10-17",
-    });
+  it("lists weekday gaps", () => {
     expect(weekdayGapRanges("2024-11-01", "2024-11-11", ["2024-11-01", "2024-11-11"])).toEqual([
       "2024-11-04..2024-11-08",
     ]);

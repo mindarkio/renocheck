@@ -33,15 +33,14 @@ import {
   publicBackfillError,
   type BackfillSummary,
 } from "../../src/lib/cause-list/backfill-report";
+import { scanCachedSnapshots } from "../../src/lib/cause-list/backfill-scan";
 import { assertCacheFileFresh } from "../../src/lib/cause-list/cache-ttl";
 import {
   BACKFILL_COURTS,
   BACKFILL_FROM_ISO,
   cdxCaptureWindow,
-  isNoHearingPage,
   isoToCompact,
   isoTodayUtc,
-  pageLooksLikeCauseList,
   parseCdxJson,
   selectCauseListSnapshots,
   snapshotCacheName,
@@ -54,28 +53,13 @@ import {
   buildDclLiveUrl,
   causeListPoliteDelayMs,
 } from "../../src/lib/cause-list/dcl-url";
-import { detectLegacyCaseFormat } from "../../src/lib/cause-list/case-no";
 import {
   fetchDclHtml,
   isPathDisallowedByRobots,
   loadRobotsDisallowPrefixes,
 } from "../../src/lib/cause-list/fetch-dcl";
-import { parseCacfiCauseListHtml } from "../../src/lib/cause-list/parse-cacfi";
-import { parseDcCauseListHtml } from "../../src/lib/cause-list/parse-dc";
-import { parseLandsCauseListHtml } from "../../src/lib/cause-list/parse-lands";
-import { parseSmtCauseListHtml } from "../../src/lib/cause-list/parse-smt";
-import type { CauseListCourtCode, ParsedCauseListCase } from "../../src/lib/cause-list/types";
+import type { CauseListCourtCode } from "../../src/lib/cause-list/types";
 import type { CauseListCompanyFixture } from "../../src/lib/cause-list/fixtures/companies.fixture";
-
-const PARSERS: Record<
-  CauseListCourtCode,
-  (html: string, date: string) => { cases: ParsedCauseListCase[] }
-> = {
-  SMT: parseSmtCauseListHtml,
-  DC: parseDcCauseListHtml,
-  CACFI: parseCacfiCauseListHtml,
-  LANDS: parseLandsCauseListHtml,
-};
 
 type CdxState = {
   mode: "global";
@@ -159,6 +143,29 @@ async function loadCdxState(
     // refetch
   }
   return null;
+}
+
+/** Report-only may reuse the snapshot list already stored, including a pre-global cache. */
+async function loadReportSnapshots(
+  cachePath: string,
+  from: string,
+  to: string,
+): Promise<CauseListSnapshot[]> {
+  const global = await loadCdxState(cachePath, from, to, false);
+  if (global) return global;
+  try {
+    const parsed = JSON.parse(await readFile(cachePath, "utf8")) as {
+      from?: string;
+      to?: string;
+      snapshots?: CauseListSnapshot[];
+    };
+    if (parsed.from === from && parsed.to === to && Array.isArray(parsed.snapshots)) {
+      return parsed.snapshots;
+    }
+  } catch {
+    // no cache
+  }
+  return [];
 }
 
 async function fetchSnapshots(
@@ -261,61 +268,22 @@ async function writeReport(input: {
   fetchFailures: number;
 }): Promise<BackfillSummary> {
   const files = await readdir(input.cacheDir).catch(() => [] as string[]);
-  const fetchedKeys = new Set<string>();
-  const rowsParsed = emptyRowsParsed();
-  const pages: PageTally = {
-    empty: 0,
-    unsupported: 0,
-    legacyFormat: 0,
-    parseFailures: 0,
-    fetchFailures: input.fetchFailures,
-    noHearing: 0,
-  };
-  const parseFailures: BackfillSummary["parseFailures"] = [];
   const aggregator = createBackfillAggregator(input.companies);
-
-  for (const snap of input.snapshots) {
-    const filename = findCachedHtml(files, snap);
-    if (!filename) continue;
-    fetchedKeys.add(`${snap.court}|${snap.dateDdMmYyyy}`);
-    const html = await readFile(path.join(input.cacheDir, filename), "utf8");
-    if (isNoHearingPage(html)) {
-      pages.noHearing += 1;
-      log({ event: "page", court: snap.court, date: snap.dateDdMmYyyy, result: "no_hearing" });
-      continue;
-    }
-    if (detectLegacyCaseFormat(html)) pages.legacyFormat += 1;
-    if (!pageLooksLikeCauseList(html)) {
-      pages.unsupported += 1;
-      log({ event: "page", court: snap.court, date: snap.dateDdMmYyyy, result: "unsupported" });
-      continue;
-    }
-    try {
-      const parsed = PARSERS[snap.court](html, snap.dateDdMmYyyy);
-      rowsParsed[snap.court] += parsed.cases.length;
-      if (parsed.cases.length === 0) {
-        pages.empty += 1;
-        log({ event: "page", court: snap.court, date: snap.dateDdMmYyyy, result: "empty", rows: 0 });
-        continue;
-      }
-      aggregator.add(parsed.cases);
-      log({
-        event: "page",
-        court: snap.court,
-        date: snap.dateDdMmYyyy,
-        result: "parsed",
-        rows: parsed.cases.length,
-      });
-    } catch (error) {
-      const kind =
-        error instanceof Error && error.message.startsWith("DCL page date mismatch")
-          ? "date_mismatch"
-          : "parse_error";
-      pages.parseFailures += 1;
-      parseFailures.push({ court: snap.court, date: snap.dateDdMmYyyy, kind });
-      log({ event: "page", court: snap.court, date: snap.dateDdMmYyyy, result: kind });
-    }
-  }
+  const scanned = await scanCachedSnapshots({
+    snapshots: input.snapshots,
+    cacheDir: input.cacheDir,
+    files,
+    onParsed: (cases) => aggregator.add(cases),
+    log,
+  });
+  const fetchedKeys = scanned.fetchedKeys;
+  const rowsParsed = scanned.rowsParsed;
+  const pages: PageTally = {
+    ...scanned.pages,
+    fetchFailures: input.fetchFailures,
+    notFetched: input.snapshots.length - fetchedKeys.size,
+  };
+  const parseFailures = scanned.parseFailures;
 
   const aggregated = aggregator.finish();
   assertCorporateBackfillRows(aggregated.rows);
@@ -350,7 +318,7 @@ async function writeReport(input: {
 
   log({
     event: "backfill_report",
-    complete: input.complete,
+    complete: summary.complete,
     dedupedCases: summary.totals.dedupedCases,
     distinctCompaniesA: summary.totals.distinctCompaniesA,
     distinctCompaniesB: summary.totals.distinctCompaniesB,
@@ -405,8 +373,7 @@ async function main(): Promise<number> {
     );
     snapshots = await fetchSnapshots(cacheDir, from, to, refreshCdx, archiveRules);
   } else {
-    const cached = await loadCdxState(path.join(cacheDir, "backfill-cdx.json"), from, to, false);
-    snapshots = cached ?? [];
+    snapshots = await loadReportSnapshots(path.join(cacheDir, "backfill-cdx.json"), from, to);
   }
 
   const byCourt = emptyRowsParsed();

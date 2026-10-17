@@ -57,6 +57,20 @@ describe("cause-list party splitter (exact)", () => {
     expect(isCorporateEntityName("ABC (HK) LIMITED")).toBe(true);
   });
 
+  it("keeps one corporate party from a comma-separated list", () => {
+    const parties = splitPartyBlock(
+      "SYNTH ALPHA LIMITED ( 合成甲有限公司 ), FICTIVE PERSON ( 虛構人 )",
+      "defendant",
+    );
+    const corps = parseCorporateParties(parties);
+    expect(corps).toHaveLength(1);
+    expect(corps[0]?.legalName).toBe("SYNTH ALPHA LIMITED ( 合成甲有限公司 )");
+    expect(isCorporateEntityName("合成甲有限公司虛構名字")).toBe(false);
+    const ltd = parseCorporateParties(splitPartyBlock("SYNTH CO., LTD.", "defendant"));
+    expect(ltd).toHaveLength(1);
+    expect(ltd[0]?.legalName).toBe("SYNTH CO., LTD.");
+  });
+
   it("drops person without logging", () => {
     expect(isCorporateEntityName("FAKE PERSON ALPHA")).toBe(false);
     const corps = parseCorporateParties([

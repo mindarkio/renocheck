@@ -166,6 +166,21 @@ describe("cause-list matcher (exact)", () => {
     expect(zhOnly[0]?.confidence).toBe("A");
   });
 
+  it("treats a bracketed bilingual name as a corporate pair", () => {
+    const matches = matchCauseListCases(
+      [smtDefendantCase("SCTC 17/2099", "SYNTH ALPHA LIMITED ( 合成甲有限公司 )")],
+      [
+        {
+          id: "synth-hk",
+          namesEn: ["SYNTH ALPHA (HK) LIMITED"],
+          namesZh: ["合成甲（香港）有限公司"],
+        },
+      ],
+    );
+    expect(matches[0]?.confidence).toBe("C");
+    expect(matches[0]?.reviewOnly).toBe(true);
+  });
+
   it("downgrades a strict key shared by two companies to review-only C", () => {
     const matches = matchCauseListCases(
       [smtDefendantCase("SCTC 16/2099", "合成甲有限公司")],

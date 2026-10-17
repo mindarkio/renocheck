@@ -145,56 +145,8 @@ export function selectCauseListSnapshots(
   );
 }
 
-/** Inclusive calendar-month slices clipped to [fromIso, toIso]. */
-export function calendarMonthChunks(
-  fromIso: string,
-  toIso: string,
-): Array<{ fromIso: string; toIso: string }> {
-  const chunks: Array<{ fromIso: string; toIso: string }> = [];
-  let cursor = fromIso;
-  while (cursor <= toIso) {
-    const year = Number(cursor.slice(0, 4));
-    const month = Number(cursor.slice(5, 7));
-    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    const monthEnd = `${cursor.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
-    const end = monthEnd < toIso ? monthEnd : toIso;
-    chunks.push({ fromIso: cursor, toIso: end });
-    cursor = addIsoDays(end, 1);
-  }
-  return chunks;
-}
-
-export function mergeSnapshots(
-  existing: CauseListSnapshot[],
-  incoming: CauseListSnapshot[],
-): CauseListSnapshot[] {
-  const asRecords: CdxRecord[] = [...existing, ...incoming].map((snap) => ({
-    timestamp: snap.timestamp,
-    original: snap.original,
-    status: "200",
-  }));
-  const fromIso = [...existing, ...incoming].reduce(
-    (min, snap) => (snap.iso < min ? snap.iso : min),
-    "9999-99-99",
-  );
-  const toIso = [...existing, ...incoming].reduce(
-    (max, snap) => (snap.iso > max ? snap.iso : max),
-    "0000-00-00",
-  );
-  if (asRecords.length === 0) return [];
-  return selectCauseListSnapshots(asRecords, fromIso, toIso);
-}
-
 export function snapshotCacheName(snap: CauseListSnapshot): string {
   return `${snap.court}_${snap.dateDdMmYyyy}_wb${snap.timestamp}.html`;
-}
-
-export function courtDateFromCacheName(
-  filename: string,
-): { court: CauseListCourtCode; dateDdMmYyyy: string } | null {
-  const m = /^(SMT|DC|CACFI|LANDS)_(\d{8})(?:_wb\d+)?\.html$/.exec(filename);
-  if (!m || !isCourt(m[1])) return null;
-  return { court: m[1], dateDdMmYyyy: m[2] };
 }
 
 /** Inclusive capture window: list dates expanded ±31 days, never past `today`. */

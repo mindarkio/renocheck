@@ -9,7 +9,7 @@ import {
   normalizeEnglishCompanyName,
   splitBilingualCompanyRaw,
 } from "./normalize";
-import { isCorporateEntityName, parseCorporateParties } from "./party";
+import { isCorporateEntityName, parseCorporateParties, splitTopLevelPartyCommas } from "./party";
 import type {
   CauseListCourtCode,
   MatchConfidence,
@@ -196,7 +196,8 @@ export function publicBackfillError(error: unknown): string {
 
 export function assertCorporateBackfillRows(rows: BackfillRow[]): void {
   for (const row of rows) {
-    if (!isCorporateEntityName(row.companyName)) {
+    const segments = splitTopLevelPartyCommas(row.companyName);
+    if (segments.length === 0 || segments.some((segment) => !isCorporateEntityName(segment))) {
       throw new Error(`refusing non-corporate output row ${row.court} ${row.caseNo}`);
     }
     if (row.role !== "defendant" && row.role !== "respondent") {
@@ -272,6 +273,11 @@ export type BackfillSummary = {
     parseFailures: number;
     fetchFailures: number;
     noHearing: number;
+    truncated: number;
+    /** Snapshots with no cached page. Exclusive with the other page buckets. */
+    notFetched: number;
+    /** Cached pages that contributed case rows. */
+    parsed: number;
   };
   parseFailures: Array<{ court: CauseListCourtCode; date: string; kind: string }>;
 };
@@ -342,7 +348,7 @@ export function buildBackfillSummary(input: {
     from: input.from,
     to: input.to,
     generatedAt: input.generatedAt,
-    complete: input.complete,
+    complete: input.complete && input.pages.truncated === 0,
     mwcRegistry: {
       source: ".cache/bd-register/registers_full_list.csv",
       corporateCompanies: input.corporateCompanies,
@@ -359,7 +365,10 @@ export function buildBackfillSummary(input: {
       distinctCompaniesAorB: idsAorB.size,
     },
     coverage,
-    pages: input.pages,
+    pages: {
+      ...input.pages,
+      notFetched: input.snapshots.length - input.fetchedKeys.size,
+    },
     parseFailures: input.parseFailures,
   };
 }
