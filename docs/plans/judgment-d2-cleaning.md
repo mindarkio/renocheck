@@ -168,3 +168,15 @@ flowchart TB
 |------|------|
 | 2026-10-16 | 初稿；DEC-0012 原告 pass |
 | 2026-10-16 | `pnpm d2:filter-candidates` — 174 入 → see `judgment-d2-queue.json` summary |
+| 2026-10-17 | 效能：MWC memory index + `d2-candidate-step-cache.json`（`contentHash`）；`--profile` / `--only` / `--changed`；golden parity test |
+
+## 12. 執行與效能
+
+```bash
+pnpm d2:filter-candidates --profile
+pnpm d2:filter-candidates --only="CACV 131/2005"
+pnpm d2:filter-candidates --changed    # 內容 hash 未變 → 讀 step cache
+pnpm d2:filter-candidates --no-cache   # 強制重算（仍用 memory MWC）
+```
+
+`profileMs`：`read_files_ms`、`load_mwc_index_ms`（一次載入 ~15.5k MWC）、`parse_parties_ms`、`mwc_lookup_ms`、`run_gates_ms`、`write_output_ms`；暖 cache 時 `cache_hits=897` 且 parse/MWC/gates ≈ 0。對照：`scripts/fixtures/judgment-d2-filter-golden.json` + `judgment-d2-filter-golden.test.ts`。

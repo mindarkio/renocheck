@@ -3,19 +3,21 @@
  *
  *   pnpm d2:filter-candidates
  *   pnpm d2:filter-candidates --dry-run
+ *   pnpm d2:filter-candidates --profile
+ *   pnpm d2:filter-candidates --only="CACV 131/2005"
+ *   pnpm d2:filter-candidates --changed
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { judgmentCandidatesManifestSchema } from "../src/lib/judgment-candidates-schema";
+import type { D2Disposition } from "../src/lib/judgment-d2-gates";
 import {
-  defaultDefendantPartyLabel,
-  defaultPlaintiffPartyLabel,
-  splitPartiesLineWithRetry,
-} from "../src/lib/judgment-d2-parties";
-import { runD2Gates, type D2Disposition } from "../src/lib/judgment-d2-gates";
-import { lookupMwcForPartyLabel } from "../src/lib/judgment-d2-mwc-match";
-import { courtFromCaseRef } from "../src/lib/court-from-case-ref";
+  loadD2FilterStepCache,
+  saveD2FilterStepCache,
+} from "../src/lib/judgment-d2-filter-cache";
+import { runD2FilterPipeline } from "../src/lib/judgment-d2-filter-pipeline";
+import { MwcContractorsMemoryIndex } from "../src/lib/mwc-contractors-memory-index";
 
 const IN_PATH = resolve(
   process.cwd(),
@@ -61,10 +63,29 @@ function loadEnvLocal() {
   }
 }
 
+function argValue(prefix: string): string | undefined {
+  const a = process.argv.find((x) => x.startsWith(`${prefix}=`));
+  if (!a) return undefined;
+  const raw = a.slice(prefix.length + 1);
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"))
+  ) {
+    return raw.slice(1, -1);
+  }
+  return raw;
+}
+
 async function main() {
   loadEnvLocal();
   const dryRun = process.argv.includes("--dry-run");
+  const profile = process.argv.includes("--profile");
+  const noCache = process.argv.includes("--no-cache");
+  const changedOnly = process.argv.includes("--changed");
+  const onlyCaseRef = argValue("--only");
+  const timings: Record<string, number> = {};
 
+  const tRead = performance.now();
   const url =
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -85,65 +106,46 @@ async function main() {
       prefixes: Record<string, string>;
     }
   ).prefixes;
+  timings.read_files_ms = performance.now() - tRead;
+
+  const tParse = performance.now();
+  const stepCache = noCache ? loadD2FilterStepCache() : loadD2FilterStepCache();
+  if (noCache) stepCache.byCaseRef = {};
+  timings.parse_manifest_ms = performance.now() - tParse;
 
   const supabase = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const entries: Array<Record<string, unknown>> = [];
-  const counts: Record<D2Disposition, number> = {
-    keep: 0,
-    drop: 0,
-    review: 0,
-  };
+  const tMwc = performance.now();
+  const mwcIndex = await MwcContractorsMemoryIndex.loadAll(supabase);
+  timings.load_mwc_index_ms = performance.now() - tMwc;
+  timings.mwc_rows = mwcIndex.size;
 
-  for (const row of manifest.candidates) {
-    const { split } = splitPartiesLineWithRetry(row.partiesLine);
-    let mwcLeft = null;
-    let mwcRight = null;
-    if (split) {
-      const partyLabels = [split.left, split.right];
-      mwcLeft = await lookupMwcForPartyLabel(
-        supabase,
-        defaultPlaintiffPartyLabel(split),
-        partyLabels,
-      );
-      mwcRight = await lookupMwcForPartyLabel(
-        supabase,
-        defaultDefendantPartyLabel(split),
-        partyLabels,
-      );
-    }
+  const tPipeline = performance.now();
+  const { entries, counts, timingsMs, cache } = runD2FilterPipeline({
+    candidates: manifest.candidates,
+    skipPrefixes: profiles.caseRefSkipPrefixes,
+    priorityPrefixes: profiles.caseRefPriorityPrefixes,
+    courtPrefixes,
+    mwcIndex,
+    stepCache,
+    useStepCache: !noCache,
+    writeStepCache: !dryRun && !onlyCaseRef,
+    onlyCaseRef,
+    changedOnly,
+  });
+  timings.filter_pipeline_ms = performance.now() - tPipeline;
+  timings.parse_parties_ms = timingsMs.parseParties;
+  timings.mwc_lookup_ms = timingsMs.mwcLookup;
+  timings.run_gates_ms = timingsMs.runGates;
+  timings.cache_hits = timingsMs.cacheHits;
+  timings.cache_misses = timingsMs.cacheMisses;
 
-    const gate = runD2Gates({
-      row,
-      skipPrefixes: profiles.caseRefSkipPrefixes,
-      priorityPrefixes: profiles.caseRefPriorityPrefixes,
-      mwcLeft,
-      mwcRight,
-      partiesSplit: split,
-    });
-    counts[gate.disposition] += 1;
-
-    entries.push({
-      caseRef: row.caseRef,
-      disposition: gate.disposition,
-      reasons: gate.reasons,
-      defendantLabel: gate.defendantLabel,
-      plaintiffLabel: gate.plaintiffLabel,
-      renovationRelevantSuggested: gate.renovationRelevantSuggested,
-      mwcMatch: gate.mwcMatch,
-      court: courtFromCaseRef(row.caseRef, courtPrefixes),
-      sourceUrl: row.judgmentUrl ?? row.lrsListingUrl,
-      partiesLine: row.partiesLine,
-      discoveredFrom: row.discoveredFrom,
-      ...(gate.reviewJudgmentCategory
-        ? { reviewJudgmentCategory: gate.reviewJudgmentCategory }
-        : {}),
-      ...(gate.reviewLookupAliases?.length
-        ? { reviewLookupAliases: gate.reviewLookupAliases }
-        : {}),
-    });
+  if (!dryRun && !onlyCaseRef) {
+    const tWrite = performance.now();
+    saveD2FilterStepCache(cache);
+    timings.write_cache_ms = performance.now() - tWrite;
   }
 
   const generatedAt = new Date().toISOString();
@@ -158,7 +160,7 @@ async function main() {
   const keeps = entries.filter((e) => e.disposition === "keep");
 
   const reportPriorDrops = process.argv.includes("--report-prior-keep-drops");
-  if (reportPriorDrops) {
+  if (reportPriorDrops && !onlyCaseRef) {
     try {
       const priorRaw = readFileSync(OUT_KEEPS, "utf8");
       const prior = JSON.parse(priorRaw) as Array<{ caseRef: string }>;
@@ -210,22 +212,30 @@ async function main() {
     }
   }
 
-  if (!dryRun) {
+  if (!dryRun && !onlyCaseRef) {
+    const tWrite = performance.now();
     mkdirSync(resolve(process.cwd(), "scripts/output"), { recursive: true });
     writeFileSync(OUT_QUEUE, `${JSON.stringify(queue, null, 2)}\n`, "utf8");
     writeFileSync(OUT_KEEPS, `${JSON.stringify(keeps, null, 2)}\n`, "utf8");
+    timings.write_output_ms = performance.now() - tWrite;
   }
 
-  console.info(
-    JSON.stringify({
-      event: "d2_filter_candidates_done",
-      dryRun,
-      inputCount: manifest.candidates.length,
-      summary: counts,
-      queuePath: dryRun ? null : OUT_QUEUE,
-      keepPath: dryRun ? null : OUT_KEEPS,
-    }),
-  );
+  const payload: Record<string, unknown> = {
+    event: "d2_filter_candidates_done",
+    dryRun,
+    onlyCaseRef: onlyCaseRef ?? null,
+    changedOnly,
+    inputCount: manifest.candidates.length,
+    processedCount: entries.length,
+    summary: counts,
+    queuePath: dryRun || onlyCaseRef ? null : OUT_QUEUE,
+    keepPath: dryRun || onlyCaseRef ? null : OUT_KEEPS,
+  };
+  if (profile) {
+    payload.profileMs = timings;
+  }
+
+  console.info(JSON.stringify(payload));
 }
 
 main().catch((err) => {
