@@ -22,7 +22,7 @@ describe("cause-list normalize (exact)", () => {
 
   it("converts simplified to traditional via opencc", () => {
     expect(toTraditionalHongKong("示例光伏科技有限公司")).toBe("示例光伏科技有限公司");
-    expect(toTraditionalHongKong("隆基乐叶科技有限公司")).toBe("隆基樂葉科技有限公司");
+    expect(toTraditionalHongKong("示例乐叶科技有限公司")).toBe("示例樂葉科技有限公司");
     expect(toTraditionalHongKong("中国华业")).toBe("中國華業");
   });
 
@@ -32,10 +32,11 @@ describe("cause-list normalize (exact)", () => {
     );
   });
 
-  it("regional zh core strips （香港）", () => {
-    expect(
-      normalizeChineseCompanyName("示例工程（香港）有限公司").normCore,
-    ).toBe("示例工程");
+  it("regional zh: strict keeps 香港, core strips regional", () => {
+    expect(normalizeChineseCompanyName("示例工程（香港）有限公司")).toEqual({
+      normStrict: "示例工程香港有限公司",
+      normCore: "示例工程",
+    });
   });
 
   it("bilingual without brackets", () => {

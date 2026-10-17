@@ -16,6 +16,7 @@ describe("parseSmtCauseListHtml (exact)", () => {
       "SCTC 10004/2026",
       "SCTC 10005/2026",
       "SCTC 10006/2026",
+      "SCTC 2/2026",
     ]);
     expect(cases[0].claimNature).toContain("Work Done");
     expect(cases[0].hearingDate).toBe("2026-10-16");

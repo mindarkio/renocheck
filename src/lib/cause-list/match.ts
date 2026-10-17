@@ -106,11 +106,6 @@ function matchPartyToCompany(
   const strict = lookupStrictMatch(index, party.legalName);
   if (strict) return strict;
 
-  if (party.formerlyTradedAs && party.tradeName) {
-    const tradeStrict = lookupStrictMatch(index, party.tradeName);
-    if (tradeStrict) return { ...tradeStrict, confidence: "B" };
-  }
-
   return lookupFuzzyMatch(index, party.legalName, companies);
 }
 

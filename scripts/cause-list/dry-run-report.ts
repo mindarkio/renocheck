@@ -15,6 +15,7 @@ import {
 } from "../../src/lib/cause-list";
 import { isDdMmYyyyInRange } from "../../src/lib/cause-list/date-range";
 import { csvField } from "../../src/lib/cause-list/csv";
+import { assertCacheFileFresh } from "../../src/lib/cause-list/cache-ttl";
 import type { ParsedCauseListCase } from "../../src/lib/cause-list/types";
 
 const PARSERS: Record<
@@ -54,7 +55,9 @@ async function main() {
     const parser = PARSERS[court];
     if (!parser) continue;
     try {
-      const html = await readFile(path.join(cacheDir, file), "utf8");
+      const cachePath = path.join(cacheDir, file);
+      await assertCacheFileFresh(cachePath, "cause-list HTML cache");
+      const html = await readFile(cachePath, "utf8");
       allCases.push(...parser(html, date).cases);
     } catch (e) {
       console.warn(`skip ${file}: ${(e as Error).message}`);
@@ -68,6 +71,7 @@ async function main() {
   await mkdir(outDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const csvPath = path.join(outDir, `cause-list-dry-run-${stamp}.csv`);
+  const summaryPath = path.join(outDir, `cause-list-dry-run-${stamp}-summary.json`);
 
   const header =
     "confidence,company_id,case_no,court,hearing_date,claim_nature,role,matched_on,review_only\n";
@@ -84,8 +88,23 @@ async function main() {
       m.reviewOnly ? "yes" : "no",
     ].join(","),
   );
-  const footer = `\n# summary_A,${summary.A},summary_B,${summary.B},summary_C,${summary.C},cases_parsed,${allCases.length}\n`;
-  await writeFile(csvPath, header + rows.join("\n") + footer, "utf8");
+  await writeFile(csvPath, header + rows.join("\n") + "\n", "utf8");
+  await writeFile(
+    summaryPath,
+    JSON.stringify(
+      {
+        from,
+        to,
+        cases_parsed: allCases.length,
+        summary_A: summary.A,
+        summary_B: summary.B,
+        summary_C: summary.C,
+      },
+      null,
+      2,
+    ) + "\n",
+    "utf8",
+  );
 
   console.info(
     JSON.stringify({
@@ -95,6 +114,7 @@ async function main() {
       cases_parsed: allCases.length,
       summary,
       csv: csvPath,
+      summary_json: summaryPath,
     }),
   );
 }

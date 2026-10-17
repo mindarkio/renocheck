@@ -1,5 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchDclHtml } from "./fetch-dcl";
+import {
+  fetchDclHtml,
+  isPathDisallowedByRobots,
+  parseRobotsDisallowPrefixes,
+} from "./fetch-dcl";
+
+describe("robots.txt", () => {
+  it("blocks /dcl via prefix disallow", () => {
+    const prefixes = parseRobotsDisallowPrefixes(
+      "User-agent: *\nDisallow: /dcl\nDisallow: /private\n",
+    );
+    expect(isPathDisallowedByRobots("/dcl/view.jsp", prefixes)).toBe(true);
+    expect(isPathDisallowedByRobots("/other", prefixes)).toBe(false);
+  });
+});
 
 describe("fetchDclHtml", () => {
   it("retries 503 then succeeds", async () => {

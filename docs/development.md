@@ -41,7 +41,7 @@ Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm d
 | `pnpm cause-list:export-mwc` | Phase 3a（本地，可選）：MWC 快照供 `dry-run-report`；`.cache/cause-list/mwc-companies-verify.json`（gitignored；勿 commit） |
 | `pnpm cause-list:verify-samples` | Phase 3a（本地）：解析 `~/renocheck-review/samples/view_en_*.html`；只印 rows／kept（裝修相關且含法人被告／答辯人）與案件編號 |
 
-`.cache/cause-list/` 內 DCL 原始 HTML 含當事人姓名；僅供離線開發，完成後應刪除或約 7 日內清理，勿長期保存。
+`.cache/cause-list/` 內 DCL 原始 HTML 與 `mwc-companies-verify.json` 含當事人／公司名；僅供離線開發，**7 日 TTL**（`cache-ttl.ts`；過期需重新 fetch／`pnpm cause-list:export-mwc`），勿 commit。
 
 ## 健康檢查
 

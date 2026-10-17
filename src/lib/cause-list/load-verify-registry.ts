@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { extractMwcBilingualNames } from "../mwc-bilingual-company-names";
+import { assertCacheFileFresh } from "./cache-ttl";
 import type { CauseListCompanyFixture } from "./fixtures/companies.fixture";
 
 export type MwcSnapshotRow = {
@@ -46,6 +47,7 @@ export async function loadVerifyCompanyRegistry(): Promise<CauseListCompanyFixtu
   );
   const jsonPath = envPath || defaultPath;
   try {
+    await assertCacheFileFresh(jsonPath, "MWC verify snapshot");
     const raw = await readFile(jsonPath, "utf8");
     const rows = JSON.parse(raw) as MwcSnapshotRow[];
     return rows.map(rowToFixture).filter((f) => f.namesEn.length || f.namesZh.length);

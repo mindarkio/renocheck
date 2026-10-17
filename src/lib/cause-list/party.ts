@@ -13,6 +13,11 @@ const LIMITED_PARTNERSHIP_RE = /\bLIMITED\s+PARTNERSHIP\b/i;
 const LIMITED_EDITION_RE = /\bLIMITED\s+EDITION\b/i;
 
 const IO_MARKERS_RE = /業主立案法團|INCORPORATED OWNERS/i;
+const IN_LIQUIDATION_RE = /\s*\(IN\s+LIQUIDATION\)\s*$/i;
+
+function stripLiquidationSuffix(name: string): string {
+  return name.replace(IN_LIQUIDATION_RE, "").trim();
+}
 
 export type SplitPartyBlockOptions = {
   /** When false, do not split on inline AND (SMT / labeled blocks). */
@@ -123,7 +128,7 @@ function stripBracketedChineseAlias(name: string): string {
 
 /** M1: corporate entity detection (excludes IO, LP, trustee-of, Limited Edition). */
 export function isCorporateEntityName(name: string): boolean {
-  let cleaned = name.replace(STRIP_CLAUSE_RE, "").trim();
+  let cleaned = stripLiquidationSuffix(name.replace(STRIP_CLAUSE_RE, "").trim());
   if (IO_MARKERS_RE.test(cleaned)) return false;
   if (TRUSTEE_OF_RE.test(cleaned)) return false;
   if (LIMITED_PARTNERSHIP_RE.test(cleaned)) return false;
@@ -153,20 +158,21 @@ export function parseCorporateParties(
 ): ParsedCorporateParty[] {
   const out: ParsedCorporateParty[] = [];
   for (const p of parties) {
-    const raw = p.rawName.replace(STRIP_CLAUSE_RE, "").trim();
+    const raw = stripLiquidationSuffix(p.rawName.replace(STRIP_CLAUSE_RE, "").trim());
     if (!raw) continue;
     const { legalName, tradeName, formerlyTradedAs } = splitTradingAs(raw);
+    const legalNameClean = stripLiquidationSuffix(legalName);
 
-    if (!legalNameIsMatchableCorporate(legalName)) {
+    if (!legalNameIsMatchableCorporate(legalNameClean)) {
       continue;
     }
 
-    const incorporatedOwners = isIncorporatedOwners(legalName);
+    const incorporatedOwners = isIncorporatedOwners(legalNameClean);
     out.push({
       role: p.role,
       position: p.position,
       rawName: p.rawName,
-      legalName,
+      legalName: legalNameClean,
       tradeName: tradeName || undefined,
       formerlyTradedAs: formerlyTradedAs || undefined,
       incorporatedOwners,

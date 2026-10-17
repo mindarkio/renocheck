@@ -7,9 +7,34 @@ export type FetchDclOptions = {
   maxRetries?: number;
 };
 
+export function parseRobotsDisallowPrefixes(robotsText: string): string[] {
+  const prefixes: string[] = [];
+  let applies = false;
+  for (const line of robotsText.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (/^user-agent:\s*\*/i.test(trimmed)) applies = true;
+    if (/^user-agent:/i.test(trimmed) && !/\*/i.test(trimmed)) applies = false;
+    const m = trimmed.match(/^disallow:\s*(.+)$/i);
+    if (applies && m) prefixes.push(m[1].trim());
+  }
+  return prefixes;
+}
+
+export function isPathDisallowedByRobots(
+  pathname: string,
+  disallowPrefixes: string[],
+): boolean {
+  for (const prefix of disallowPrefixes) {
+    if (prefix === "") continue;
+    if (pathname.startsWith(prefix)) return true;
+  }
+  return false;
+}
+
 export async function checkRobotsAllowsFetch(
   origin: string,
   userAgent: string,
+  targetPath = "/dcl/",
 ): Promise<void> {
   const robotsUrl = `${origin.replace(/\/$/, "")}/robots.txt`;
   const res = await fetch(robotsUrl, {
@@ -18,15 +43,9 @@ export async function checkRobotsAllowsFetch(
   });
   if (!res.ok) return;
   const text = await res.text();
-  const lines = text.split(/\r?\n/);
-  let applies = false;
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (/^user-agent:\s*\*/i.test(trimmed)) applies = true;
-    if (/^user-agent:/i.test(trimmed) && !/\*/i.test(trimmed)) applies = false;
-    if (applies && /^disallow:\s*\/\s*$/i.test(trimmed)) {
-      throw new Error(`robots.txt disallows fetch for ${origin}`);
-    }
+  const prefixes = parseRobotsDisallowPrefixes(text);
+  if (isPathDisallowedByRobots(targetPath, prefixes)) {
+    throw new Error(`robots.txt disallows fetch for ${origin}${targetPath}`);
   }
 }
 

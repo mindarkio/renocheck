@@ -26,3 +26,11 @@ export function extractCasePrefix(caseNo: string): string {
 export function detectLegacyCaseFormat(html: string): boolean {
   return LEGACY_CASE_RE.test(html);
 }
+
+/** Count case-number tokens in raw HTML (smoke / verify). */
+export function countRawCaseNosInHtml(html: string): number {
+  const re = new RegExp(CASE_NO_CAPTURE_RE.source, CASE_NO_CAPTURE_RE.flags);
+  let n = 0;
+  while (re.exec(html) !== null) n += 1;
+  return n;
+}

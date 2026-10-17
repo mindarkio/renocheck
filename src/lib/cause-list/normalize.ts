@@ -39,13 +39,10 @@ export function normalizeChineseCompanyName(input: string): {
   normStrict: string;
   normCore: string;
 } {
-  let s = toTraditionalHongKong(input);
-  s = s.replace(REGIONAL_ZH_RE, "");
-  s = s.replace(/[（）()・．.，,、\s]/g, "");
-  s = s.replace(/有限公司$/u, "有限公司");
-  const normStrict = s;
-  let normCore = normStrict.replace(/有限公司$/u, "");
-  normCore = normCore.replace(REGIONAL_ZH_RE, "");
+  const s = toTraditionalHongKong(input);
+  const clean = (x: string) => x.replace(/[（）()・．.，,、\s]/g, "");
+  const normStrict = clean(s);
+  const normCore = clean(s.replace(REGIONAL_ZH_RE, "")).replace(/有限公司$/u, "");
   return { normStrict, normCore };
 }
 
