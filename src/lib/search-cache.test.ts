@@ -105,4 +105,52 @@ describe("setCachedReport ttlMs", () => {
       }),
     );
   });
+
+  it("overwrites degraded cache when writing healthy report", async () => {
+    const healthy = {
+      ...report,
+      official: { mwcMatched: false, legalLookupStatus: "ok" as const },
+      summaryZh: "完整查證摘要。",
+    };
+
+    await setCachedReport(
+      supabase,
+      "fp1",
+      { matchType: "company_name" },
+      healthy,
+    );
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fingerprint: "fp1",
+        report: healthy,
+      }),
+    );
+    expect(maybeSingle).not.toHaveBeenCalled();
+  });
+
+  it("writes degraded report after prior healthy row expired", async () => {
+    const healthy = {
+      ...report,
+      official: { mwcMatched: false, legalLookupStatus: "ok" as const },
+    };
+    maybeSingle.mockResolvedValueOnce({
+      data: {
+        report: healthy,
+        expires_at: "2026-10-16T12:00:00.000Z",
+      },
+    });
+
+    await setCachedReport(supabase, "fp1", { matchType: "company_name" }, report, {
+      ttlMs: LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
+      skipIfHealthyCacheExists: true,
+    });
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fingerprint: "fp1",
+        report,
+      }),
+    );
+  });
 });

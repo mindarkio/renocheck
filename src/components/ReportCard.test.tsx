@@ -5,6 +5,7 @@ import { REPORT_VERSION } from "@/lib/constants";
 import { buildEvaluationStub } from "@/lib/evaluation-stub";
 import type { RiskReport } from "@/lib/report-schema";
 import { LEGAL_LOOKUP_DEGRADED_ZH } from "@/lib/legal-event-display";
+import { summaryZhForLegalLookupDegraded } from "@/lib/search-pipeline-legal-summary";
 
 function degradedReport(): RiskReport {
   const evaluation = buildEvaluationStub({
@@ -14,6 +15,7 @@ function degradedReport(): RiskReport {
     boundHitCount: 0,
     highlightCount: 1,
   });
+  const baseSummary = "公開討論未見負面摘要，建議自行核實。";
   return {
     reportVersion: REPORT_VERSION,
     entity: {
@@ -33,7 +35,7 @@ function degradedReport(): RiskReport {
         recentDisputeCount: 0,
       },
     },
-    summaryZh: "判詞紀錄暫時未能查詢，本次評級未計入判詞。摘要",
+    summaryZh: summaryZhForLegalLookupDegraded(baseSummary),
     official: { mwcMatched: false, legalLookupStatus: "timeout" },
     signals: {
       discussionCount: 1,
@@ -55,9 +57,14 @@ function degradedReport(): RiskReport {
 
 describe("ReportCard legal lookup degraded", () => {
   it("shows 中性 in hero and hides 未見負面摘要 footer", () => {
-    const html = renderToStaticMarkup(<ReportCard report={degradedReport()} />);
+    const report = degradedReport();
+    expect(report.summaryZh).not.toContain("未見負面摘要");
+    expect(report.summaryZh).toContain("建議自行核實");
+
+    const html = renderToStaticMarkup(<ReportCard report={report} />);
     expect(html).toContain(">中性</p>");
     expect(html).not.toContain("「未見負面摘要」僅表示");
     expect(html).toContain(LEGAL_LOOKUP_DEGRADED_ZH);
+    expect(html).toContain(report.summaryZh);
   });
 });
