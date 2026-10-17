@@ -17,6 +17,7 @@ import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
 import {
   judgmentCategoryLabelZh,
+  LEGAL_EVENTS_AI_VERIFIED_ZH,
   LEGAL_EVENTS_AUTO_SUMMARY_ZH,
   LEGAL_EVENTS_FACTS_ONLY_ZH,
   LEGAL_EVENTS_SCOPE_ZH,
@@ -524,7 +525,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
           {legalEvents.some((ev) =>
             hearingSummaryPendingForEvent(
               ev.hearingKeyPointsZh,
-              ev.reviewStatus,
+              ev.hearingPointsSource,
             ),
           ) ? (
             <p className={`${reportMetaClass} -mt-1 mb-3`}>
@@ -539,7 +540,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
             {legalEvents.map((ev) => {
               const factsOnly = hearingSummaryPendingForEvent(
                 ev.hearingKeyPointsZh,
-                ev.reviewStatus,
+                ev.hearingPointsSource,
               );
               return (
                 <li
@@ -572,18 +573,63 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   </p>
                   {!factsOnly ? (
                     <>
-                      {ev.hearingPointsSource === "llm_draft" ||
-                      ev.hearingPointsSource === "ai_verified" ? (
+                      {ev.hearingPointsSource === "ai_verified" ? (
+                        <p className={`mt-2 ${reportMetaClass}`}>
+                          {LEGAL_EVENTS_AI_VERIFIED_ZH}
+                        </p>
+                      ) : ev.hearingPointsSource === "llm_draft" ? (
                         <p className={`mt-2 ${reportMetaClass}`}>
                           {LEGAL_EVENTS_AUTO_SUMMARY_ZH}
                         </p>
                       ) : null}
                       <ul
-                        className={`mt-2 list-disc space-y-1 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
+                        className={`mt-2 list-disc space-y-2 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
                       >
-                        {ev.hearingKeyPointsZh.map((point) => (
-                          <li key={point}>{point}</li>
-                        ))}
+                        {ev.hearingKeyPointsZh.map((point, pointIndex) => {
+                          const quote =
+                            ev.hearingKeyPointQuotesZh?.[pointIndex]?.trim();
+                          return (
+                            <li key={`${pointIndex}-${point}`}>
+                              <span className="text-foreground/90">
+                                {point}
+                              </span>
+                              {quote ? (
+                                <details className="mt-1.5 group">
+                                  <summary
+                                    className="cursor-pointer list-none text-xs font-medium text-primary underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden"
+                                  >
+                                    <span className="inline-flex items-center gap-1">
+                                      判詞引文
+                                      <span
+                                        className="text-[10px] font-normal text-muted-foreground group-open:hidden"
+                                        aria-hidden
+                                      >
+                                        （展開）
+                                      </span>
+                                    </span>
+                                  </summary>
+                                  <p
+                                    className="mt-1.5 whitespace-pre-wrap rounded-md border border-border/60 bg-muted/30 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground"
+                                  >
+                                    {quote}
+                                  </p>
+                                  <a
+                                    href={ev.sourceUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
+                                  >
+                                    <ExternalLink
+                                      className="size-3 shrink-0"
+                                      aria-hidden
+                                    />
+                                    判詞原文（Legal Ref）
+                                  </a>
+                                </details>
+                              ) : null}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </>
                   ) : null}

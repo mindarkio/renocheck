@@ -1,4 +1,6 @@
-/** Hearing summary placeholders — UI shows facts + links only until human_verified. */
+/** Hearing summary placeholders — UI shows facts + links only until verified source. */
+
+import type { HearingPointsSource } from "./legal-event-schema";
 
 export const HEARING_SUMMARY_AUTO_PLACEHOLDER_ZH =
   "聆訊要點待人手覆核；請以刊憲連結查閱公開紀錄。";
@@ -13,11 +15,14 @@ export function isHearingSummaryPlaceholder(text: string): boolean {
   return PLACEHOLDER_MARKERS.test(t);
 }
 
+/** Whether to hide hearing points and show facts-only block. */
 export function hearingSummaryPendingForEvent(
   points: string[],
-  reviewStatus?: "auto" | "human_verified",
+  hearingPointsSource?: HearingPointsSource,
 ): boolean {
-  if (reviewStatus === "human_verified") return false;
+  if (hearingPointsSource === "ai_verified" || hearingPointsSource === "manual") {
+    return points.length === 0;
+  }
   if (points.length === 0) return true;
   return points.every((p) => isHearingSummaryPlaceholder(p));
 }

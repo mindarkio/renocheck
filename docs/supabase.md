@@ -44,6 +44,8 @@ pnpm db:link
 
 ## Migrations
 
+**治理：** 任何新 migration 須先經 **Aaron** 批准再 `db push`／套用 remote（`hearing_key_point_quotes_zh` 2026-10-17 為事後補批）。
+
 已套用（remote）：
 
 - `20261012202411_initial_schema.sql` — placeholder（remote `statements` 為空；無 DDL）

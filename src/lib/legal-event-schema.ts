@@ -52,6 +52,8 @@ export const hearingPointsSourceSchema = z.enum([
   "placeholder",
 ]);
 
+export type HearingPointsSource = z.infer<typeof hearingPointsSourceSchema>;
+
 export const legalEventBusinessFormSchema = z.enum(["sole_proprietorship"]);
 
 export const officialLegalEventSchema = z.object({
@@ -64,6 +66,8 @@ export const officialLegalEventSchema = z.object({
   outcomeHint: outcomeHintSchema.optional(),
   procedureStage: procedureStageSchema.optional(),
   hearingKeyPointsZh: z.array(z.string().max(200)).min(1).max(8),
+  /** Same order as hearingKeyPointsZh (DEC-0012 verified import). */
+  hearingKeyPointQuotesZh: z.array(z.string().max(8000)).max(8).optional(),
   hearingPointsSource: hearingPointsSourceSchema.optional(),
   sourceUrl: z.string().url(),
   matchReasonZh: z.string().max(80),

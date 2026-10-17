@@ -24,6 +24,7 @@ export type LegalJudgmentRow = {
   event_date: string;
   party_names?: string[] | null;
   hearing_key_points_zh: string[];
+  hearing_key_point_quotes_zh?: string[] | null;
   source_url: string;
   judgment_category: string;
   party_role: string;
@@ -55,7 +56,7 @@ const FETCH_PAGE_SIZE = 500;
 const MATCH_SELECT =
   "id, case_ref, company_name_normalized, lookup_aliases, topic_tags";
 const FULL_SELECT =
-  "id, source_type, case_ref, court, event_date, party_names, hearing_key_points_zh, hearing_points_source, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
+  "id, source_type, case_ref, court, event_date, party_names, hearing_key_points_zh, hearing_key_point_quotes_zh, hearing_points_source, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
 
 function parseEnum<T extends string>(
   schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
@@ -88,6 +89,13 @@ function rowToEvent(
     : [];
   if (points.length === 0) return null;
 
+  const quotesRaw = row.hearing_key_point_quotes_zh;
+  const quotes = Array.isArray(quotesRaw)
+    ? quotesRaw.filter((q) => typeof q === "string" && q.trim())
+    : [];
+  const hearingKeyPointQuotesZh =
+    quotes.length > 0 ? quotes.slice(0, points.length) : undefined;
+
   const eventDate =
     typeof row.event_date === "string"
       ? row.event_date.slice(0, 10)
@@ -119,6 +127,9 @@ function rowToEvent(
         })()
       : {}),
     hearingKeyPointsZh: points.slice(0, 8),
+    ...(hearingKeyPointQuotesZh
+      ? { hearingKeyPointQuotesZh: hearingKeyPointQuotesZh.slice(0, 8) }
+      : {}),
     ...(row.hearing_points_source
       ? (() => {
           const v = parseEnum(

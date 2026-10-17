@@ -1,5 +1,6 @@
 /** Human triage overrides (deterministic; ref-keyed). */
 
+import { createHash } from "node:crypto";
 import { normalizeCaseRefKey } from "./judgment-d2-v3d-rules";
 
 export type ManualKeepOverride = {
@@ -54,4 +55,13 @@ export function manualDropReason(caseRef: string): string | null {
 export function manualKeepOverride(caseRef: string): ManualKeepOverride | null {
   const key = normalizeCaseRefKey(caseRef);
   return MANUAL_KEEP[key] ?? null;
+}
+
+/** Bumps D2 step cache when MANUAL_DROP / MANUAL_KEEP change. */
+export function manualTriageRevisionHash(): string {
+  const payload = JSON.stringify({
+    drop: Object.entries(MANUAL_DROP).sort(([a], [b]) => a.localeCompare(b)),
+    keep: Object.entries(MANUAL_KEEP).sort(([a], [b]) => a.localeCompare(b)),
+  });
+  return createHash("sha256").update(payload).digest("hex").slice(0, 16);
 }

@@ -174,10 +174,7 @@ async function main() {
     }
   } else if (!allSeed) {
     pool = seed.filter((r) =>
-      hearingSummaryPendingForEvent(
-        r.hearingKeyPointsZh,
-        r.reviewStatus,
-      ),
+      hearingSummaryPendingForEvent(r.hearingKeyPointsZh),
     );
   }
   const batch = pool.slice(
@@ -215,7 +212,7 @@ async function main() {
 
     if (
       !forceLlm &&
-      !hearingSummaryPendingForEvent(row.hearingKeyPointsZh, row.reviewStatus)
+      !hearingSummaryPendingForEvent(row.hearingKeyPointsZh)
     ) {
       for (const { outcomeHint, point } of existingPointsToRows(
         row,

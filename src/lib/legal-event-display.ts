@@ -35,6 +35,9 @@ export const LEGAL_EVENTS_FACTS_ONLY_ZH =
 export const LEGAL_EVENTS_AUTO_SUMMARY_ZH =
   "自動摘要，以判詞原文為準。";
 
+/** Shown when hearing_points_source is ai_verified. */
+export const LEGAL_EVENTS_AI_VERIFIED_ZH = "已核對判詞原文。";
+
 export function partyRoleLabelZh(
   role: "defendant" | "plaintiff" | "third_party" | "unknown",
 ): string {

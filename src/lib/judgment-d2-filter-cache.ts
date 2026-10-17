@@ -5,6 +5,7 @@ import type { JudgmentCandidateRow } from "./judgment-candidates-schema";
 import type { SplitParties } from "./judgment-d2-parties";
 import type { MwcMatchSummary } from "./judgment-d2-gates";
 import type { D2Disposition } from "./judgment-d2-gates";
+import { manualTriageRevisionHash } from "./judgment-d2-manual-triage";
 
 export const D2_FILTER_POLICY = "company_defendant_v3e";
 
@@ -31,6 +32,8 @@ export type D2CachedCandidateStep = {
 export type D2FilterStepCacheFile = {
   schemaVersion: 1;
   policy: string;
+  /** Invalidates cache when manual triage maps change. */
+  manualTriageRev?: string;
   updatedAt: string;
   byCaseRef: Record<string, D2CachedCandidateStep>;
 };
@@ -52,6 +55,8 @@ export function judgmentCandidateContentHash(row: JudgmentCandidateRow): string 
     eventDate: row.eventDate,
     database: row.database,
     profileId: row.discoveredFrom.profileId,
+    manualTriageRev: manualTriageRevisionHash(),
+    policy: D2_FILTER_POLICY,
   });
   return createHash("sha256").update(payload).digest("hex");
 }
@@ -59,19 +64,25 @@ export function judgmentCandidateContentHash(row: JudgmentCandidateRow): string 
 export function loadD2FilterStepCache(
   path = DEFAULT_CACHE_PATH,
 ): D2FilterStepCacheFile {
+  const triageRev = manualTriageRevisionHash();
   if (!existsSync(path)) {
     return {
       schemaVersion: 1,
       policy: D2_FILTER_POLICY,
+      manualTriageRev: triageRev,
       updatedAt: new Date(0).toISOString(),
       byCaseRef: {},
     };
   }
   const raw = JSON.parse(readFileSync(path, "utf8")) as D2FilterStepCacheFile;
-  if (raw.policy !== D2_FILTER_POLICY) {
+  if (
+    raw.policy !== D2_FILTER_POLICY ||
+    raw.manualTriageRev !== triageRev
+  ) {
     return {
       schemaVersion: 1,
       policy: D2_FILTER_POLICY,
+      manualTriageRev: triageRev,
       updatedAt: new Date(0).toISOString(),
       byCaseRef: {},
     };
@@ -86,7 +97,15 @@ export function saveD2FilterStepCache(
   mkdirSync(resolve(path, ".."), { recursive: true });
   writeFileSync(
     path,
-    `${JSON.stringify({ ...cache, updatedAt: new Date().toISOString() }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        ...cache,
+        manualTriageRev: manualTriageRevisionHash(),
+        updatedAt: new Date().toISOString(),
+      },
+      null,
+      2,
+    )}\n`,
     "utf8",
   );
 }
