@@ -27,6 +27,7 @@ import { calibrateEvaluation } from "./risk-report-calibration-v2";
 import { synthesizeRiskReport } from "./llm-risk-report";
 import {
   getCachedReport,
+  LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
   logSearchEvent,
   setCachedReport,
 } from "./search-cache";
@@ -113,10 +114,15 @@ export async function runSearchPipeline(
     mwcLookup.ambiguous,
   );
 
-  const legalLookupPromise = startLegalLookupForSearch(supabase, {
-    searchLabelUsed,
-    br: input.br,
-  });
+  const legalEventsEnabled = isLegalEventsEnabled();
+  const legalLookupPromise = startLegalLookupForSearch(
+    supabase,
+    {
+      searchLabelUsed,
+      br: input.br,
+    },
+    legalEventsEnabled,
+  );
 
   const serpStart = performance.now();
   const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, mwcOpts);
@@ -271,7 +277,6 @@ export async function runSearchPipeline(
     legalLookup.events,
     boundHitCount,
   );
-  const legalLookupAttempted = isLegalEventsEnabled();
   fullReport = {
     ...fullReport,
     official: {
@@ -282,7 +287,7 @@ export async function runSearchPipeline(
       ...(legalLookup.registryAsOf
         ? { legalRegistryAsOf: legalLookup.registryAsOf }
         : {}),
-      ...(legalLookupAttempted
+      ...(legalLookup.attempted
         ? { legalLookupStatus: legalLookup.status }
         : {}),
     },
@@ -291,9 +296,11 @@ export async function runSearchPipeline(
   const { riskReportSchema } = await import("./report-schema");
   const validated = riskReportSchema.parse(fullReport);
 
-  if (!legalLookupAttempted || !isLegalLookupDegraded(legalLookup.status)) {
-    await setCachedReport(supabase, fingerprint, input, validated);
-  }
+  await setCachedReport(supabase, fingerprint, input, validated, {
+    ttlMs: isLegalLookupDegraded(legalLookup.status)
+      ? LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS
+      : undefined,
+  });
   await logSearchEvent(supabase, fingerprint, false);
 
   console.info(

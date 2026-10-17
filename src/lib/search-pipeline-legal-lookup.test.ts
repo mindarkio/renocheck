@@ -9,15 +9,10 @@ import {
 
 const supabase = {} as SupabaseClient;
 
-vi.mock("./legal-events-config", () => ({
-  isLegalEventsEnabled: vi.fn(),
-}));
-
 vi.mock("./lookup-legal-judgments", () => ({
   lookupLegalJudgments: vi.fn(),
 }));
 
-import { isLegalEventsEnabled } from "./legal-events-config";
 import { lookupLegalJudgments } from "./lookup-legal-judgments";
 
 describe("isLegalLookupDegraded", () => {
@@ -31,7 +26,6 @@ describe("isLegalLookupDegraded", () => {
 describe("startLegalLookupForSearch", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.mocked(isLegalEventsEnabled).mockReturnValue(true);
     vi.mocked(lookupLegalJudgments).mockReset();
   });
 
@@ -39,12 +33,17 @@ describe("startLegalLookupForSearch", () => {
     vi.useRealTimers();
   });
 
-  it("returns ok status when legal events disabled", async () => {
-    vi.mocked(isLegalEventsEnabled).mockReturnValue(false);
-    const result = await startLegalLookupForSearch(supabase, {
-      searchLabelUsed: "示例公司",
+  it("returns not attempted when legal events disabled", async () => {
+    const result = await startLegalLookupForSearch(
+      supabase,
+      { searchLabelUsed: "示例公司" },
+      false,
+    );
+    expect(result).toEqual({
+      status: "ok",
+      attempted: false,
+      ...emptyLegalLookupResult(),
     });
-    expect(result).toEqual({ status: "ok", ...emptyLegalLookupResult() });
     expect(lookupLegalJudgments).not.toHaveBeenCalled();
   });
 
@@ -52,11 +51,14 @@ describe("startLegalLookupForSearch", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(lookupLegalJudgments).mockRejectedValue(new Error("db down"));
 
-    const result = await startLegalLookupForSearch(supabase, {
-      searchLabelUsed: "示例公司",
-    });
+    const result = await startLegalLookupForSearch(
+      supabase,
+      { searchLabelUsed: "示例公司" },
+      true,
+    );
 
     expect(result.status).toBe("error");
+    expect(result.attempted).toBe(true);
     expect(result.events).toEqual([]);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("legal_lookup_failed"),
@@ -79,13 +81,16 @@ describe("startLegalLookupForSearch", () => {
         }),
     );
 
-    const resultPromise = startLegalLookupForSearch(supabase, {
-      searchLabelUsed: "示例公司",
-    });
+    const resultPromise = startLegalLookupForSearch(
+      supabase,
+      { searchLabelUsed: "示例公司" },
+      true,
+    );
     await vi.advanceTimersByTimeAsync(LEGAL_LOOKUP_TIMEOUT_MS);
     const result = await resultPromise;
 
     expect(result.status).toBe("timeout");
+    expect(result.attempted).toBe(true);
     expect(result.events).toEqual([]);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
@@ -104,10 +109,12 @@ describe("startLegalLookupForSearch", () => {
     };
     vi.mocked(lookupLegalJudgments).mockResolvedValue(payload);
 
-    const result = await startLegalLookupForSearch(supabase, {
-      searchLabelUsed: "示例公司",
-    });
+    const result = await startLegalLookupForSearch(
+      supabase,
+      { searchLabelUsed: "示例公司" },
+      true,
+    );
 
-    expect(result).toEqual({ status: "ok", ...payload });
+    expect(result).toEqual({ status: "ok", attempted: true, ...payload });
   });
 });
