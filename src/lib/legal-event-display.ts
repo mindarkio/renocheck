@@ -25,6 +25,9 @@ export function judgmentCategoryLabelZh(cat: JudgmentCategory): string {
 export const LEGAL_LOOKUP_DEGRADED_ZH =
   "判詞紀錄暫時未能查詢，本次評級未計入判詞；請稍後再試";
 
+export const LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX =
+  "判詞紀錄暫時未能查詢，本次評級未計入判詞。";
+
 export const LEGAL_EVENTS_EMPTY_ZH =
   "已檢索本次匯入的公開判詞紀錄；未見與查證對象對照之紀錄。此結果並不表示該方從未涉及司法程序。";
 

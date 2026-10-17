@@ -44,6 +44,7 @@ import {
   isLegalLookupDegraded,
   startLegalLookupForSearch,
 } from "./search-pipeline-legal-lookup";
+import { summaryZhForLegalLookupDegraded } from "./search-pipeline-legal-summary";
 import { isLegalEventsEnabled } from "./legal-events-config";
 
 export type SearchPipelineResult = {
@@ -277,8 +278,14 @@ export async function runSearchPipeline(
     legalLookup.events,
     boundHitCount,
   );
+  const legalDegraded = isLegalLookupDegraded(legalLookup.status);
   fullReport = {
     ...fullReport,
+    ...(legalDegraded
+      ? {
+          summaryZh: summaryZhForLegalLookupDegraded(fullReport.summaryZh),
+        }
+      : {}),
     official: {
       ...fullReport.official,
       ...(legalLookup.events.length > 0
@@ -297,9 +304,8 @@ export async function runSearchPipeline(
   const validated = riskReportSchema.parse(fullReport);
 
   await setCachedReport(supabase, fingerprint, input, validated, {
-    ttlMs: isLegalLookupDegraded(legalLookup.status)
-      ? LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS
-      : undefined,
+    ttlMs: legalDegraded ? LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS : undefined,
+    skipIfHealthyCacheExists: legalDegraded,
   });
   await logSearchEvent(supabase, fingerprint, false);
 
