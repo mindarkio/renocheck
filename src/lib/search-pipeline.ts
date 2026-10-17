@@ -39,7 +39,11 @@ import {
   resolveAuthoritativeSearchLabel,
 } from "./entity-report-context";
 import { applyLegalEventFloors } from "./legal-event-calibration";
-import { startLegalLookupForSearch } from "./search-pipeline-legal-lookup";
+import {
+  isLegalLookupDegraded,
+  startLegalLookupForSearch,
+} from "./search-pipeline-legal-lookup";
+import { isLegalEventsEnabled } from "./legal-events-config";
 
 export type SearchPipelineResult = {
   fingerprint: string;
@@ -267,6 +271,7 @@ export async function runSearchPipeline(
     legalLookup.events,
     boundHitCount,
   );
+  const legalLookupAttempted = isLegalEventsEnabled();
   fullReport = {
     ...fullReport,
     official: {
@@ -277,13 +282,18 @@ export async function runSearchPipeline(
       ...(legalLookup.registryAsOf
         ? { legalRegistryAsOf: legalLookup.registryAsOf }
         : {}),
+      ...(legalLookupAttempted
+        ? { legalLookupStatus: legalLookup.status }
+        : {}),
     },
   };
 
   const { riskReportSchema } = await import("./report-schema");
   const validated = riskReportSchema.parse(fullReport);
 
-  await setCachedReport(supabase, fingerprint, input, validated);
+  if (!legalLookupAttempted || !isLegalLookupDegraded(legalLookup.status)) {
+    await setCachedReport(supabase, fingerprint, input, validated);
+  }
   await logSearchEvent(supabase, fingerprint, false);
 
   console.info(

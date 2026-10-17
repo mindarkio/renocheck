@@ -21,6 +21,7 @@ import {
   LEGAL_EVENTS_AUTO_SUMMARY_ZH,
   LEGAL_EVENTS_FACTS_ONLY_ZH,
   LEGAL_EVENTS_SCOPE_ZH,
+  LEGAL_LOOKUP_DEGRADED_ZH,
   partyRoleLabelZh,
 } from "@/lib/legal-event-display";
 import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
@@ -293,6 +294,10 @@ export function ReportCard({ report }: { report: RiskReport }) {
     showSaturationBanner && saturationNote && !bindFailure;
   const legalEvents = report.official.legalEvents ?? [];
   const showLegalEvents = legalEvents.length > 0;
+  const showLegalLookupDegraded =
+    !showLegalEvents &&
+    (report.official.legalLookupStatus === "error" ||
+      report.official.legalLookupStatus === "timeout");
 
   return (
     <div className="space-y-4 text-left">
@@ -657,6 +662,14 @@ export function ReportCard({ report }: { report: RiskReport }) {
               </time>
             </p>
           ) : null}
+        </ReportBlock>
+      ) : showLegalLookupDegraded ? (
+        <ReportBlock
+          id="legal-events-heading"
+          icon={FileText}
+          title="公開判詞紀錄"
+        >
+          <p className={`${reportMetaClass} -mt-1`}>{LEGAL_LOOKUP_DEGRADED_ZH}</p>
         </ReportBlock>
       ) : null}
 

@@ -147,6 +147,8 @@ const riskReportBaseSchema = z.object({
     /** DEC-0012 Track 1 court judgments (structured; not LLM) */
     legalEvents: z.array(officialLegalEventSchema).max(10).optional(),
     legalRegistryAsOf: z.string().datetime().optional(),
+    /** Set when Track 1 lookup ran; error/timeout → UI degraded message */
+    legalLookupStatus: z.enum(["ok", "error", "timeout"]).optional(),
   }),
   signals: z.object({
     discussionCount: z.number().int().nonnegative(),

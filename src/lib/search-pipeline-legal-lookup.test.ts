@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   LEGAL_LOOKUP_TIMEOUT_MS,
   emptyLegalLookupResult,
+  isLegalLookupDegraded,
   startLegalLookupForSearch,
 } from "./search-pipeline-legal-lookup";
 
@@ -19,6 +20,14 @@ vi.mock("./lookup-legal-judgments", () => ({
 import { isLegalEventsEnabled } from "./legal-events-config";
 import { lookupLegalJudgments } from "./lookup-legal-judgments";
 
+describe("isLegalLookupDegraded", () => {
+  it("flags error and timeout only", () => {
+    expect(isLegalLookupDegraded("ok")).toBe(false);
+    expect(isLegalLookupDegraded("error")).toBe(true);
+    expect(isLegalLookupDegraded("timeout")).toBe(true);
+  });
+});
+
 describe("startLegalLookupForSearch", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -30,16 +39,16 @@ describe("startLegalLookupForSearch", () => {
     vi.useRealTimers();
   });
 
-  it("returns empty when legal events disabled", async () => {
+  it("returns ok status when legal events disabled", async () => {
     vi.mocked(isLegalEventsEnabled).mockReturnValue(false);
     const result = await startLegalLookupForSearch(supabase, {
       searchLabelUsed: "示例公司",
     });
-    expect(result).toEqual(emptyLegalLookupResult());
+    expect(result).toEqual({ status: "ok", ...emptyLegalLookupResult() });
     expect(lookupLegalJudgments).not.toHaveBeenCalled();
   });
 
-  it("returns empty and logs on lookup error", async () => {
+  it("returns error status and logs on lookup failure", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(lookupLegalJudgments).mockRejectedValue(new Error("db down"));
 
@@ -47,13 +56,14 @@ describe("startLegalLookupForSearch", () => {
       searchLabelUsed: "示例公司",
     });
 
-    expect(result).toEqual(emptyLegalLookupResult());
+    expect(result.status).toBe("error");
+    expect(result.events).toEqual([]);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("legal_lookup_failed"),
     );
   });
 
-  it("returns empty after timeout when lookup is slow", async () => {
+  it("returns timeout status and clears timer without late warn", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(lookupLegalJudgments).mockImplementation(
       () =>
@@ -75,13 +85,19 @@ describe("startLegalLookupForSearch", () => {
     await vi.advanceTimersByTimeAsync(LEGAL_LOOKUP_TIMEOUT_MS);
     const result = await resultPromise;
 
-    expect(result).toEqual(emptyLegalLookupResult());
+    expect(result.status).toBe("timeout");
+    expect(result.events).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("legal_lookup_timeout"),
     );
+
+    warn.mockClear();
+    await vi.advanceTimersByTimeAsync(LEGAL_LOOKUP_TIMEOUT_MS);
+    expect(warn).not.toHaveBeenCalled();
   });
 
-  it("returns lookup result when it finishes within timeout", async () => {
+  it("returns ok status when lookup finishes within timeout", async () => {
     const payload = {
       events: [],
       registryAsOf: "2026-10-17T12:00:00.000Z",
@@ -92,6 +108,6 @@ describe("startLegalLookupForSearch", () => {
       searchLabelUsed: "示例公司",
     });
 
-    expect(result).toEqual(payload);
+    expect(result).toEqual({ status: "ok", ...payload });
   });
 });

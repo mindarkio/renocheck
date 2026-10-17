@@ -8,8 +8,20 @@ import {
 
 export const LEGAL_LOOKUP_TIMEOUT_MS = 3000;
 
+export type LegalLookupStatus = "ok" | "error" | "timeout";
+
+export type LegalLookupForSearchResult = LegalLookupResult & {
+  status: LegalLookupStatus;
+};
+
 export function emptyLegalLookupResult(): LegalLookupResult {
   return { events: [], registryAsOf: undefined };
+}
+
+export function isLegalLookupDegraded(
+  status: LegalLookupStatus,
+): boolean {
+  return status === "error" || status === "timeout";
 }
 
 function logLegalLookupFailure(reason: "error" | "timeout", detail?: string) {
@@ -31,25 +43,42 @@ function logLegalLookupFailure(reason: "error" | "timeout", detail?: string) {
 export function startLegalLookupForSearch(
   supabase: SupabaseClient,
   ctx: LegalLookupContext,
-): Promise<LegalLookupResult> {
+): Promise<LegalLookupForSearchResult> {
   if (!isLegalEventsEnabled()) {
-    return Promise.resolve(emptyLegalLookupResult());
+    return Promise.resolve({
+      status: "ok",
+      ...emptyLegalLookupResult(),
+    });
   }
 
-  const lookupPromise = lookupLegalJudgments(supabase, ctx).catch((err) => {
-    logLegalLookupFailure(
-      "error",
-      err instanceof Error ? err.message : String(err),
-    );
-    return emptyLegalLookupResult();
-  });
+  const lookupPromise = lookupLegalJudgments(supabase, ctx)
+    .then((result) => ({
+      status: "ok" as const,
+      ...result,
+    }))
+    .catch((err) => {
+      logLegalLookupFailure(
+        "error",
+        err instanceof Error ? err.message : String(err),
+      );
+      return {
+        status: "error" as const,
+        ...emptyLegalLookupResult(),
+      };
+    });
 
-  const timeoutPromise = new Promise<LegalLookupResult>((resolve) => {
-    setTimeout(() => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<LegalLookupForSearchResult>((resolve) => {
+    timeoutId = setTimeout(() => {
       logLegalLookupFailure("timeout");
-      resolve(emptyLegalLookupResult());
+      resolve({
+        status: "timeout",
+        ...emptyLegalLookupResult(),
+      });
     }, LEGAL_LOOKUP_TIMEOUT_MS);
   });
 
-  return Promise.race([lookupPromise, timeoutPromise]);
+  return Promise.race([lookupPromise, timeoutPromise]).finally(() => {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  });
 }
