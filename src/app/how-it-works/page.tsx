@@ -34,13 +34,13 @@ export default function HowItWorksPage() {
           </ContentSection>
           <ContentSection title="2. 公開資料來源">
             <p>
-              並行檢索屋宇署<strong>小型工程承辦商註冊制度（MWC）</strong>相關公開名冊，以及合規搜尋服務取得的
-              <strong>公開網頁摘要</strong>（標題與 snippet）。未收錄的私人通訊或已刪除內容可能不在範圍內。
+              並行檢索屋宇署<strong>小型工程承辦商註冊制度（MWC）</strong>相關公開名冊；在功能開啟時，查詢營運方<strong>已匯入</strong>的<strong>公開判詞紀錄</strong>（聆訊要點與刊憲連結，不經 AI 改寫）；以及合規搜尋服務取得的
+              <strong>公開網頁摘要</strong>（標題與 snippet）。未收錄的私人通訊、未匯入的官司或已刪除內容可能不在範圍內。
             </p>
           </ContentSection>
           <ContentSection title="3. 對照與風險參考分檔">
             <p>
-              系統嘗試將搜尋結果與本次查證名稱對照，並在範圍內整理與裝修糾紛或讚揚相關的公開討論摘要。你會看到風險參考分檔（例如風險偏高、風險中等、中性、未見負面摘要）及置信度說明——
+              系統嘗試將搜尋結果與本次查證名稱對照，並在範圍內整理與裝修糾紛或讚揚相關的公開討論摘要。判詞紀錄以程式規則影響分檔下限（按案件類型與角色），與討論摘要分開。你會看到風險參考分檔（例如風險偏高、風險中等、中性、未見負面摘要）及置信度說明——
               <strong>不是</strong>工程品質保證或信貸評分。
             </p>
           </ContentSection>

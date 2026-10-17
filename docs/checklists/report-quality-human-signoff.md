@@ -17,10 +17,16 @@
 | 8 | 公司：`南興工程有限公司` | 可能唔 hit 名冊；`user_only` 可接受 | | | | | | |
 | 9 | _自選：用戶輸入名 ≠ 名冊名（有 MWC hit 時）_ | `nameAlignment` / 文案 | | | | | | |
 | 10 | _自選：BR 或第二條電話（若有真實測試資料）_ | 匹配路徑 | | | | | | |
+| 11 | 公司：`示例裝修工程有限公司`（`LEGAL_EVENTS_ENABLED=1`，`refresh: true`） | 有判詞要點 + 外鏈；分檔 ≥ 風險中等；摘要唔寫「黑店」 | | | | | | 合成 seed |
+| 11a | 公司：`燊記裝修水電工程`（`LEGAL_EVENTS_ENABLED=1`，`refresh: true`；**Track 1 beta 實測**） | **被告 only（B0）：** `legalEvents` = HCSA 57/2024（唔含 59/2014 原告）；要點 + LRS 外鏈；分檔 **風險中等**；摘要唔寫「黑店」 | Y | Y | Y | Product owner | 2026-10-16 | B0 後重新驗 UI；榮記／燊記 alias |
+| 12 | BR：`87654321` 或公司：`勞資示例有限公司` | 勞資類只展示為主；唔誤升「風險偏高」 | | | | | | 合成 seed |
+| 13 | 任意查詢（法律庫已開） | 無判詞 match 時顯示「未見對照」句；唔寫「無官司」 | | | | | | |
 
 **自動對照（唔代替本表）：**
 
 ```bash
+pnpm legal:lookup-smoke "示例裝修工程有限公司"
+pnpm legal:lookup-smoke --br 87654321
 pnpm eval:report-quality
 pnpm eval:report-quality --live   # 需 dev + .env.local；食 quota
 ```

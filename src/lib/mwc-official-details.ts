@@ -1,4 +1,5 @@
 import type { MwcRow } from "@/lib/mwc-lookup";
+import { normalizeIsoDatetimeForSchema } from "./normalize-iso-datetime";
 
 export type OfficialMwcDetails = {
   companyName: string;
@@ -17,8 +18,11 @@ export function buildOfficialMwcDetails(mwc: MwcRow): OfficialMwcDetails {
     registrationNo: mwc.registration_no,
     ...(mwc.expiry_date ? { expiryDate: mwc.expiry_date } : {}),
     ...(authorizedSignatory ? { authorizedSignatory } : {}),
-    ...(mwc.source_updated_at
-      ? { registryDataAsOf: mwc.source_updated_at }
-      : {}),
+    ...(() => {
+      const registryDataAsOf = normalizeIsoDatetimeForSchema(
+        mwc.source_updated_at,
+      );
+      return registryDataAsOf ? { registryDataAsOf } : {};
+    })(),
   };
 }

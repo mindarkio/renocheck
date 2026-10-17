@@ -14,7 +14,7 @@ Start when **paid unlock (Stripe)** or **public marketing launch** is committed.
 | Area | Add |
 |------|-----|
 | Requirements | `docs/requirements/MRL.md` with `RNCK-REQ-nnn` |
-| **Company intelligence** | Persistent **entity** (phone / BR / name resolution) decoupled from `mwc_contractors`; **risk assessment snapshots** (grade, confidence, signals) over time; **extended history** (Phase 1.5 official sources e.g. court/customs stubs, curated web-signal archives with retention/ToS policy). MVP `search_cache` remains ephemeral; V2 defines what is durable vs re-fetched on search |
+| **Company intelligence** | Persistent **entity** (phone / BR / name resolution) decoupled from `mwc_contractors`; **risk assessment snapshots** (grade, confidence, signals) over time; **extended history** (Track 1 legal events per [`track1-official-extensions-roadmap.md`](track1-official-extensions-roadmap.md) v1.0–v1.2, plus curated web-signal archives with retention/ToS policy). MVP `search_cache` remains ephemeral; V2 defines what is durable vs re-fetched on search |
 | Payments | `payments` flow + scoped rule or DEC |
 | Quality | E2E (Playwright or similar), dependency audit |
 | Supply chain | SBOM on release |

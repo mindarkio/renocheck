@@ -15,4 +15,10 @@ describe("mwcCompanyNameLookupTerms", () => {
     const terms = mwcCompanyNameLookupTerms("甲公司有限公司");
     expect(new Set(terms).size).toBe(terms.length);
   });
+
+  it("expands LTD and decodes &amp;", () => {
+    const terms = mwcCompanyNameLookupTerms("GORDON TSO &amp; CO LTD");
+    expect(terms.some((t) => /LIMITED/i.test(t))).toBe(true);
+    expect(terms.some((t) => t.includes("&"))).toBe(true);
+  });
 });

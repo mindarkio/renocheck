@@ -24,3 +24,6 @@ npm-debug.log*
 # supabase
 .branches
 tmp-report-2.1.0.json
+scripts/fixtures/judgments-seed.local.json
+scripts/output/*
+!scripts/output/README.md

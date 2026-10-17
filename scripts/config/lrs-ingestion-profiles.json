@@ -1,0 +1,374 @@
+{
+  "version": 1,
+  "validatedAt": "2026-10-16",
+  "validationMethod": "browser_manual_legalref",
+  "rulesDoc": "docs/design/lrs-judgment-discovery-rules.md",
+  "lrsProfiles": [
+    {
+      "id": "phrase-裝修工程",
+      "tier": "A",
+      "mode": "phrase",
+      "keyword": "裝修工程",
+      "observedHitsJu": 749,
+      "maxPagesDefault": 8,
+      "note": "Primary renovation phrase; includes HCSA/DCCJ in results — filter by case prefix in D2."
+    },
+    {
+      "id": "hcsa-裝修",
+      "tier": "A",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "裝修",
+      "maxPagesDefault": 8,
+      "note": "Dual-field: case prefix + 裝修; high precision Small Claims."
+    },
+    {
+      "id": "dccj-裝修",
+      "tier": "A",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "裝修",
+      "maxPagesDefault": 8,
+      "note": "Dual-field: District Court civil + 裝修."
+    },
+    {
+      "id": "ldpd-裝修",
+      "tier": "A",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "裝修",
+      "observedHitsJu": 72,
+      "maxPagesDefault": 8,
+      "note": "Dual-field: LDPD + 裝修; browser validated 2026-10-16 (72 JU hits)."
+    },
+    {
+      "id": "ldbm-裝修",
+      "tier": "A",
+      "mode": "anywords",
+      "keyword": "LDBM",
+      "secondKeyword": "裝修",
+      "observedHitsJu": 205,
+      "maxPagesDefault": 15,
+      "note": "Dual-field: LDBM + 裝修; browser validated 2026-10-16 (205 JU hits)."
+    },
+    {
+      "id": "phrase-裝修合約",
+      "tier": "A",
+      "mode": "phrase",
+      "keyword": "裝修合約",
+      "observedHitsJu": 40,
+      "maxPagesDefault": 4,
+      "note": "Phrase 裝修合約; browser 2026-10-16: 4 total pages (JU)."
+    },
+    {
+      "id": "anywords-室內工程",
+      "tier": "A",
+      "mode": "anywords",
+      "keyword": "室內工程",
+      "observedHitsJu": 19,
+      "maxPagesDefault": 5
+    },
+    {
+      "id": "anywords-滲水",
+      "tier": "A",
+      "mode": "anywords",
+      "keyword": "滲水",
+      "observedHitsJu": 19,
+      "maxPagesDefault": 5
+    },
+    {
+      "id": "anywords-裝修公司",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "裝修公司",
+      "maxPagesDefault": 10,
+      "note": "Aaron topic v2; probe pending observedHitsJu."
+    },
+    {
+      "id": "hca-裝修",
+      "tier": "A",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "裝修",
+      "maxPagesDefault": 8,
+      "note": "Aaron topic v2 dual-field."
+    },
+    {
+      "id": "cacv-裝修",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "CACV",
+      "secondKeyword": "裝修",
+      "maxPagesDefault": 8,
+      "note": "Aaron topic v2; appeals — D2 may review/drop."
+    },
+    {
+      "id": "dccj-工程款",
+      "tier": "A",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "工程款",
+      "maxPagesDefault": 8,
+      "note": "Aaron topic v2."
+    },
+    {
+      "id": "hca-工程合約",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "工程合約",
+      "maxPagesDefault": 10,
+      "note": "Aaron topic v2."
+    },
+    {
+      "id": "anywords-工程合約",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "工程合約",
+      "observedHitsJu": 389,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "anywords-翻新",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "翻新",
+      "observedHitsJu": 414,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "anywords-承辦商",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "承辦商",
+      "maxPagesDefault": 10
+    },
+    {
+      "id": "phrase-判頭",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "判頭",
+      "observedHitsJu": 396,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl 2026-10-16."
+    },
+    {
+      "id": "phrase-浴室",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "浴室",
+      "observedHitsJu": 490,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "phrase-廚櫃",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "廚櫃",
+      "observedHitsJu": 71,
+      "maxPagesDefault": 12,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "phrase-防水",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "防水",
+      "observedHitsJu": 392,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "phrase-拆卸",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "拆卸",
+      "observedHitsJu": 431,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "phrase-室內設計",
+      "tier": "B",
+      "mode": "phrase",
+      "keyword": "室內設計",
+      "observedHitsJu": 183,
+      "maxPagesDefault": 15,
+      "note": "Round 2 crawl."
+    },
+    {
+      "id": "dccj-水電",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "水電",
+      "observedHitsJu": 162,
+      "maxPagesDefault": 15,
+      "note": "Round 2 dual-prefix probe; all ≤500."
+    },
+    {
+      "id": "hca-水電",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "水電",
+      "observedHitsJu": 141,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "ldpd-水電",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "水電",
+      "observedHitsJu": 86,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "hcsa-水電",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "水電",
+      "observedHitsJu": 25,
+      "maxPagesDefault": 5
+    },
+    {
+      "id": "dccj-冷氣",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "冷氣",
+      "observedHitsJu": 125,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "hca-冷氣",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "冷氣",
+      "observedHitsJu": 126,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "ldpd-冷氣",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "冷氣",
+      "observedHitsJu": 38,
+      "maxPagesDefault": 7
+    },
+    {
+      "id": "hcsa-冷氣",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "冷氣",
+      "observedHitsJu": 28,
+      "maxPagesDefault": 5
+    },
+    {
+      "id": "dccj-油漆",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "油漆",
+      "observedHitsJu": 107,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "hca-油漆",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "油漆",
+      "observedHitsJu": 68,
+      "maxPagesDefault": 12
+    },
+    {
+      "id": "ldpd-油漆",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "油漆",
+      "observedHitsJu": 9,
+      "maxPagesDefault": 2
+    },
+    {
+      "id": "hcsa-油漆",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "油漆",
+      "observedHitsJu": 22,
+      "maxPagesDefault": 4
+    },
+    {
+      "id": "dccj-interior",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "DCCJ",
+      "secondKeyword": "interior",
+      "observedHitsJu": 310,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "hca-interior",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCA",
+      "secondKeyword": "interior",
+      "observedHitsJu": 455,
+      "maxPagesDefault": 15
+    },
+    {
+      "id": "ldpd-interior",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "LDPD",
+      "secondKeyword": "interior",
+      "observedHitsJu": 15,
+      "maxPagesDefault": 3
+    },
+    {
+      "id": "hcsa-interior",
+      "tier": "B",
+      "mode": "anywords",
+      "keyword": "HCSA",
+      "secondKeyword": "interior",
+      "observedHitsJu": 23,
+      "maxPagesDefault": 4
+    },
+    {
+      "id": "anywords-裝修",
+      "tier": "C",
+      "mode": "anywords",
+      "keyword": "裝修",
+      "observedHitsJu": 3266,
+      "maxPagesDefault": 3,
+      "note": "Broad; use for sampling only — do not bulk-import full list."
+    }
+  ],
+  "deprecatedPatterns": [
+    {
+      "pattern": "courtTerm prefix in txtSearch (e.g. HKSCT 裝修)",
+      "reason": "Full-text keyword only; does not filter Small Claims Tribunal. Overlaps ~99% with 裝修 alone."
+    },
+    {
+      "pattern": "selDatabase includes PD",
+      "reason": "Surfaces Practice Directions (e.g. 綜合實務指示) ahead of judgments."
+    },
+    {
+      "pattern": "GET with txtSearch10 case number without form POST",
+      "reason": "Observed GovHK 500 on direct URL; use advanced form GO or future Playwright POST."
+    }
+  ],
+  "caseRefPriorityPrefixes": ["HCSA", "DCCJ", "LDPD", "LDBM", "HCA", "HCPI"],
+  "caseRefSkipPrefixes": ["CACC", "HCMA", "DCCC"],
+  "_caseRefNote": "DCCC = District Court criminal; DCCJ = civil — do not conflate",
+  "skipDatabaseLabels": ["Practice Directions"],
+  "warnIfHitsAbove": 500
+}

@@ -19,3 +19,10 @@ export function normalizeSearchInput(raw: SearchInput): NormalizedSearchInput {
 
   return { companyName, phone, br, matchType };
 }
+
+/** Scripts / D2 in-memory lookup that only search by company label. */
+export function companyNameOnlySearchInput(
+  companyName: string,
+): NormalizedSearchInput {
+  return { companyName, matchType: "company_name" };
+}

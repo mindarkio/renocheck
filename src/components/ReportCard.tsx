@@ -14,6 +14,16 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
+import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
+import {
+  judgmentCategoryLabelZh,
+  LEGAL_EVENTS_AI_VERIFIED_ZH,
+  LEGAL_EVENTS_AUTO_SUMMARY_ZH,
+  LEGAL_EVENTS_FACTS_ONLY_ZH,
+  LEGAL_EVENTS_SCOPE_ZH,
+  partyRoleLabelZh,
+} from "@/lib/legal-event-display";
+import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
 import { formatReportGeneratedAtHkt } from "@/lib/format-report-generated-at";
 import {
   formatMwcExpiryDateZh,
@@ -281,6 +291,8 @@ export function ReportCard({ report }: { report: RiskReport }) {
     (report.signals.boundHitCount ?? 0) === 0;
   const showSaturationNote =
     showSaturationBanner && saturationNote && !bindFailure;
+  const legalEvents = report.official.legalEvents ?? [];
+  const showLegalEvents = legalEvents.length > 0;
 
   return (
     <div className="space-y-4 text-left">
@@ -445,6 +457,57 @@ export function ReportCard({ report }: { report: RiskReport }) {
           </div>
         ) : null}
 
+        <div className="mt-4 border-t border-primary-foreground/15 pt-3">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-primary-foreground/75">
+            <Link2 className="size-3.5 shrink-0" aria-hidden />
+            一鍵查證（外部連結）
+          </p>
+          <ul className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-primary-foreground/85 sm:text-xs">
+            {(() => {
+              const links = buildJudiciaryDeepLinks(
+                report.entity.searchLabelUsed,
+              );
+              return (
+                <>
+                  <li>
+                    <a
+                      href={links.lrsPartiesSearch}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline-offset-2 hover:underline"
+                    >
+                      司法機構法律參考（訴訟方搜尋）
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href={links.hkliiSearch}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline-offset-2 hover:underline"
+                    >
+                      HKLII 站內搜尋
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href={links.dailyCauseListSearch}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline-offset-2 hover:underline"
+                    >
+                      司法機構每日排期表
+                    </a>
+                    <span className="mt-0.5 block text-primary-foreground/60">
+                      {links.dailyCauseListNote}
+                    </span>
+                  </li>
+                </>
+              );
+            })()}
+          </ul>
+        </div>
+
         <p className="mt-4 border-t border-primary-foreground/15 pt-3 text-[11px] leading-[1.6] text-primary-foreground/65 sm:text-xs">
           生成時間{" "}
           <time dateTime={report.generatedAt}>
@@ -452,6 +515,150 @@ export function ReportCard({ report }: { report: RiskReport }) {
           </time>
         </p>
       </header>
+
+      {showLegalEvents ? (
+        <ReportBlock
+          id="legal-events-heading"
+          icon={FileText}
+          title={`公開判詞紀錄（${legalEvents.length} 宗）`}
+        >
+          {legalEvents.some((ev) =>
+            hearingSummaryPendingForEvent(
+              ev.hearingKeyPointsZh,
+              ev.hearingPointsSource,
+            ),
+          ) ? (
+            <p className={`${reportMetaClass} -mt-1 mb-3`}>
+              {LEGAL_EVENTS_FACTS_ONLY_ZH}
+            </p>
+          ) : (
+            <p className={`${reportMetaClass} -mt-1 mb-3`}>
+              {LEGAL_EVENTS_SCOPE_ZH}
+            </p>
+          )}
+          <ul className="list-none space-y-0 p-0">
+            {legalEvents.map((ev) => {
+              const factsOnly = hearingSummaryPendingForEvent(
+                ev.hearingKeyPointsZh,
+                ev.hearingPointsSource,
+              );
+              return (
+                <li
+                  key={`${ev.caseRef}-${ev.sourceUrl}`}
+                  className={reportListRowClass}
+                >
+                  <p className="text-sm font-semibold text-foreground sm:text-[15px]">
+                    {ev.caseRef}
+                  </p>
+                  {ev.businessForm === "sole_proprietorship" &&
+                  ev.defendantDisplayNameZh ? (
+                    <p className={`mt-1.5 flex flex-wrap items-center gap-2 ${reportBodyClass}`}>
+                      <span className="font-medium text-foreground">
+                        {ev.defendantDisplayNameZh}
+                      </span>
+                      <span
+                        className="inline-flex rounded-full border border-muted-foreground/25 bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                      >
+                        獨資經營
+                      </span>
+                    </p>
+                  ) : null}
+                  <p className={`mt-1.5 ${reportMetaClass}`}>
+                    {ev.court} ·{" "}
+                    <time dateTime={ev.eventDate}>{ev.eventDate}</time>
+                    {" · "}
+                    {partyRoleLabelZh(ev.partyRole)}
+                    {" · "}
+                    {judgmentCategoryLabelZh(ev.judgmentCategory)}
+                  </p>
+                  {!factsOnly ? (
+                    <>
+                      {ev.hearingPointsSource === "ai_verified" ? (
+                        <p className={`mt-2 ${reportMetaClass}`}>
+                          {LEGAL_EVENTS_AI_VERIFIED_ZH}
+                        </p>
+                      ) : ev.hearingPointsSource === "llm_draft" ? (
+                        <p className={`mt-2 ${reportMetaClass}`}>
+                          {LEGAL_EVENTS_AUTO_SUMMARY_ZH}
+                        </p>
+                      ) : null}
+                      <ul
+                        className={`mt-2 list-disc space-y-2 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
+                      >
+                        {ev.hearingKeyPointsZh.map((point, pointIndex) => {
+                          const quote =
+                            ev.hearingKeyPointQuotesZh?.[pointIndex]?.trim();
+                          return (
+                            <li key={`${pointIndex}-${point}`}>
+                              <span className="text-foreground/90">
+                                {point}
+                              </span>
+                              {quote ? (
+                                <details className="mt-1.5 group">
+                                  <summary
+                                    className="cursor-pointer list-none text-xs font-medium text-primary underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden"
+                                  >
+                                    <span className="inline-flex items-center gap-1">
+                                      判詞引文
+                                      <span
+                                        className="text-[10px] font-normal text-muted-foreground group-open:hidden"
+                                        aria-hidden
+                                      >
+                                        （展開）
+                                      </span>
+                                    </span>
+                                  </summary>
+                                  <p
+                                    className="mt-1.5 whitespace-pre-wrap rounded-md border border-border/60 bg-muted/30 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground"
+                                  >
+                                    {quote}
+                                  </p>
+                                  <a
+                                    href={ev.sourceUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
+                                  >
+                                    <ExternalLink
+                                      className="size-3 shrink-0"
+                                      aria-hidden
+                                    />
+                                    判詞原文（Legal Ref）
+                                  </a>
+                                </details>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </>
+                  ) : null}
+                  <a
+                    href={ev.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 hover:underline"
+                  >
+                    <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+                    司法機構刊憲連結
+                  </a>
+                  <p className={`mt-1.5 ${reportMetaClass}`}>
+                    {ev.matchReasonZh}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+          {report.official.legalRegistryAsOf ? (
+            <p className={`mt-3 ${reportMetaClass}`}>
+              判詞庫摘錄截至{" "}
+              <time dateTime={report.official.legalRegistryAsOf}>
+                {formatReportGeneratedAtHkt(report.official.legalRegistryAsOf)}
+              </time>
+            </p>
+          ) : null}
+        </ReportBlock>
+      ) : null}
 
       {evidenceCount > 0 && highlights.length === 0 && (
         <ReportBlock

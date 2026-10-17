@@ -8,6 +8,10 @@
 1b. [`docs/design/search-evidence.md`](docs/design/search-evidence.md) — Track 2 retrieval / evidence（實作前）  
 1c. [`docs/design/pipeline-ssot.md`](docs/design/pipeline-ssot.md) — pipeline 可靠與報告 SSOT（north star）  
 1d. [`docs/plans/pipeline-v2.2.0-practical-landing.md`](docs/plans/pipeline-v2.2.0-practical-landing.md) — v2.2.0 雙軌評分／Q3／校準（draft）  
+1e. [`docs/phases/track1-official-extensions-roadmap.md`](docs/phases/track1-official-extensions-roadmap.md) — Track 1 法律延伸 v1.0.0 判詞／v1.1.0 海關／v1.2.0 清盤  
+1f. [`docs/plans/judgment-ingestion-execution.md`](docs/plans/judgment-ingestion-execution.md) — 判詞來源獲取與 DB 入庫（D1–D3 執行 SSOT）  
+1g. [`docs/plans/judgment-j5-mwc-parties-coverage.md`](docs/plans/judgment-j5-mwc-parties-coverage.md) — J5：~16k MWC Parties 軸  
+1h. [`docs/plans/track1-v1-0-execution.md`](docs/plans/track1-v1-0-execution.md) — Renocheck 1.0 判詞實作計劃（P0–P7）  
 2. [Notion spec](https://app.notion.com/p/3f63e97febe9809ebb29c1fb43c3c331)  
 3. [`docs/phases/V2-roadmap.md`](docs/phases/V2-roadmap.md) — what not to build early  
 4. [`docs/development.md`](docs/development.md) — `pnpm dev` / test  
@@ -52,7 +56,7 @@ See [`docs/decision-log/README.md`](docs/decision-log/README.md). Examples: sear
 
 Plans: [`seo-aeo-geo-optimization.md`](docs/plans/seo-aeo-geo-optimization.md)（SEO／AEO／GEO；域名 renocheck.homes）。
 
-Recorded: [`DEC-0001-lightweight-governance.md`](docs/decision-log/DEC-0001-lightweight-governance.md), [`DEC-0002-search-query-pack-l1.md`](docs/decision-log/DEC-0002-search-query-pack-l1.md), [`DEC-0003-serp-q2-loose-short-entity.md`](docs/decision-log/DEC-0003-serp-q2-loose-short-entity.md), [`DEC-0004-trustworthy-report-open-access.md`](docs/decision-log/DEC-0004-trustworthy-report-open-access.md), [`DEC-0005-serp-partial-pages.md`](docs/decision-log/DEC-0005-serp-partial-pages.md), [`DEC-0006-retrieval-evidence-ssot.md`](docs/decision-log/DEC-0006-retrieval-evidence-ssot.md), [`DEC-0007-dual-track-v2-2-0.md`](docs/decision-log/DEC-0007-dual-track-v2-2-0.md), [`DEC-0008-serper-primary-search-provider.md`](docs/decision-log/DEC-0008-serper-primary-search-provider.md), [`DEC-0009-release-gold-set-acceptance.md`](docs/decision-log/DEC-0009-release-gold-set-acceptance.md)（[`release-gold-set.md`](docs/design/release-gold-set.md)）, [`DEC-0010-risk-band-display-grading.md`](docs/decision-log/DEC-0010-risk-band-display-grading.md)（[`risk-band-grading.md`](docs/design/risk-band-grading.md)）, [`DEC-0011-mwc-public-register-names.md`](docs/decision-log/DEC-0011-mwc-public-register-names.md).
+Recorded: [`DEC-0001-lightweight-governance.md`](docs/decision-log/DEC-0001-lightweight-governance.md), [`DEC-0002-search-query-pack-l1.md`](docs/decision-log/DEC-0002-search-query-pack-l1.md), [`DEC-0003-serp-q2-loose-short-entity.md`](docs/decision-log/DEC-0003-serp-q2-loose-short-entity.md), [`DEC-0004-trustworthy-report-open-access.md`](docs/decision-log/DEC-0004-trustworthy-report-open-access.md), [`DEC-0005-serp-partial-pages.md`](docs/decision-log/DEC-0005-serp-partial-pages.md), [`DEC-0006-retrieval-evidence-ssot.md`](docs/decision-log/DEC-0006-retrieval-evidence-ssot.md), [`DEC-0007-dual-track-v2-2-0.md`](docs/decision-log/DEC-0007-dual-track-v2-2-0.md), [`DEC-0008-serper-primary-search-provider.md`](docs/decision-log/DEC-0008-serper-primary-search-provider.md), [`DEC-0009-release-gold-set-acceptance.md`](docs/decision-log/DEC-0009-release-gold-set-acceptance.md)（[`release-gold-set.md`](docs/design/release-gold-set.md)）, [`DEC-0010-risk-band-display-grading.md`](docs/decision-log/DEC-0010-risk-band-display-grading.md)（[`risk-band-grading.md`](docs/design/risk-band-grading.md)）, [`DEC-0011-mwc-public-register-names.md`](docs/decision-log/DEC-0011-mwc-public-register-names.md), [`DEC-0012-track1-court-judgments-v1-0-0.md`](docs/decision-log/DEC-0012-track1-court-judgments-v1-0-0.md).
 
 ## Hype / scope traps (quick map)
 

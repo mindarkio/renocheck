@@ -38,6 +38,10 @@ import {
   computeNameAlignment,
   resolveAuthoritativeSearchLabel,
 } from "./entity-report-context";
+import { lookupLegalJudgments } from "./lookup-legal-judgments";
+import { isLegalEventsEnabled } from "./legal-events-config";
+import { applyLegalEventFloors } from "./legal-event-calibration";
+import type { OfficialLegalEvent } from "./legal-event-schema";
 
 export type SearchPipelineResult = {
   fingerprint: string;
@@ -107,8 +111,21 @@ export async function runSearchPipeline(
     mwcLookup.ambiguous,
   );
 
+  const legalEnabled = isLegalEventsEnabled();
   const serpStart = performance.now();
-  const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, mwcOpts);
+  const [serpResult, legalLookup] = await Promise.all([
+    fetchWebSearchHitsForEntity(input, mwcOpts),
+    legalEnabled
+      ? lookupLegalJudgments(supabase, {
+          searchLabelUsed,
+          br: input.br,
+        })
+      : Promise.resolve({
+          events: [] as OfficialLegalEvent[],
+          registryAsOf: undefined,
+        }),
+  ]);
+  const { hits: serpHits } = serpResult;
 
   const tokens = entityMatchTokens(input, {
     mwcCompanyName: mwc?.company_name,
@@ -253,6 +270,24 @@ export async function runSearchPipeline(
   if (mwcLookup.ambiguous && fullReport.confidence !== "low") {
     fullReport = mirrorEvaluationConfidence(fullReport, "low");
   }
+
+  fullReport = applyLegalEventFloors(
+    fullReport,
+    legalLookup.events,
+    boundHitCount,
+  );
+  fullReport = {
+    ...fullReport,
+    official: {
+      ...fullReport.official,
+      ...(legalLookup.events.length > 0
+        ? { legalEvents: legalLookup.events }
+        : {}),
+      ...(legalLookup.registryAsOf
+        ? { legalRegistryAsOf: legalLookup.registryAsOf }
+        : {}),
+    },
+  };
 
   const { riskReportSchema } = await import("./report-schema");
   const validated = riskReportSchema.parse(fullReport);

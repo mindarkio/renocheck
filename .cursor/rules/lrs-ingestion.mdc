@@ -1,0 +1,28 @@
+---
+description: Track 1 LRS judgment discovery / ingestion (D1–D3)
+globs:
+  - scripts/discover-judgment*.ts
+  - scripts/import-judgments.ts
+  - scripts/config/judgment-discovery-queries.json
+  - scripts/config/lrs-ingestion-profiles.json
+  - src/lib/lrs-search-url.ts
+  - scripts/ingestion/**
+---
+
+# LRS ingestion (Track 1)
+
+Read **`docs/design/lrs-judgment-discovery-rules.md`** before changing D1 URLs, parsers, or filters.
+
+## Non-negotiables
+
+- **No Serp** for judgment discovery (`scripts/ingestion/SERP-RESERVED-FOR-USERS.md`).
+- D1 URLs: **`selDatabase=JU` only** — do not add PD/RV/RS by default.
+- **Do not** treat `HKSCT` / `DCCJ` in `txtSearch` as court filters; filter by **case ref prefix** after parse.
+- Broad keyword `裝修` (~3k hits): **page cap** only — never bulk-import full list without D2 gate.
+- Fetch: plain `curl`/Node fetch often fails without browser session — adapter = Playwright or manual URL.
+
+## Query source of truth
+
+`scripts/config/lrs-ingestion-profiles.json` → `pnpm discover:judgments` → `scripts/output/judgment-source-urls.json` (gitignored).
+
+URL builder: `scripts/lib/lrs-search-url.ts`.

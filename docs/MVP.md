@@ -50,7 +50,7 @@ flowchart LR
 | Track | 來源 | MVP 實作 |
 |-------|------|----------|
 | **Track 1 官方** | 屋宇署小型工程承辦商名冊 (MWC) | CSV/API 匯入 Supabase；`company_name`、`phone` 索引 |
-| **Track 1 延伸** | 司法判詞、海關檢控 | **Phase 1.5**（MVP 可留空表／手動 seed 極端案例） |
+| **Track 1 延伸** | 司法判詞、海關檢控、清盤公告 | **產品路線：** v1.0.0 判詞 → v1.1.0 海關 → v1.2.0 清盤（見 [`phases/track1-official-extensions-roadmap.md`](phases/track1-official-extensions-roadmap.md)、DEC-0012）；MVP 可留空表／手動 seed |
 | **Track 2 網搜** | FB / LIHKG / discuss.com.hk 公開帖 | Serper（優先）或 SerpAPI / Google CSE；site 約束查詢 |
 
 ### 2.3 降噪管道（必須在 code 路徑實作）
@@ -155,6 +155,16 @@ interface RiskReport {
       authorizedSignatory?: string;
       registryDataAsOf?: string;
     };
+    /** DEC-0012 — 已匯入判詞要點 + sourceUrl；唔入 LLM */
+    legalEvents?: Array<{
+      caseRef: string;
+      judgmentCategory: string;
+      partyRole: string;
+      hearingKeyPointsZh: string[];
+      sourceUrl: string;
+      matchReasonZh: string;
+    }>;
+    legalRegistryAsOf?: string;
   };
   signals: {
     discussionCount: number;
