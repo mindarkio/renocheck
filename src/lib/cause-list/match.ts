@@ -65,6 +65,13 @@ function lookupStrictMatch(
   return null;
 }
 
+function partyHasBilingualPair(legalName: string): boolean {
+  const bi = splitBilingualCompanyRaw(legalName);
+  if (bi.en && bi.zh) return true;
+  const paren = extractMwcBilingualNames(legalName);
+  return Boolean(paren.en && paren.zh);
+}
+
 function lookupFuzzyMatch(
   index: CompanyRegistryIndex,
   legalName: string,
@@ -74,9 +81,12 @@ function lookupFuzzyMatch(
   const en = normalizeEnglishCompanyName(bi.en ?? legalName);
   const zh = normalizeChineseCompanyName(bi.zh ?? legalName);
 
-  for (let i = 0; i < companies.length; i++) {
-    if (bilingualPairMatches(legalName, companies[i])) {
-      return { confidence: "B", companyId: companies[i].id, matchedOn: legalName };
+  // Same result as scanning every company: a non-bilingual party never pairs.
+  if (partyHasBilingualPair(legalName)) {
+    for (let i = 0; i < companies.length; i++) {
+      if (bilingualPairMatches(legalName, companies[i])) {
+        return { confidence: "B", companyId: companies[i].id, matchedOn: legalName };
+      }
     }
   }
 
@@ -89,13 +99,26 @@ function lookupFuzzyMatch(
     return { confidence: "C", companyId: coreZhHit, matchedOn: legalName };
   }
 
-  for (const [core, id] of index.coreZhToId) {
-    if (cjkEditDistance(zh.normCore, core) <= 1 && zh.normCore.length >= 4) {
-      return { confidence: "C", companyId: id, matchedOn: legalName };
+  // Edit distance ≤ 1 implies |len(a) − len(b)| ≤ 1. Skip the rest.
+  if ([...zh.normCore].length >= 4) {
+    const zhLen = [...zh.normCore].length;
+    for (const [core, id] of index.coreZhToId) {
+      if (Math.abs([...core].length - zhLen) > 1) continue;
+      if (cjkEditDistance(zh.normCore, core) <= 1) {
+        return { confidence: "C", companyId: id, matchedOn: legalName };
+      }
     }
   }
 
   return null;
+}
+
+export function matchCorporateParty(
+  party: ParsedCorporateParty,
+  index: CompanyRegistryIndex,
+  companies: CompanyRegistry,
+): { confidence: MatchConfidence; companyId: string; matchedOn: string } | null {
+  return matchPartyToCompany(party, index, companies);
 }
 
 function matchPartyToCompany(

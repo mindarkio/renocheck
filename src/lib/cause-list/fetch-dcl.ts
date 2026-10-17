@@ -49,6 +49,28 @@ export async function checkRobotsAllowsFetch(
   }
 }
 
+/** Live DCL fetch: robots check uses the request URL pathname, not a default prefix. */
+export async function assertLiveDclRobotsAllowed(
+  liveUrl: string,
+  userAgent: string,
+): Promise<void> {
+  const url = new URL(liveUrl);
+  await checkRobotsAllowsFetch(url.origin, userAgent, url.pathname);
+}
+
+export async function loadRobotsDisallowPrefixes(
+  origin: string,
+  userAgent: string,
+): Promise<string[]> {
+  const robotsUrl = `${origin.replace(/\/$/, "")}/robots.txt`;
+  const res = await fetch(robotsUrl, {
+    headers: { "User-Agent": userAgent },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) return [];
+  return parseRobotsDisallowPrefixes(await res.text());
+}
+
 export async function fetchDclHtml(
   url: string,
   options: FetchDclOptions,
