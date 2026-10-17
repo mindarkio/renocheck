@@ -6,6 +6,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { assertJudgmentSeedAllowedForRemoteImport } from "../src/lib/judgment-import-catalog-guard";
 import {
   buildJudgmentImportDbRow,
   type ExistingJudgmentHearingRow,
@@ -103,6 +104,15 @@ async function main() {
 
   const raw = readFileSync(seedPath, "utf8");
   const rows = JSON.parse(raw) as JudgmentSeedRow[];
+  try {
+    assertJudgmentSeedAllowedForRemoteImport(rows);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(
+      JSON.stringify({ event: "import_judgments_blocked", error: message }),
+    );
+    process.exit(1);
+  }
 
   const supabase = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },

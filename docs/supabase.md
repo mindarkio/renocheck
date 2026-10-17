@@ -79,17 +79,20 @@ pnpm import:mwc
 
 ## 司法判詞匯入（DEC-0012）
 
+**Remote `official_legal_events`（cloud）：** 僅保留 D2 keep **`legalref-lrs-ju`（70 行）**。曾誤入嘅合成測試 catalog `judiciary-lrs-fixture`（`DCCJ 9001/2020`、`HCSA 42/2019`）已自 remote 刪除；唔會再經匯入腳本寫回。
+
 1. `pnpm db:push`（含 `official_legal_events` migration）。
-2. 編輯或擴充 [`scripts/fixtures/judgments-seed.json`](../scripts/fixtures/judgments-seed.json)；真實案可放 `scripts/fixtures/judgments-seed.local.json`（勿 commit 未授權內容）。
-3. 來源說明見 [`docs/sourcedata/judgments-sources.md`](sourcedata/judgments-sources.md)。
-4. 執行：
+2. **Production / remote 匯入：** 用 `scripts/fixtures/judgments-seed.local.json`（gitignore）或已核准嘅 `legalref-lrs-ju` seed；`pnpm import:judgments` 會 **拒絕** `judiciary-lrs-fixture`（見 `src/lib/judgment-import-catalog-guard.ts`）。
+3. **Fixture only：** [`scripts/fixtures/judgments-seed.json`](../scripts/fixtures/judgments-seed.json) 內 `judiciary-lrs-fixture` 兩行僅供 **單元測試／本地 fixture**，不可 `--file` 指向 cloud。
+4. 來源說明見 [`docs/sourcedata/judgments-sources.md`](sourcedata/judgments-sources.md)。
+5. 執行：
 
 ```bash
-pnpm import:judgments
-# 預覽：pnpm import:judgments --dry-run
+pnpm import:judgments --file=scripts/fixtures/judgments-seed.local.json
+# 預覽：pnpm import:judgments --dry-run --file=...
 ```
 
-5. 在 Vercel／`.env.local` 設 `LEGAL_EVENTS_ENABLED=1` 後，`POST /api/search` 才會 lookup 並在報告顯示 `official.legalEvents`。
+6. 在 Vercel／`.env.local` 設 `LEGAL_EVENTS_ENABLED=1` 後，`POST /api/search` 才會 lookup 並在報告顯示 `official.legalEvents`。
 
 ## 本地 Supabase（可選）
 
