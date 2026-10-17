@@ -1,0 +1,10 @@
+REGISTRATION_NUMBER,REGISTRATION_TYPE,ENGLISH_NAME,CHINESE_NAME,ENGLISH_COMPANY_NAME,CHINESE_COMPANY_NAME,COMP_CLASS,COMP_TYPE,AS_NAME_ENGLISH,AS_NAME_CHINESE,AS_CLASS,AS_TYPE,EXPIRY_DATE,FLAG,ITEMS,SERVICE_IN_BUILDING_SAFETY,INTERESTED_FSS,MBIS_RI,DISTRICT_ENGLISH,DISTRICT_CHINESE,TELEPHONE_NO,FAX,EMAIL
+"MWC 10/2026","MWC","","","SYNTHETIC ALPHA ENGINEERING LIMITED","合成甲工程有限公司","","","SHOULD NOT LOG","不應輸出","","","01/06/2028","","","","","","","","","",""
+"MWC 10/2026","MWC","","","SYNTHETIC ALPHA ENGINEERING LIMITED","合成甲工程有限公司","","","OTHER AS","其他簽署","","","01/06/2028","","","","","","","","","",""
+"MWC(W) 88/2026","MWC(W)","SOLE PROP EN","獨資東主","","","","","","","","","01/06/2028","","","","","","","","","",""
+"GBC 20/2026","GBC","","","SYNTHETIC BETA CONSTRUCTION LIMITED","合成乙建築有限公司","","","AS EN","授權簽署人","","","15/03/2029","","","","","","","","","",""
+"AP(A) 1/99","AP(A)","IGNORED PERSON","忽略","","","","","","","","","01/01/2030","","","","","","","","","",""
+"MWC 11/2026","MWC","","","SYNTHETIC GAMMA CO., LTD. (IN LIQUIDATION)","合成丙有限公司","","","","","","","10/10/2027","S","","","","","","","","",""
+"MWC 12/2026","MWC","","","SYNTHETIC DELTA LIMITED","合成戊有限公司","","","LINE<br>ONE","行一","","","01/06/2028","","","","","","","","","",""
+"MWC 14/2026","MWC","","","FAKE PERSON KAPPA","假人甲","","","FAKE PERSON KAPPA","假人甲","","","01/06/2028","","","","","","","","","",""
+"MWC 15/2026","MWC","","","SYNTHETIC KAPPA LIMITED","合成丁有限公司","","","","","","","01/06/2028","","","","","","","","","",""

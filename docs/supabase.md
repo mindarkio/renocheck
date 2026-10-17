@@ -81,7 +81,7 @@ pnpm supabase migration list --linked   # local vs remote
 
 ## MWC 名冊匯入
 
-1. 將屋宇署 **Registers full list** CSV 放在 [`docs/sourcedata/registers_full_list.csv`](sourcedata/registers_full_list.csv)（見 [`sourcedata/README.md`](sourcedata/README.md)）。
+1. `pnpm bd-register:fetch`（寫入 `.cache/bd-register/registers_full_list.csv`；見 [`bd-register/sources.md`](bd-register/sources.md)）。
 2. `.env.local` 設好 `SUPABASE_SERVICE_ROLE_KEY`。
 3. 套用 unique index migration（若尚未）：`pnpm db:push`
 4. 執行：

@@ -26,6 +26,10 @@ npm-debug.log*
 tmp-report-2.1.0.json
 scripts/fixtures/judgments-seed.local.json
 .cache/
+.cache/bd-register/
+
+# BD register full-list CSV (PII); use pnpm bd-register:fetch → .cache/bd-register/
+docs/sourcedata/*.csv
 
 scripts/output/*
 !scripts/output/README.md
