@@ -51,6 +51,8 @@ flowchart TB
 | 前綴 `HCSA`, `CACV` | **keep** 僅當被告商號含工程字眼（`defendantHasEngineeringKeyword`）；否則 **drop** |
 | 前綴 `LDBM` | **keep** 僅當被告商號含工程字眼；否則 **drop**（`ldbm_defendant_name_no_engineering`） |
 | `LDBM` + 申請人為 **業主立案法團** | 被告 **唔** 含工程／裝修字眼 → **drop**（`ldbm_oc_applicant_defendant_not_contractor`）；業主／投資／物業方被告唔當承建商紀錄。被告為工程公司（例 LDBM 6/1998）仍可 keep |
+| `CACV` + 個人英文原告 | 被告 **有** 工傷／僱主字眼 → drop；**否則** → **review**（唔自動 keep）。IOC v 承建商 → `owners_corporation_vs_contractor` keep |
+| 行業 RE（租務／工傷） | 只匹配 **被告標籤**，唔掃整條 `partiesLine` |
 | 前綴 `LDPD` | **keep** 若合約／欠款信號（`suggestsContractOrDebtCase`）；唔用寬鬆 renovation 捷徑 |
 | `HCPI`, `DCPI`, `HCB` 等 | **drop**（v3e `case_prefix_v3e_drop` 或 manual triage） |
 | 其他 | 多為 **drop**；僅 `parties_unparsed`／`mwc_defendant_ambiguous` → **review**（v3e） |

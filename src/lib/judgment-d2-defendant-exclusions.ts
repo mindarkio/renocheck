@@ -1,4 +1,21 @@
+import { defendantHasEngineeringKeyword } from "./judgment-d2-case-policy";
+import type { DefendantEntityKind } from "./judgment-d2-entity";
 import { caseRefPrefix } from "./judgment-d2-parties";
+
+const VEHICLE_RE =
+  /車之城|汽車|車輛|車行|電單車|motor\s*vehicle|car\s*city/i;
+
+const ESTATE_AGENT_RE =
+  /地產代理|家居地產|物業代理|置業代理|estate\s*agent|property\s*agency|地產\s*\(/i;
+
+const PROPERTY_MGMT_RE = /物業管理|property\s*management/i;
+
+/** 被告名或案類（案號前綴）— 唔掃 parties 全文。 */
+const TENANCY_TITLE_RE =
+  /業權|租賃|租務|租約|landlord|tenant|tenancy|title\s*to\s*land|incapacitated\s*person/i;
+
+const WORK_INJURY_RE =
+  /僱主|工傷|employees?\s*compensation|personal\s*injuries/i;
 
 /**
  * LDBM：申請人為業主立案法團、被告非裝修／工程承建商（含業主／投資／物業方）→ drop。
@@ -14,30 +31,26 @@ export function ldbmOcApplicantNonContractorDropReason(input: {
   if (defendantHasEngineeringKeyword(input.defendantLabel)) return null;
   return "ldbm_oc_applicant_defendant_not_contractor";
 }
-import { defendantHasEngineeringKeyword } from "./judgment-d2-case-policy";
-import type { DefendantEntityKind } from "./judgment-d2-entity";
 
-const VEHICLE_RE =
-  /車之城|汽車|車輛|車行|電單車|motor\s*vehicle|car\s*city/i;
-
-const ESTATE_AGENT_RE =
-  /地產代理|家居地產|物業代理|置業代理|estate\s*agent|property\s*agency|地產\s*\(/i;
-
-const PROPERTY_MGMT_RE = /物業管理|property\s*management/i;
-
-const TENANCY_TITLE_RE =
-  /業權|租賃|租務|租約|landlord|tenant|tenancy|title\s*to\s*land|incapacitated\s*person/i;
-
-const WORK_INJURY_RE =
-  /僱主|工傷|employees?\s*compensation|personal\s*injuries|工傷/i;
-
-/** 非裝修承建被告行業／案類 — deterministic drop reason or null。 */
 export function plaintiffIsOwnersCorporation(plaintiffLabel: string): boolean {
   return /INCORPORATED OWNERS|業主立案法團|owners\s*corporation/i.test(
     plaintiffLabel.trim(),
   );
 }
 
+export function isPersonalEnglishPlaintiff(plaintiffLabel: string): boolean {
+  const plaintiff = plaintiffLabel.trim();
+  return (
+    /^[A-Z][A-Z\s.'-]{3,60}$/i.test(plaintiff) &&
+    !/\b(LTD|LIMITED|COMPANY|INC|CORP|OWNERS)\b/i.test(plaintiff)
+  );
+}
+
+export function defendantWorkInjurySignal(defendantLabel: string): boolean {
+  return WORK_INJURY_RE.test(defendantLabel.trim());
+}
+
+/** 非裝修承建被告行業／案類 — deterministic drop reason or null。 */
 export function defendantRenovationScopeDropReason(input: {
   caseRef: string;
   defendantLabel: string;
@@ -46,9 +59,6 @@ export function defendantRenovationScopeDropReason(input: {
   entityKind: DefendantEntityKind;
 }): string | null {
   const defendant = input.defendantLabel.trim();
-  const plaintiff = input.plaintiffLabel.trim();
-  const parties = input.partiesLine.trim();
-  const blob = `${defendant} ${parties}`;
 
   if (VEHICLE_RE.test(defendant)) {
     return "defendant_vehicle_industry";
@@ -59,31 +69,16 @@ export function defendantRenovationScopeDropReason(input: {
   if (PROPERTY_MGMT_RE.test(defendant)) {
     return "defendant_property_management";
   }
-  if (TENANCY_TITLE_RE.test(blob)) {
+  if (TENANCY_TITLE_RE.test(defendant)) {
     return "defendant_tenancy_or_title";
   }
-  if (WORK_INJURY_RE.test(defendant) || WORK_INJURY_RE.test(parties)) {
-    return "defendant_work_injury_context";
-  }
-
-  const prefix = caseRefPrefix(input.caseRef);
-  const renovationContractNarrative =
-    /裝修|合約|工程款|裝修工程|renovation|decoration/i.test(parties);
-  const personalPlaintiff =
-    /^[A-Z][A-Z\s.'-]{3,60}$/i.test(plaintiff) &&
-    !/\b(LTD|LIMITED|COMPANY|INC|CORP|OWNERS)\b/i.test(plaintiff);
-  if (
-    prefix === "CACV" &&
-    personalPlaintiff &&
-    !renovationContractNarrative &&
-    defendantHasEngineeringKeyword(defendant)
-  ) {
+  if (defendantWorkInjurySignal(defendant)) {
     return "defendant_work_injury_context";
   }
 
   if (input.entityKind === "company") {
     const ocVsContractor =
-      plaintiffIsOwnersCorporation(plaintiff) &&
+      plaintiffIsOwnersCorporation(input.plaintiffLabel) &&
       /\b(CO\.?|COMPANY|LTD|LIMITED|有限公司)\b/i.test(defendant);
     if (
       !defendantHasEngineeringKeyword(defendant) &&

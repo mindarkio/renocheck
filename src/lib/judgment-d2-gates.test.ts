@@ -130,6 +130,21 @@ describe("runD2Gates", () => {
     expect(r.disposition).toBe("keep");
   });
 
+  it("reviews CACV with personal plaintiff unless defendant has work injury signal", () => {
+    const r = runD2Gates({
+      row: baseRow(
+        "JOHN SMITH 訴 名富工程服務有限公司",
+        "CACV 12/2020",
+      ),
+      skipPrefixes: skip,
+      priorityPrefixes: priority,
+      mwcLeft: null,
+      mwcRight: null,
+    });
+    expect(r.disposition).toBe("review");
+    expect(r.reasons).toContain("cacv_personal_plaintiff_review");
+  });
+
   it("drops HCPI personal injury prefix", () => {
     const r = runD2Gates({
       row: baseRow("業主 對 名富工程服務有限公司", "HCPI 12/2020"),

@@ -38,7 +38,7 @@ Renocheck 現有 **Track 1** 以 MWC 名冊為主；**Track 2** 靠合規網搜�
    - `sourceType: "court_judgment"`（v1.1+ 海關等共用表時靠此區分）
    - 案號、法院、判決／刊憲日期、`matchReasonZh`（短）
    - **`judgmentCategory`**、`partyRole`（見 §3；report 內 echo import 值）
-   - **`hearingKeyPointsZh`**：`string[]`（聆訊／判詞**要點**列點，每點字數上限；**import 或人工 seed 寫入**，v1.0 **唔**用 LLM 生成）
+   - **`hearingKeyPointsZh`**：`string[]`（聆訊／判詞**要點**列點，每點字數上限；**import 前** 可由 **LLM 草擬**（見下 §3 聆訊摘要），上線庫內仍為 **已審核／已驗證** 之靜態文字，**唔**在 `POST /api/search` 即時生成）
    - **`sourceUrl`**（必填）：用戶點擊閱讀原文／官方刊載；**唔**在報告內顯示長摘錄或全文
    - `sourceLabel`（可選，如「司法機構刊憲」）、`registrySnapshotAt`（匯入批次時間）
    - 文案：**「在本次已匯入的公開判詞紀錄中」** — 禁止「從未被起訴」「一定輸官司」等定性。
@@ -51,7 +51,8 @@ Renocheck 現有 **Track 1** 以 MWC 名冊為主；**Track 2** 靠合規網搜�
      - 可選 `outcomeHint`：`judgment_against_defendant` | `dismissed` | `settled` | `unknown`（僅在來源明確時填）
    - **Calibration：** 新增或擴展 `risk-report-calibration-v2`（或 `legal-event-calibration.ts`）在論壇／L1 信號之後套用 **法律紀錄下限（floor）／爭議級別下限**；`riskBandZh` 取 **較嚴重** 者。具體矩陣見 **Appendix B** — **發布 v1.0 前須合規 + grading human sign-off**（同 DEC-0010）。
    - **MWC `licenseStatus`** 不因判詞自動改（名冊仍獨立）；法律信號進 **`evaluation` 新欄或擴展 `reputationTrack`／`legalTrack`**（實作時選一，同步 schema）。
-   - UI：除要點 + 連結外，顯示 **判決類型標籤**（用戶可理解「咩類型官司」）及一句 **程式生成** 說明（如「公開紀錄顯示與工程／裝修合約相關之民事程序」），唔用 LLM 臆測案情。
+   - UI：除要點 + 連結外，顯示 **判決類型標籤**（用戶可理解「咩類型官司」）及一句 **程式生成** 說明（如「公開紀錄顯示與工程／裝修合約相關之民事程序」）；要點若為 LLM 草擬，須標明 **「自動摘要，以判詞原文為準」**（或同等 HK 文案），並保留 `sourceUrl`。
+   - **聆訊摘要（LLM 草擬，2026-10-17 修訂）：** 允許離線用 LLM 由 LRS 公開摘錄草擬 `hearingKeyPointsZh`（**唔**改寫 Track 2 `summaryZh`／themes）。**條件：** (1) 每點附 **原文引句**（`sourceQuoteZh` 或等價 metadata，入庫前可只存要點 + 審核記錄）；(2) 要點內 **數字／金額** 必須在對應引句中出現；(3) **上線前** 須 **AI／腳本對原文核對**（quote substring + 數字校驗，見 `judgment-summary-point-validation.ts`）+ 抽樣人手覆核；(4) 用戶面 **唔** 即時 LLM；失敗則保留 placeholder + 連結。判詞 **仍唔**送入口碑 LLM 推論。
 4. **紀錄範圍（產品過濾，2026-10-16 (b)）：** 離線入庫以 **公司被告** 為主（`partyRole=defendant` + D2 `company_defendant_v2`）；**裝修／工程相關信號** 或優先案號前綴；**`matchConfidence=high`** 方自動 `import:judgments`（自然人／独资／弱信號 → review）。**MWC 非必須** — 有則 enrich 及報告「政府名冊有登記」。**原告 pass**（唔 import／唔 lookup／唔升檔）。文案仍 **唔** 暗示「無官司」或全港覆蓋；未登記裝修公司亦可能入庫（用戶查商號時對照 `company_name_normalized`／alias）。
 5. **Entity match：**
    - 優先：**BR**（判詞或匯入欄位）、**normalized 公司名**（與 `searchLabelUsed`／MWC 名冊名、既有 L1 括號／NFKC 規則一致）。
@@ -263,6 +264,7 @@ flowchart LR
 | 2026-10-16 | **原告 pass：** 入庫／lookup／calibration 僅 **被告**；覆蓋目標 = 盡量 MWC 被告案（非 exhaustive） |
 | 2026-10-16 | **Phase 3 Daily Cause List：** v1.0 後 ingestion；先 archive 後日更 cron；小額錢債主渠道（見上文 Phase 3 小節） |
 | 2026-10-17 | **Phase 4 公司可靠度來源：** 官方查核定位、ICRIS 連結先行、消委會／新聞優先序 — 文件 only（見 Phase 4 小節） |
+| 2026-10-17 | **聆訊摘要：** 允許離線 LLM 草擬要點 + 引句／數字校驗 + 上線前 AI 對原文核對；UI「自動摘要，以判詞原文為準」 |
 
 ## Consequences
 

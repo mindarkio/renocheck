@@ -6,6 +6,8 @@ import {
 import { autoImportEligibility, defendantHasEngineeringKeyword } from "./judgment-d2-case-policy";
 import {
   defendantRenovationScopeDropReason,
+  defendantWorkInjurySignal,
+  isPersonalEnglishPlaintiff,
   ldbmOcApplicantNonContractorDropReason,
   plaintiffIsOwnersCorporation,
 } from "./judgment-d2-defendant-exclusions";
@@ -270,6 +272,25 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
       mwcMatch,
       renovationRelevantSuggested,
       defendantEntityKind: entityKind,
+    };
+  }
+
+  const prefix = caseRefPrefix(row.caseRef);
+  if (
+    prefix === "CACV" &&
+    isPersonalEnglishPlaintiff(plaintiffLabel) &&
+    !plaintiffIsOwnersCorporation(plaintiffLabel) &&
+    !defendantWorkInjurySignal(defendantLabel)
+  ) {
+    return {
+      disposition: "review",
+      reasons: [...reasons, "cacv_personal_plaintiff_review"],
+      defendantLabel,
+      plaintiffLabel,
+      mwcMatch,
+      renovationRelevantSuggested,
+      defendantEntityKind: entityKind,
+      matchConfidence: "review",
     };
   }
 

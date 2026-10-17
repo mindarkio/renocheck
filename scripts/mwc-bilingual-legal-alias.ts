@@ -38,6 +38,7 @@ type LegalRow = {
   id: string;
   case_ref: string;
   company_name_normalized: string;
+  party_names: string[] | null;
   lookup_aliases: string[] | null;
   br_normalized: string | null;
   topic_tags: string[] | null;
@@ -172,6 +173,24 @@ function bilingualAliasExtras(mwc: MwcRow): string[] {
   return mwcBilingualLookupTerms(extractMwcBilingualNames(mwc.company_name));
 }
 
+function defendantLabelForLegalRow(
+  legal: LegalRow,
+  seed?: SeedRow,
+): string | null {
+  if (seed?.companyNameNormalized?.trim()) {
+    return defendantLabelForMwcLookup(seed.companyNameNormalized);
+  }
+  const parties = legal.party_names ?? [];
+  if (parties.length >= 2) {
+    const defendant = parties[parties.length - 1]?.trim();
+    if (defendant) return defendantLabelForMwcLookup(defendant);
+  }
+  if (legal.company_name_normalized?.trim()) {
+    return defendantLabelForMwcLookup(legal.company_name_normalized);
+  }
+  return null;
+}
+
 function loadSeedByCaseRef(): Map<string, SeedRow> {
   const map = new Map<string, SeedRow>();
   if (!existsSync(SEED_PATH)) return map;
@@ -208,7 +227,7 @@ async function main() {
   const legals = await fetchAllRows<LegalRow>(
     supabase,
     "official_legal_events",
-    "id, case_ref, company_name_normalized, lookup_aliases, br_normalized, topic_tags",
+    "id, case_ref, company_name_normalized, party_names, lookup_aliases, br_normalized, topic_tags",
     (q) => q.eq("source_catalog_id", "legalref-lrs-ju"),
   );
 
@@ -224,10 +243,17 @@ async function main() {
 
   for (const legal of legals) {
     const seed = seedByRef.get(normRef(legal.case_ref));
-    const defendantRaw =
-      seed?.companyNameNormalized ??
-      legal.company_name_normalized;
-    const defendant = defendantLabelForMwcLookup(defendantRaw);
+    const defendantRaw = defendantLabelForLegalRow(legal, seed);
+    if (!defendantRaw) {
+      console.warn(
+        JSON.stringify({
+          event: "mwc_bilingual_skip_no_defendant",
+          caseRef: legal.case_ref,
+        }),
+      );
+      continue;
+    }
+    const defendant = defendantRaw;
     const partyNames = seed?.partyNames ?? [];
 
     const lookup = await lookupMwcForPartyLabel(
@@ -288,16 +314,38 @@ async function main() {
         extras.push(...bilingualAliasExtras(mwc));
       }
       const defendantLabel =
-        seed?.companyNameNormalized ?? legal.company_name_normalized;
-      const nextAliases = isSoleProprietorshipLegalRow(legal.topic_tags)
-        ? filterSolePropLookupAliases(defendantLabel, [
-            ...shaped.lookupAliases,
-            ...extras,
-          ])
-        : normalizeLookupAliases(shaped.companyNameNormalized, [
-            ...shaped.lookupAliases,
-            ...extras,
-          ]);
+        defendantLabelForLegalRow(legal, seed) ??
+        shaped.companyNameNormalized;
+      if (!defendantLabel?.trim()) {
+        console.warn(
+          JSON.stringify({
+            event: "mwc_bilingual_skip_alias_no_defendant",
+            caseRef: legal.case_ref,
+          }),
+        );
+        continue;
+      }
+      let nextAliases: string[];
+      try {
+        nextAliases = isSoleProprietorshipLegalRow(legal.topic_tags)
+          ? filterSolePropLookupAliases(defendantLabel, [
+              ...shaped.lookupAliases,
+              ...extras,
+            ])
+          : normalizeLookupAliases(shaped.companyNameNormalized, [
+              ...shaped.lookupAliases,
+              ...extras,
+            ]);
+      } catch (e) {
+        console.warn(
+          JSON.stringify({
+            event: "mwc_bilingual_skip_alias_build_failed",
+            caseRef: legal.case_ref,
+            error: e instanceof Error ? e.message : String(e),
+          }),
+        );
+        continue;
+      }
       const prev = legal.lookup_aliases ?? [];
       const same =
         nextAliases.length === prev.length &&
@@ -308,8 +356,14 @@ async function main() {
         .update({ lookup_aliases: nextAliases })
         .eq("id", legal.id);
       if (error) {
-        console.error(error);
-        process.exit(1);
+        console.warn(
+          JSON.stringify({
+            event: "mwc_bilingual_skip_alias_update_failed",
+            caseRef: legal.case_ref,
+            error: error.message,
+          }),
+        );
+        continue;
       }
       aliasUpdates += 1;
     }
