@@ -91,6 +91,7 @@ describe("D2 filter golden parity", () => {
         auth: { persistSession: false, autoRefreshToken: false },
       });
       const mwcIndex = await MwcContractorsMemoryIndex.loadAll(supabase);
+      const mwcSnapshotSha = mwcIndex.snapshotContentHash();
 
       const { entries, counts } = runD2FilterPipeline({
         candidates: manifest.candidates,
@@ -98,6 +99,7 @@ describe("D2 filter golden parity", () => {
         priorityPrefixes: profiles.caseRefPriorityPrefixes,
         courtPrefixes,
         mwcIndex,
+        mwcSnapshotSha,
         useStepCache: false,
         writeStepCache: false,
       });

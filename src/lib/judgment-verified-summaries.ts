@@ -1,5 +1,25 @@
 /** SSOT shape for scripts/fixtures/judgment-summaries-verified.json */
 
+import { z } from "zod";
+
+export const verifiedSummaryPointSchema = z.object({
+  point_index: z.number().int().positive(),
+  keyPointZh: z.string().min(1),
+  sourceQuoteZh: z.string().min(1),
+});
+
+export const verifiedSummaryRowSchema = z.object({
+  caseRef: z.string().min(1),
+  sourceUrl: z.string().url(),
+  outcome_hint: z.string().min(1),
+  hearing_points_source: z.literal("ai_verified"),
+  points: z.array(verifiedSummaryPointSchema).min(1),
+});
+
+export const verifiedSummariesFileSchema = z
+  .array(verifiedSummaryRowSchema)
+  .min(1);
+
 export type VerifiedSummaryPoint = {
   point_index: number;
   keyPointZh: string;
@@ -94,4 +114,8 @@ export function reconstructedFromDb(
 
 export function verifiedRowsEqual(a: VerifiedSummaryRow, b: VerifiedSummaryRow): boolean {
   return JSON.stringify(canonicalVerifiedRow(a)) === JSON.stringify(canonicalVerifiedRow(b));
+}
+
+export function parseVerifiedSummariesFile(raw: unknown): VerifiedSummaryRow[] {
+  return verifiedSummariesFileSchema.parse(raw);
 }

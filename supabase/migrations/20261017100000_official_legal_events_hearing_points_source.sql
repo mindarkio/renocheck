@@ -1,4 +1,3 @@
--- DRAFT — pending product/compliance approval before `supabase db push`.
 -- Track 1: provenance for hearing_key_points_zh (DEC-0012 amendment 2026-10-17).
 
 alter table public.official_legal_events

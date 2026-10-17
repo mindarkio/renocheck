@@ -11,6 +11,7 @@ import { resolve } from "node:path";
 import {
   canonicalVerifiedRow,
   normCaseRefKey,
+  parseVerifiedSummariesFile,
   reconstructedFromDb,
   type VerifiedSummaryRow,
   verifiedRowToDbUpdate,
@@ -49,11 +50,8 @@ function loadEnvLocal() {
 }
 
 function loadVerified(path: string): VerifiedSummaryRow[] {
-  const raw = JSON.parse(readFileSync(path, "utf8")) as VerifiedSummaryRow[];
-  if (!Array.isArray(raw) || raw.length === 0) {
-    throw new Error(`empty or invalid verified file: ${path}`);
-  }
-  return raw;
+  const raw = JSON.parse(readFileSync(path, "utf8"));
+  return parseVerifiedSummariesFile(raw);
 }
 
 function fieldDiff(

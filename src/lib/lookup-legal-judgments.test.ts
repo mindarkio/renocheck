@@ -122,4 +122,51 @@ describe("lookupLegalJudgments", () => {
     expect(result.events).toHaveLength(1);
     expect(result.events[0]?.caseRef).toBe("DCCJ 1/1999");
   });
+
+  it("drops rows with non-legalref source_url", async () => {
+    const supabase = mockSupabase({
+      meta: [{ imported_at: "2026-10-16T08:00:00.000Z" }],
+      brRows: [
+        {
+          ...baseRow,
+          id: "bad-url",
+          case_ref: "DCCJ 9/2020",
+          source_url: "https://example.com/judgment",
+          company_name_normalized: "示例工程有限公司",
+          br_normalized: "12345678",
+        },
+      ],
+      matchRows: [],
+      fullRows: [],
+    });
+
+    const result = await lookupLegalJudgments(supabase, {
+      searchLabelUsed: "x",
+      br: "12345678",
+    });
+    expect(result.events).toEqual([]);
+  });
+
+  it("aligns hearing quotes by index with points", async () => {
+    const supabase = mockSupabase({
+      meta: [{ imported_at: "2026-10-16T08:00:00.000Z" }],
+      brRows: [
+        {
+          ...baseRow,
+          hearing_key_points_zh: ["要點 A", "要點 B"],
+          hearing_key_point_quotes_zh: ["引文 A", ""],
+          br_normalized: "87654321",
+          company_name_normalized: "對齊測試有限公司",
+        },
+      ],
+      matchRows: [],
+      fullRows: [],
+    });
+
+    const result = await lookupLegalJudgments(supabase, {
+      searchLabelUsed: "x",
+      br: "87654321",
+    });
+    expect(result.events[0]?.hearingKeyPointQuotesZh).toEqual(["引文 A", ""]);
+  });
 });

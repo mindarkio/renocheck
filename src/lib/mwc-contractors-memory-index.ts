@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NormalizedSearchInput } from "./normalize-search-input";
 import type { MwcLookupResult, MwcRow } from "./mwc-lookup";
@@ -38,6 +39,15 @@ export class MwcContractorsMemoryIndex {
 
   get size(): number {
     return this.rows.length;
+  }
+
+  /** Snapshot for D2 step-cache invalidation when MWC import changes. */
+  snapshotContentHash(): string {
+    const payload = this.rows
+      .map((r) => `${r.registration_no ?? ""}|${r.company_name}`)
+      .sort()
+      .join("\n");
+    return createHash("sha256").update(payload).digest("hex").slice(0, 16);
   }
 
   lookupWithMeta(input: NormalizedSearchInput): MwcLookupResult {

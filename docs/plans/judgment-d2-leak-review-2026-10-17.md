@@ -9,7 +9,22 @@
 | **Y（新加 keep）** | **0** | 現行 **79** 宗均屬原 167 集合；**無**新案號淨增 |
 | **算式** | **167 − 88 = 79** | 79 + 88 = 167 ✓ |
 | **`d2:filter-candidates`（2026-10-17）** | keep **79** / drop **818** / review **0** | CACV 593/2020 → `defendant_work_injury_context` drop |
-| **Remote `legalref-lrs-ju`** | **79** | Supabase `official_legal_events` count [Certain 2026-10-17] |
+| **Verified SSOT 剔除（2026-10-17）** | **79 − 9 = 70** keep | 見 [`judgment-summary-verification.md`](./judgment-summary-verification.md) |
+| **Remote `legalref-lrs-ju`** | **70** | 剔除 9 單後 prune + verified import [Certain 2026-10-17] |
+
+### 9 單自 keep 剔除（verified fixture 未收錄）
+
+| caseRef | drop reason |
+|---------|-------------|
+| CACV 131/2005 | `manual_triage_judgment_correction_notice_only` |
+| DCCJ 3800/2013 | `manual_triage_defendant_mainland_geotech_not_renovation` |
+| DCCJ 18510/2001 | `manual_triage_general_contractor_as_plaintiff` |
+| DCCJ 2220/2002 | `manual_triage_defendant_marine_freight_not_renovation` |
+| HCA 2269/2007 | `manual_triage_individual_plaintiff_vs_contractor` |
+| LDBM 6/1998 | `manual_triage_ldbm_building_management_dispute` |
+| HCSA 40/2023 | `manual_triage_hcsa_appeal_leave_order_only` |
+| HCA 714/2007 | `manual_triage_defendant_developer_contractor_out_of_scope` |
+| DCCJ 3255/2004 | `manual_triage_defendant_interior_design_not_renovation` |
 
 **過程備忘（唔改算式）：** 首輪漏網 dry-run 曾 **78** keep；修補行業排除／`mwc_plaintiff_only_pass` 等後曾 **86** 入庫；**CACV 131/2005** 由 `weak_renovation_signal` 改 **`owners_corporation_vs_contractor`**；LDBM 收緊 **−7** → **79**。
 
@@ -32,7 +47,7 @@
 | LDBM 152/2020 | 同上 |
 | LDBM 3/2015 | 同上 |
 
-**仍 keep 嘅 LDBM：** LDBM 6/1998（被告 成龍工程有限公司，含工程字眼）。
+**LDBM 6/1998：** 曾 keep（被告 成龍工程有限公司）；2026-10-17 verified SSOT 剔除（見上表 9 單）。
 
 ### X：88 宗仍 drop（自 167 跌出、唔在現行 keep）— reason 分佈
 

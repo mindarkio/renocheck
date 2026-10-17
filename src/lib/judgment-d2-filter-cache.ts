@@ -9,6 +9,20 @@ import { manualTriageRevisionHash } from "./judgment-d2-manual-triage";
 
 export const D2_FILTER_POLICY = "company_defendant_v3e";
 
+const D2_RULE_SOURCE_FILES = [
+  "src/lib/judgment-d2-gates.ts",
+  "src/lib/judgment-d2-defendant-exclusions.ts",
+  "src/lib/judgment-d2-case-policy.ts",
+  "src/lib/judgment-d2-v3d-rules.ts",
+  "src/lib/judgment-d2-v3e-rules.ts",
+  "src/lib/judgment-d2-manual-triage.ts",
+  "src/lib/judgment-d2-entity.ts",
+  "src/lib/judgment-d2-parties.ts",
+  "scripts/config/court-from-case-ref.json",
+] as const;
+
+const LRS_PROFILES_PATH = "scripts/config/lrs-ingestion-profiles.json";
+
 export type D2CachedGate = {
   disposition: D2Disposition;
   reasons: string[];
@@ -32,8 +46,7 @@ export type D2CachedCandidateStep = {
 export type D2FilterStepCacheFile = {
   schemaVersion: 1;
   policy: string;
-  /** Invalidates cache when manual triage maps change. */
-  manualTriageRev?: string;
+  pipelineRev?: string;
   updatedAt: string;
   byCaseRef: Record<string, D2CachedCandidateStep>;
 };
@@ -47,42 +60,69 @@ export function normalizeCaseRefKey(caseRef: string): string {
   return caseRef.replace(/\s+/g, "").toUpperCase();
 }
 
+function sha256File(relativePath: string): string {
+  const absolute = resolve(process.cwd(), relativePath);
+  return createHash("sha256").update(readFileSync(absolute)).digest("hex");
+}
+
+/** SHA-256 (hex) of D2 gate / rules source bundle. */
+export function d2RulesBundleContentSha(): string {
+  const parts = D2_RULE_SOURCE_FILES.map((p) => sha256File(p));
+  return createHash("sha256").update(parts.join("")).digest("hex").slice(0, 16);
+}
+
+export function d2PipelineRevisionHash(mwcSnapshotSha: string): string {
+  const profilesSha = sha256File(LRS_PROFILES_PATH).slice(0, 16);
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        rules: d2RulesBundleContentSha(),
+        profiles: profilesSha,
+        mwc: mwcSnapshotSha,
+        manualTriage: manualTriageRevisionHash(),
+        policy: D2_FILTER_POLICY,
+      }),
+    )
+    .digest("hex")
+    .slice(0, 16);
+}
+
 /** Stable hash for candidate row (parse / gate inputs). */
-export function judgmentCandidateContentHash(row: JudgmentCandidateRow): string {
+export function judgmentCandidateContentHash(
+  row: JudgmentCandidateRow,
+  mwcSnapshotSha: string,
+): string {
   const payload = JSON.stringify({
     caseRef: normalizeCaseRefKey(row.caseRef),
     partiesLine: row.partiesLine.trim(),
     eventDate: row.eventDate,
     database: row.database,
     profileId: row.discoveredFrom.profileId,
-    manualTriageRev: manualTriageRevisionHash(),
-    policy: D2_FILTER_POLICY,
+    pipelineRev: d2PipelineRevisionHash(mwcSnapshotSha),
   });
   return createHash("sha256").update(payload).digest("hex");
 }
 
 export function loadD2FilterStepCache(
+  mwcSnapshotSha: string,
   path = DEFAULT_CACHE_PATH,
 ): D2FilterStepCacheFile {
-  const triageRev = manualTriageRevisionHash();
+  const pipelineRev = d2PipelineRevisionHash(mwcSnapshotSha);
   if (!existsSync(path)) {
     return {
       schemaVersion: 1,
       policy: D2_FILTER_POLICY,
-      manualTriageRev: triageRev,
+      pipelineRev,
       updatedAt: new Date(0).toISOString(),
       byCaseRef: {},
     };
   }
   const raw = JSON.parse(readFileSync(path, "utf8")) as D2FilterStepCacheFile;
-  if (
-    raw.policy !== D2_FILTER_POLICY ||
-    raw.manualTriageRev !== triageRev
-  ) {
+  if (raw.policy !== D2_FILTER_POLICY || raw.pipelineRev !== pipelineRev) {
     return {
       schemaVersion: 1,
       policy: D2_FILTER_POLICY,
-      manualTriageRev: triageRev,
+      pipelineRev,
       updatedAt: new Date(0).toISOString(),
       byCaseRef: {},
     };
@@ -92,6 +132,7 @@ export function loadD2FilterStepCache(
 
 export function saveD2FilterStepCache(
   cache: D2FilterStepCacheFile,
+  mwcSnapshotSha: string,
   path = DEFAULT_CACHE_PATH,
 ): void {
   mkdirSync(resolve(path, ".."), { recursive: true });
@@ -100,7 +141,7 @@ export function saveD2FilterStepCache(
     `${JSON.stringify(
       {
         ...cache,
-        manualTriageRev: manualTriageRevisionHash(),
+        pipelineRev: d2PipelineRevisionHash(mwcSnapshotSha),
         updatedAt: new Date().toISOString(),
       },
       null,
@@ -113,11 +154,12 @@ export function saveD2FilterStepCache(
 export function getCachedStepIfValid(
   cache: D2FilterStepCacheFile,
   row: JudgmentCandidateRow,
+  mwcSnapshotSha: string,
 ): D2CachedCandidateStep | null {
   const key = normalizeCaseRefKey(row.caseRef);
   const entry = cache.byCaseRef[key];
   if (!entry) return null;
-  const hash = judgmentCandidateContentHash(row);
+  const hash = judgmentCandidateContentHash(row, mwcSnapshotSha);
   if (entry.contentHash !== hash) return null;
   if (entry.partiesLine !== row.partiesLine.trim()) return null;
   return entry;

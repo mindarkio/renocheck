@@ -13,7 +13,7 @@ const sampleRow = {
 
 describe("judgmentCandidateContentHash", () => {
   it("includes manual triage revision in hash", () => {
-    const hash = judgmentCandidateContentHash(sampleRow);
+    const hash = judgmentCandidateContentHash(sampleRow, "test_mwc_snapshot");
     expect(hash).toMatch(/^[a-f0-9]{64}$/);
     expect(manualTriageRevisionHash()).toHaveLength(16);
   });

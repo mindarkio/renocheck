@@ -109,19 +109,20 @@ async function main() {
   ).prefixes;
   timings.read_files_ms = performance.now() - tRead;
 
-  const tParse = performance.now();
-  const stepCache = noCache ? loadD2FilterStepCache() : loadD2FilterStepCache();
-  if (noCache) stepCache.byCaseRef = {};
-  timings.parse_manifest_ms = performance.now() - tParse;
-
   const supabase = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
   const tMwc = performance.now();
   const mwcIndex = await MwcContractorsMemoryIndex.loadAll(supabase);
+  const mwcSnapshotSha = mwcIndex.snapshotContentHash();
   timings.load_mwc_index_ms = performance.now() - tMwc;
   timings.mwc_rows = mwcIndex.size;
+
+  const tParse = performance.now();
+  const stepCache = loadD2FilterStepCache(mwcSnapshotSha);
+  if (noCache) stepCache.byCaseRef = {};
+  timings.parse_manifest_ms = performance.now() - tParse;
 
   const tPipeline = performance.now();
   const { entries, counts, timingsMs, cache } = runD2FilterPipeline({
@@ -130,6 +131,7 @@ async function main() {
     priorityPrefixes: profiles.caseRefPriorityPrefixes,
     courtPrefixes,
     mwcIndex,
+    mwcSnapshotSha,
     stepCache,
     useStepCache: !noCache,
     writeStepCache: !dryRun && !onlyCaseRef,
@@ -145,7 +147,7 @@ async function main() {
 
   if (!dryRun && !onlyCaseRef) {
     const tWrite = performance.now();
-    saveD2FilterStepCache(cache);
+    saveD2FilterStepCache(cache, mwcSnapshotSha);
     timings.write_cache_ms = performance.now() - tWrite;
   }
 

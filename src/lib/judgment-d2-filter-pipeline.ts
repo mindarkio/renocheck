@@ -51,6 +51,7 @@ export type RunD2FilterPipelineOptions = {
   writeStepCache?: boolean;
   onlyCaseRef?: string;
   changedOnly?: boolean;
+  mwcSnapshotSha: string;
 };
 
 export type RunD2FilterPipelineResult = {
@@ -118,6 +119,7 @@ export function runD2FilterPipeline(
     writeStepCache = true,
     onlyCaseRef,
     changedOnly = false,
+    mwcSnapshotSha,
   } = options;
 
   const cache: D2FilterStepCacheFile = initialCache ?? {
@@ -152,7 +154,7 @@ export function runD2FilterPipeline(
     allowCache: boolean,
   ): D2FilterEntry => {
     if (allowCache) {
-      const cached = getCachedStepIfValid(cache, row);
+      const cached = getCachedStepIfValid(cache, row, mwcSnapshotSha);
       if (cached) {
         timingsMs.cacheHits += 1;
         return entryFromCache(row, courtPrefixes, cached);
@@ -198,7 +200,7 @@ export function runD2FilterPipeline(
     if (writeStepCache) {
       const key = normalizeCaseRefKey(row.caseRef);
       cache.byCaseRef[key] = {
-        contentHash: judgmentCandidateContentHash(row),
+        contentHash: judgmentCandidateContentHash(row, mwcSnapshotSha),
         partiesLine: row.partiesLine.trim(),
         parse: { split: parsed.split, retried: parsed.retried },
         mwcLeft,

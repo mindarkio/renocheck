@@ -13,6 +13,7 @@ import {
   legalRowMatchesSearchLabel,
 } from "./judgment-lookup-match";
 import { soleProprietorDefendantDisplayZh } from "./judgment-sole-prop-import";
+import { isLegalrefJudgmentSourceUrl } from "./legal-event-source-url";
 import { normalizeBrDigits } from "./normalize-br";
 import { normalizeIsoDatetimeForSchema } from "./normalize-iso-datetime";
 
@@ -79,6 +80,8 @@ function rowToEvent(
   row: LegalJudgmentRow,
   matchReasonZh: string,
 ): OfficialLegalEvent | null {
+  if (!isLegalrefJudgmentSourceUrl(row.source_url)) return null;
+
   const judgmentCategory = parseEnum(judgmentCategorySchema, row.judgment_category);
   const partyRole = parseEnum(partyRoleSchema, row.party_role);
   if (!judgmentCategory || !partyRole) return null;
@@ -90,11 +93,10 @@ function rowToEvent(
   if (points.length === 0) return null;
 
   const quotesRaw = row.hearing_key_point_quotes_zh;
-  const quotes = Array.isArray(quotesRaw)
-    ? quotesRaw.filter((q) => typeof q === "string" && q.trim())
-    : [];
-  const hearingKeyPointQuotesZh =
-    quotes.length > 0 ? quotes.slice(0, points.length) : undefined;
+  const quotes = Array.isArray(quotesRaw) ? (quotesRaw as string[]) : [];
+  const hearingKeyPointQuotesZh = points
+    .slice(0, 8)
+    .map((_, i) => (typeof quotes[i] === "string" ? quotes[i]! : ""));
 
   const eventDate =
     typeof row.event_date === "string"
@@ -127,9 +129,7 @@ function rowToEvent(
         })()
       : {}),
     hearingKeyPointsZh: points.slice(0, 8),
-    ...(hearingKeyPointQuotesZh
-      ? { hearingKeyPointQuotesZh: hearingKeyPointQuotesZh.slice(0, 8) }
-      : {}),
+    hearingKeyPointQuotesZh,
     ...(row.hearing_points_source
       ? (() => {
           const v = parseEnum(
