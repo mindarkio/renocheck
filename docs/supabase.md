@@ -46,7 +46,7 @@ pnpm db:link
 
 **治理：** 任何新 migration 須先經 **Aaron** 批准再 `db push`／套用 remote（`hearing_key_point_quotes_zh` 2026-10-17 為事後補批）。
 
-**已套用（remote，2026-10-17）：** `20261017140000_official_legal_events_catalog_case_ref_and_hearing_guard.sql` — `(source_catalog_id, case_ref)` unique + `ai_verified` 降級 trigger。`pnpm db:push` 若報 remote migration 漂移，用 Dashboard SQL 或 `migration repair` 對齊 history（見 CLI 提示）。
+**Track 1 判詞欄位（remote 版本號）：** `20261017101908`（`hearing_points_source`）、`20261017110920`（`hearing_key_point_quotes_zh`）、`20261017114049`（`(source_catalog_id, case_ref)` unique + `ai_verified` 降級 trigger）。本地 migration 檔名與 remote history 對齊。
 
 已套用（remote）：
 

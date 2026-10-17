@@ -37,7 +37,7 @@ export type LegalJudgmentRow = {
   imported_at: string;
   review_status: string | null;
   topic_tags: string[] | null;
-  /** Present after migration 20261017100000 is applied. */
+  /** Present after migration 20261017101908 is applied. */
   hearing_points_source?: string | null;
 };
 

@@ -44,7 +44,7 @@ export type ProcedureStage = z.infer<typeof procedureStageSchema>;
 
 export const legalEventReviewStatusSchema = z.enum(["auto", "human_verified"]);
 
-/** DB `hearing_points_source` (migration 20261017100000). */
+/** DB `hearing_points_source` (migration 20261017101908). */
 export const hearingPointsSourceSchema = z.enum([
   "llm_draft",
   "ai_verified",
