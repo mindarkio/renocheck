@@ -3,7 +3,7 @@
  *
  * Usage: pnpm import:judgments --file=path/to/seed.json [--dry-run]
  */
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assertJudgmentSeedAllowedForRemoteImport } from "../src/lib/judgment-import-catalog-guard";
@@ -78,7 +78,7 @@ function requireSeedFileArg(): string {
 }
 
 async function fetchExistingByCatalogCase(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   catalogIds: string[],
   select: string,
 ): Promise<Map<string, Record<string, unknown>>> {
@@ -93,13 +93,13 @@ async function fetchExistingByCatalogCase(
         .order("id", { ascending: true })
         .range(from, from + EXISTING_PAGE_SIZE - 1);
       if (error) throw error;
-      const batch = data ?? [];
+      const batch = (data ?? []) as unknown as Array<Record<string, unknown>>;
       for (const row of batch) {
         const key = judgmentImportRowKey(
-          row.source_catalog_id as string,
-          row.case_ref as string,
+          String(row.source_catalog_id),
+          String(row.case_ref),
         );
-        map.set(key, row as Record<string, unknown>);
+        map.set(key, row);
       }
       if (batch.length < EXISTING_PAGE_SIZE) break;
       from += EXISTING_PAGE_SIZE;
@@ -116,7 +116,7 @@ type CaseRefDriftRow = {
 };
 
 export async function auditRemoteJudgmentCaseRefNormalization(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
 ): Promise<{ rowCount: number; drifts: CaseRefDriftRow[] }> {
   const drifts: CaseRefDriftRow[] = [];
   let rowCount = 0;
@@ -130,15 +130,15 @@ export async function auditRemoteJudgmentCaseRefNormalization(
         .order("id", { ascending: true })
         .range(from, from + EXISTING_PAGE_SIZE - 1);
       if (error) throw error;
-      const batch = data ?? [];
+      const batch = (data ?? []) as unknown as Array<Record<string, unknown>>;
       rowCount += batch.length;
       for (const row of batch) {
-        const stored = row.case_ref as string;
+        const stored = String(row.case_ref);
         const { normalized, changed } = judgmentCaseRefStorageDrift(stored);
         if (changed) {
           drifts.push({
-            id: row.id as string,
-            source_catalog_id: row.source_catalog_id as string,
+            id: String(row.id),
+            source_catalog_id: String(row.source_catalog_id),
             stored,
             normalized,
           });

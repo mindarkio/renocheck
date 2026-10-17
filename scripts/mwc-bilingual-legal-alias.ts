@@ -87,15 +87,17 @@ async function fetchAllRows<T>(
   supabase: SupabaseClient,
   table: string,
   select: string,
-  filter?: (q: ReturnType<SupabaseClient["from"]>) => ReturnType<SupabaseClient["from"]>,
+  eqFilter?: { column: string; values: string[] },
 ): Promise<T[]> {
   const pageSize = 1000;
   let from = 0;
   const out: T[] = [];
   while (true) {
-    let q = supabase.from(table).select(select).range(from, from + pageSize - 1);
-    if (filter) q = filter(q) as typeof q;
-    const { data, error } = await q;
+    let q = supabase.from(table).select(select);
+    if (eqFilter) {
+      q = q.in(eqFilter.column, eqFilter.values);
+    }
+    const { data, error } = await q.range(from, from + pageSize - 1);
     if (error) throw error;
     const batch = (data ?? []) as T[];
     out.push(...batch);
@@ -234,11 +236,10 @@ async function main() {
     supabase,
     "official_legal_events",
     "id, case_ref, company_name_normalized, party_names, lookup_aliases, br_normalized, topic_tags",
-    (q) =>
-      q.in(
-        "source_catalog_id",
-        officialLegalEventSourceCatalogAllowlistValues(),
-      ),
+    {
+      column: "source_catalog_id",
+      values: officialLegalEventSourceCatalogAllowlistValues(),
+    },
   );
 
   const mwcByReg = new Map<string, MwcRow>();

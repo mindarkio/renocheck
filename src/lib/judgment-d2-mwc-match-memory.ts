@@ -1,6 +1,7 @@
 import { suggestLookupAliases } from "./judgment-lookup-match";
 import type { MwcMatchSummary } from "./judgment-d2-gates";
 import type { MwcContractorsMemoryIndex } from "./mwc-contractors-memory-index";
+import { companyNameOnlySearchInput } from "./normalize-search-input";
 
 /** Sync MWC lookup for D2 filter (in-memory index, no per-row DB). */
 export function lookupMwcForPartyLabelMemory(
@@ -16,9 +17,9 @@ export function lookupMwcForPartyLabelMemory(
   let sawAmbiguous = false;
   for (const term of terms) {
     if (term.length < 2) continue;
-    const { row, ambiguous } = index.lookupWithMeta({
-      companyName: term,
-    });
+    const { row, ambiguous } = index.lookupWithMeta(
+      companyNameOnlySearchInput(term),
+    );
     if (ambiguous) sawAmbiguous = true;
     if (row && !ambiguous) {
       return {

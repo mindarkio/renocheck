@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MwcContractorsMemoryIndex } from "./mwc-contractors-memory-index";
+import { companyNameOnlySearchInput } from "./normalize-search-input";
 
 describe("MwcContractorsMemoryIndex", () => {
   const index = new MwcContractorsMemoryIndex([
@@ -22,13 +23,13 @@ describe("MwcContractorsMemoryIndex", () => {
   ]);
 
   it("matches company name substring like ilike", () => {
-    const r = index.lookupWithMeta({ companyName: "名富裝修" });
+    const r = index.lookupWithMeta(companyNameOnlySearchInput("名富裝修"));
     expect(r.row?.registration_no).toBe("MWC 506/2014");
     expect(r.ambiguous).toBe(false);
   });
 
   it("flags ambiguous when two rows match", () => {
-    const r = index.lookupWithMeta({ companyName: "裝修" });
+    const r = index.lookupWithMeta(companyNameOnlySearchInput("裝修"));
     expect(r.ambiguous).toBe(true);
     expect(r.row?.company_name).toBeTruthy();
   });

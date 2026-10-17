@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { suggestLookupAliases } from "./judgment-lookup-match";
 import type { MwcMatchSummary } from "./judgment-d2-gates";
 import { lookupMwcWithMeta } from "./mwc-lookup";
+import { companyNameOnlySearchInput } from "./normalize-search-input";
 
 /** Try party label + alias variants against mwc_contractors (D2 Gate 3). */
 export async function lookupMwcForPartyLabel(
@@ -17,9 +18,10 @@ export async function lookupMwcForPartyLabel(
   let sawAmbiguous = false;
   for (const term of terms) {
     if (term.length < 2) continue;
-    const { row, ambiguous } = await lookupMwcWithMeta(supabase, {
-      companyName: term,
-    });
+    const { row, ambiguous } = await lookupMwcWithMeta(
+      supabase,
+      companyNameOnlySearchInput(term),
+    );
     if (ambiguous) sawAmbiguous = true;
     if (row && !ambiguous) {
       return {

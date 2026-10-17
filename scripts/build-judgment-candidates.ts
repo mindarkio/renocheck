@@ -8,6 +8,7 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  type JudgmentCandidateRow,
   judgmentCandidateRowSchema,
   judgmentCandidatesManifestSchema,
 } from "../src/lib/judgment-candidates-schema";
@@ -70,7 +71,7 @@ function main() {
     byFile.set(e.htmlPath, e);
   }
 
-  const merged = new Map<string, ReturnType<typeof lrsRowToCandidateFields>>();
+  const merged = new Map<string, JudgmentCandidateRow>();
   const generatedAt = new Date().toISOString();
 
   for (const file of files.sort()) {
@@ -103,7 +104,7 @@ function main() {
   const backfillPath = resolve(OUT_DIR, "judgment-candidates-gold-backfill.json");
   try {
     const backfill = JSON.parse(readFileSync(backfillPath, "utf8")) as {
-      candidates?: ReturnType<typeof lrsRowToCandidateFields>[];
+      candidates?: JudgmentCandidateRow[];
     };
     for (const c of backfill.candidates ?? []) {
       const parsed = judgmentCandidateRowSchema.safeParse(c);

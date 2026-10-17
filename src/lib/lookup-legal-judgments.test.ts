@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { lookupLegalJudgments } from "./lookup-legal-judgments";
 
-function createQueryBuilder(resolver: () => Promise<{ data: unknown[] | null; error?: null }>) {
+function createQueryBuilder(
+  resolver: () => Promise<{
+    data: unknown[] | null;
+    error?: { message: string } | null;
+  }>,
+) {
   const builder: Record<string, unknown> = {};
   const chain = () => builder;
   for (const method of ["select", "order", "limit", "eq", "ilike", "range", "in"]) {

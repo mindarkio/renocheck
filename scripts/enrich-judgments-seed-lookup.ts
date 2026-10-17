@@ -12,6 +12,7 @@ import {
   suggestLookupAliases,
 } from "../src/lib/judgment-lookup-match";
 import { lookupMwcWithMeta } from "../src/lib/mwc-lookup";
+import { companyNameOnlySearchInput } from "../src/lib/normalize-search-input";
 import {
   brNormalizedFromSeedField,
   normalizeBrDigits,
@@ -84,9 +85,10 @@ async function main() {
       mergedLabels,
     );
 
-    const mwc = await lookupMwcWithMeta(supabase, {
-      companyName: row.companyNameNormalized,
-    });
+    const mwc = await lookupMwcWithMeta(
+      supabase,
+      companyNameOnlySearchInput(row.companyNameNormalized),
+    );
     let brNormalized = brNormalizedFromSeedField(row.brNormalized);
     const mwcAliases: string[] = [];
     if (mwc.row && !mwc.ambiguous) {

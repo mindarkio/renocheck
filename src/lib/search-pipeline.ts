@@ -112,15 +112,25 @@ export async function runSearchPipeline(
   );
 
   const legalEnabled = isLegalEventsEnabled();
-  const legalLookupPromise = legalEnabled
-    ? lookupLegalJudgments(supabase, {
-        searchLabelUsed,
-        br: input.br,
-      })
-    : Promise.resolve({
-        events: [] as OfficialLegalEvent[],
-        registryAsOf: undefined,
-      });
+  const serpStart = performance.now();
+  const [serpResult, legalLookup] = await Promise.all([
+    fetchWebSearchHitsForEntity(input, mwcOpts),
+    legalEnabled
+      ? lookupLegalJudgments(supabase, {
+          searchLabelUsed,
+          br: input.br,
+        })
+      : Promise.resolve({
+          events: [] as OfficialLegalEvent[],
+          registryAsOf: undefined,
+        }),
+  ]);
+  const { hits: serpHits } = serpResult;
+
+  const tokens = entityMatchTokens(input, {
+    mwcCompanyName: mwc?.company_name,
+    phoneNormalized: input.phone,
+  });
   const phoneForL1 = normalizeHongKongPhone(input.phone) ?? undefined;
   const l1Opts = {
     mustIncludeAny: entityL1MustIncludeAny(searchLabelUsed),
@@ -260,6 +270,24 @@ export async function runSearchPipeline(
   if (mwcLookup.ambiguous && fullReport.confidence !== "low") {
     fullReport = mirrorEvaluationConfidence(fullReport, "low");
   }
+
+  fullReport = applyLegalEventFloors(
+    fullReport,
+    legalLookup.events,
+    boundHitCount,
+  );
+  fullReport = {
+    ...fullReport,
+    official: {
+      ...fullReport.official,
+      ...(legalLookup.events.length > 0
+        ? { legalEvents: legalLookup.events }
+        : {}),
+      ...(legalLookup.registryAsOf
+        ? { legalRegistryAsOf: legalLookup.registryAsOf }
+        : {}),
+    },
+  };
 
   const { riskReportSchema } = await import("./report-schema");
   const validated = riskReportSchema.parse(fullReport);
