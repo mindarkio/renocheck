@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isLegalEventsEnabled } from "./legal-events-config";
 import {
   lookupLegalJudgments,
   type LegalLookupContext,
@@ -12,6 +11,8 @@ export type LegalLookupStatus = "ok" | "error" | "timeout";
 
 export type LegalLookupForSearchResult = LegalLookupResult & {
   status: LegalLookupStatus;
+  /** True when caller passed `legalEventsEnabled` (pipeline calls `isLegalEventsEnabled` once). */
+  attempted: boolean;
 };
 
 export function emptyLegalLookupResult(): LegalLookupResult {
@@ -43,10 +44,12 @@ function logLegalLookupFailure(reason: "error" | "timeout", detail?: string) {
 export function startLegalLookupForSearch(
   supabase: SupabaseClient,
   ctx: LegalLookupContext,
+  legalEventsEnabled: boolean,
 ): Promise<LegalLookupForSearchResult> {
-  if (!isLegalEventsEnabled()) {
+  if (!legalEventsEnabled) {
     return Promise.resolve({
       status: "ok",
+      attempted: false,
       ...emptyLegalLookupResult(),
     });
   }
@@ -54,6 +57,7 @@ export function startLegalLookupForSearch(
   const lookupPromise = lookupLegalJudgments(supabase, ctx)
     .then((result) => ({
       status: "ok" as const,
+      attempted: true,
       ...result,
     }))
     .catch((err) => {
@@ -63,6 +67,7 @@ export function startLegalLookupForSearch(
       );
       return {
         status: "error" as const,
+        attempted: true,
         ...emptyLegalLookupResult(),
       };
     });
@@ -73,6 +78,7 @@ export function startLegalLookupForSearch(
       logLegalLookupFailure("timeout");
       resolve({
         status: "timeout",
+        attempted: true,
         ...emptyLegalLookupResult(),
       });
     }, LEGAL_LOOKUP_TIMEOUT_MS);

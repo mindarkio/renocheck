@@ -6,6 +6,9 @@ import { REPORT_VERSION } from "./constants";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** When legal lookup degrades, cache report briefly so share links still resolve. */
+export const LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS = 10 * 60 * 1000;
+
 export async function getCachedReport(
   supabase: SupabaseClient,
   fingerprint: string,
@@ -31,8 +34,10 @@ export async function setCachedReport(
   fingerprint: string,
   queryInput: NormalizedSearchInput,
   report: RiskReport,
+  options?: { ttlMs?: number },
 ): Promise<void> {
-  const expiresAt = new Date(Date.now() + CACHE_TTL_MS).toISOString();
+  const ttlMs = options?.ttlMs ?? CACHE_TTL_MS;
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
   const { error } = await supabase.from("search_cache").upsert({
     fingerprint,
     query_input: queryInput,

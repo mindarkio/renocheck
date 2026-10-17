@@ -282,9 +282,13 @@ export function ReportCard({ report }: { report: RiskReport }) {
       ? "warning"
       : "muted";
 
+  const legalLookupDegraded =
+    report.official.legalLookupStatus === "error" ||
+    report.official.legalLookupStatus === "timeout";
   const showFooterNotes =
-    (report.confidence === "medium" && highlights.length === 1) ||
-    report.evaluation.riskBandZh === "未見負面摘要";
+    !legalLookupDegraded &&
+    ((report.confidence === "medium" && highlights.length === 1) ||
+      report.evaluation.riskBandZh === "未見負面摘要");
   const showThemes =
     highlights.length > 0 && report.signals.themes.length > 0;
   const bindFailure =
@@ -294,10 +298,15 @@ export function ReportCard({ report }: { report: RiskReport }) {
     showSaturationBanner && saturationNote && !bindFailure;
   const legalEvents = report.official.legalEvents ?? [];
   const showLegalEvents = legalEvents.length > 0;
-  const showLegalLookupDegraded =
-    !showLegalEvents &&
-    (report.official.legalLookupStatus === "error" ||
-      report.official.legalLookupStatus === "timeout");
+  const showLegalLookupDegraded = !showLegalEvents && legalLookupDegraded;
+  const headerRiskBandZh =
+    legalLookupDegraded && report.evaluation.riskBandZh === "未見負面摘要"
+      ? "中性"
+      : report.evaluation.riskBandZh;
+  const headerBandLabel =
+    legalLookupDegraded && report.evaluation.riskBandZh === "未見負面摘要"
+      ? headerRiskBandZh
+      : (bandDetail ?? report.evaluation.riskBandZh);
 
   return (
     <div className="space-y-4 text-left">
@@ -318,12 +327,12 @@ export function ReportCard({ report }: { report: RiskReport }) {
             風險參考分檔
           </p>
           <p
-            className={`mt-2 text-2xl leading-tight tracking-tight sm:text-[1.65rem] ${riskBandMeterActiveLabelClass(report.evaluation.riskBandZh, true)}`}
+            className={`mt-2 text-2xl leading-tight tracking-tight sm:text-[1.65rem] ${riskBandMeterActiveLabelClass(headerRiskBandZh, true)}`}
           >
-            {bandDetail ?? report.evaluation.riskBandZh}
+            {headerBandLabel}
           </p>
           <RiskBandMeter
-            bandZh={report.evaluation.riskBandZh}
+            bandZh={headerRiskBandZh}
             emphasized
           />
           <p className="mt-3 flex items-start gap-2 text-[11px] leading-[1.6] text-primary-foreground/75 sm:text-xs">
