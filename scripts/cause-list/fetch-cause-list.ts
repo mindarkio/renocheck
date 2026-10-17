@@ -13,7 +13,7 @@ import {
   buildWaybackRawUrl,
   causeListPoliteDelayMs,
 } from "../../src/lib/cause-list/dcl-url";
-import { assertLiveDclRobotsAllowed, fetchDclHtml } from "../../src/lib/cause-list/fetch-dcl";
+import { assertCauseListFetchAllowed, fetchDclHtml } from "../../src/lib/cause-list/fetch-dcl";
 
 function parseArgs(argv: string[]) {
   let date = "";
@@ -43,9 +43,11 @@ async function main() {
   console.info(`Waiting ${delay}ms before fetch…`);
   await sleep(delay);
 
-  if (!wayback) {
-    await assertLiveDclRobotsAllowed(requestUrl, CAUSE_LIST_USER_AGENT);
-  }
+  await assertCauseListFetchAllowed(
+    liveUrl,
+    CAUSE_LIST_USER_AGENT,
+    wayback ? requestUrl : undefined,
+  );
 
   const html = await fetchDclHtml(requestUrl, { userAgent: CAUSE_LIST_USER_AGENT });
   const cacheDir = path.join(process.cwd(), ".cache", "cause-list");

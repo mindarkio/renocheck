@@ -109,7 +109,11 @@ export function selectCauseListSnapshots(
     if (rec.status && rec.status !== "200") continue;
     let url: URL;
     try {
-      url = new URL(rec.original);
+      let original = rec.original;
+      for (let i = 0; i < 3 && original.includes("&amp;"); i++) {
+        original = original.replace(/&amp;/g, "&");
+      }
+      url = new URL(original);
     } catch {
       continue;
     }
@@ -193,7 +197,27 @@ export function courtDateFromCacheName(
   return { court: m[1], dateDdMmYyyy: m[2] };
 }
 
+/** Inclusive capture window: list dates expanded ±31 days, never past `today`. */
+export function cdxCaptureWindow(
+  fromIso: string,
+  toIso: string,
+  today = isoTodayUtc(),
+): { fromIso: string; toIso: string } {
+  const captureFrom = addIsoDays(fromIso, -31);
+  const expandedTo = addIsoDays(toIso, 31);
+  const captureTo = expandedTo < today ? expandedTo : today;
+  return {
+    fromIso: captureFrom,
+    toIso: captureTo < captureFrom ? captureFrom : captureTo,
+  };
+}
+
+export function isNoHearingPage(html: string): boolean {
+  return /There is no hearing on this day|此日並無法庭聆訊/.test(html);
+}
+
 export function isTransientArchiveHtml(html: string): boolean {
+  if (isNoHearingPage(html)) return false;
   if (/has not archived that url/i.test(html)) return true;
   if (/robot access (control|denied)/i.test(html)) return true;
   if (

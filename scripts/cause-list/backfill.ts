@@ -3,29 +3,44 @@
  * Courts: SMT, DC, CACFI, LANDS. Default window: 2024-11-01 through today (UTC).
  *
  * Raw HTML stays in gitignored `.cache/cause-list/`.
- * Company-only rows (Limited / Ltd / 有限公司 defendants and respondents) go to
- * `scripts/output/cause-list-backfill.csv` and `cause-list-backfill-summary.json`.
+ * Company-only rows go to `scripts/output/` (override with `--out`).
  *
  * Usage:
  *   pnpm cause-list:backfill
  *   pnpm cause-list:backfill --from 2024-11-01 --to 2026-10-17
  *   pnpm cause-list:backfill --report-only
  *   pnpm cause-list:backfill --refresh-cdx
+ *   pnpm cause-list:backfill --no-registry
+ *   pnpm cause-list:backfill --out scripts/output
  *
- * Does not read or write Supabase. MWC matching uses the public BD register CSV
- * when that file is present; otherwise every row is matchLevel unmatched.
+ * Does not read or write Supabase. Matching uses the cached BD register
+ * (`.cache/bd-register/`, 7-day TTL). Missing or stale cache exits 1.
+ * `--no-registry` is the only unmatched mode. Five consecutive 403/429
+ * responses stop the run (exit 2) after the report is written.
  */
-import { mkdir, readdir, readFile, writeFile, copyFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { BD_REGISTER_CSV_PATH, BD_REGISTER_META_PATH } from "../../src/lib/bd-register/paths";
+import { parseBdRegisterCsvFromBytes } from "../../src/lib/bd-register/parse";
+import { assertBdCsvSanity, sanityCountsFromEntries } from "../../src/lib/bd-register/sanity";
+import { resolveCandidateRetrievedAt } from "../../src/lib/bd-register/candidate-meta";
+import { fetchMissingSnapshots } from "../../src/lib/cause-list/backfill-fetch";
+import {
+  assertCorporateBackfillRows,
+  backfillRowsToCsv,
+  buildBackfillSummary,
+  createBackfillAggregator,
+  publicBackfillError,
+  type BackfillSummary,
+} from "../../src/lib/cause-list/backfill-report";
+import { assertCacheFileFresh } from "../../src/lib/cause-list/cache-ttl";
 import {
   BACKFILL_COURTS,
   BACKFILL_FROM_ISO,
-  calendarMonthChunks,
-  courtDateFromCacheName,
-  isTransientArchiveHtml,
+  cdxCaptureWindow,
+  isNoHearingPage,
   isoToCompact,
   isoTodayUtc,
-  mergeSnapshots,
   pageLooksLikeCauseList,
   parseCdxJson,
   selectCauseListSnapshots,
@@ -33,29 +48,18 @@ import {
   type CauseListSnapshot,
 } from "../../src/lib/cause-list/cdx";
 import {
-  assertCorporateBackfillRows,
-  backfillRowsToCsv,
-  buildBackfillSummary,
-  createBackfillAggregator,
-  type BackfillSummary,
-} from "../../src/lib/cause-list/backfill-report";
-import {
   CAUSE_LIST_USER_AGENT,
   DCL_LIVE_ORIGIN,
   buildCdxSearchUrl,
   buildDclLiveUrl,
-  buildWaybackRawUrl,
   causeListPoliteDelayMs,
 } from "../../src/lib/cause-list/dcl-url";
 import { detectLegacyCaseFormat } from "../../src/lib/cause-list/case-no";
-import { isDefendantSideRole, isRenovationRelevantCase } from "../../src/lib/cause-list/filter";
-import { isCorporateEntityName, parseCorporateParties } from "../../src/lib/cause-list/party";
 import {
   fetchDclHtml,
   isPathDisallowedByRobots,
   loadRobotsDisallowPrefixes,
 } from "../../src/lib/cause-list/fetch-dcl";
-import { corporateRegistryFromRegistersCsv } from "../../src/lib/cause-list/mwc-public-registry";
 import { parseCacfiCauseListHtml } from "../../src/lib/cause-list/parse-cacfi";
 import { parseDcCauseListHtml } from "../../src/lib/cause-list/parse-dc";
 import { parseLandsCauseListHtml } from "../../src/lib/cause-list/parse-lands";
@@ -74,9 +78,11 @@ const PARSERS: Record<
 };
 
 type CdxState = {
+  mode: "global";
   from: string;
   to: string;
-  completedChunks: string[];
+  captureFrom: string;
+  captureTo: string;
   snapshots: CauseListSnapshot[];
 };
 
@@ -87,17 +93,23 @@ function parseArgs(argv: string[]) {
   let to = isoTodayUtc();
   let reportOnly = false;
   let refreshCdx = false;
+  let noRegistry = false;
+  let outDir = path.join(process.cwd(), "scripts", "output");
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--from" && argv[i + 1]) from = argv[++i];
-    else if (argv[i] === "--to" && argv[i + 1]) to = argv[++i];
-    else if (argv[i] === "--report-only") reportOnly = true;
-    else if (argv[i] === "--refresh-cdx") refreshCdx = true;
+    const arg = argv[i];
+    if (arg === "--from" && argv[i + 1]) from = argv[++i];
+    else if (arg === "--to" && argv[i + 1]) to = argv[++i];
+    else if (arg === "--out" && argv[i + 1]) outDir = path.resolve(argv[++i]);
+    else if (arg === "--report-only") reportOnly = true;
+    else if (arg === "--refresh-cdx") refreshCdx = true;
+    else if (arg === "--no-registry") noRegistry = true;
+    else if (arg.startsWith("--")) throw new Error(`refusing non-option ${arg}`);
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
     throw new Error("--from and --to must be YYYY-MM-DD");
   }
   if (from > to) throw new Error("--from is after --to");
-  return { from, to, reportOnly, refreshCdx };
+  return { from, to, reportOnly, refreshCdx, noRegistry, outDir };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -118,28 +130,9 @@ function emptyRowsParsed(): Record<CauseListCourtCode, number> {
   return { SMT: 0, DC: 0, CACFI: 0, LANDS: 0 };
 }
 
-function countKeptCorporateRows(cases: ParsedCauseListCase[]): number {
-  let kept = 0;
-  for (const caseRow of cases) {
-    if (!isRenovationRelevantCase(caseRow)) continue;
-    kept += parseCorporateParties(caseRow.parties).filter(
-      (party) => isDefendantSideRole(party.role) && isCorporateEntityName(party.legalName),
-    ).length;
-  }
-  return kept;
-}
-
 function findCachedHtml(files: string[], snap: CauseListSnapshot): string | null {
   const exact = snapshotCacheName(snap);
-  if (files.includes(exact)) return exact;
-  const prefix = `${snap.court}_${snap.dateDdMmYyyy}`;
-  const candidates = files.filter(
-    (name) =>
-      name === `${prefix}.html` ||
-      (name.startsWith(`${prefix}_wb`) && name.endsWith(".html")),
-  );
-  candidates.sort();
-  return candidates.at(-1) ?? null;
+  return files.includes(exact) ? exact : null;
 }
 
 async function loadCdxState(
@@ -147,24 +140,25 @@ async function loadCdxState(
   from: string,
   to: string,
   refresh: boolean,
-): Promise<CdxState> {
-  if (!refresh) {
-    try {
-      const raw = await readFile(cachePath, "utf8");
-      const parsed = JSON.parse(raw) as CdxState;
-      if (parsed.from === from && parsed.to === to && Array.isArray(parsed.snapshots)) {
-        return {
-          from,
-          to,
-          completedChunks: parsed.completedChunks ?? [],
-          snapshots: parsed.snapshots,
-        };
-      }
-    } catch {
-      // fresh listing
+): Promise<CauseListSnapshot[] | null> {
+  if (refresh) return null;
+  const bounds = cdxCaptureWindow(from, to);
+  try {
+    const parsed = JSON.parse(await readFile(cachePath, "utf8")) as Partial<CdxState>;
+    if (
+      parsed.mode === "global" &&
+      parsed.from === from &&
+      parsed.to === to &&
+      parsed.captureFrom === bounds.fromIso &&
+      parsed.captureTo === bounds.toIso &&
+      Array.isArray(parsed.snapshots)
+    ) {
+      return parsed.snapshots;
     }
+  } catch {
+    // refetch
   }
-  return { from, to, completedChunks: [], snapshots: [] };
+  return null;
 }
 
 async function fetchSnapshots(
@@ -180,42 +174,77 @@ async function fetchSnapshots(
   }
 
   const cachePath = path.join(cacheDir, "backfill-cdx.json");
-  const state = await loadCdxState(cachePath, from, to, refreshCdx);
-  const chunks = calendarMonthChunks(from, to);
+  const cached = await loadCdxState(cachePath, from, to, refreshCdx);
+  if (cached) return cached;
 
-  for (const chunk of chunks) {
-    const id = `${chunk.fromIso}|${chunk.toIso}`;
-    if (state.completedChunks.includes(id)) continue;
-    const url = buildCdxSearchUrl(isoToCompact(chunk.fromIso), isoToCompact(chunk.toIso));
-    let selected: CauseListSnapshot[] | null = null;
-    for (let attempt = 0; attempt < 3 && !selected; attempt++) {
-      await politeWait();
-      try {
-        const body = await fetchDclHtml(url, {
-          userAgent: CAUSE_LIST_USER_AGENT,
-          timeoutMs: 90000,
-          maxRetries: 4,
-        });
-        selected = selectCauseListSnapshots(parseCdxJson(body), chunk.fromIso, chunk.toIso);
-      } catch {
-        log({ event: "cdx_retry", from: chunk.fromIso, to: chunk.toIso, attempt });
-      }
+  const bounds = cdxCaptureWindow(from, to);
+  const url = buildCdxSearchUrl(isoToCompact(bounds.fromIso), isoToCompact(bounds.toIso));
+  let selected: CauseListSnapshot[] | null = null;
+  for (let attempt = 0; attempt < 3 && !selected; attempt++) {
+    await politeWait();
+    try {
+      const body = await fetchDclHtml(url, {
+        userAgent: CAUSE_LIST_USER_AGENT,
+        timeoutMs: 120000,
+        maxRetries: 4,
+      });
+      selected = selectCauseListSnapshots(parseCdxJson(body), from, to);
+    } catch {
+      log({ event: "cdx_retry", from, to, attempt });
     }
-    if (!selected) {
-      throw new Error(`cdx_failed ${chunk.fromIso} ${chunk.toIso}`);
-    }
-    state.snapshots = mergeSnapshots(state.snapshots, selected);
-    state.completedChunks.push(id);
-    await writeFile(cachePath, JSON.stringify(state), "utf8");
-    log({
-      event: "cdx_chunk",
-      from: chunk.fromIso,
-      to: chunk.toIso,
-      dates: selected.length,
-    });
   }
+  if (!selected) throw new Error(`cdx_failed ${from} ${to}`);
 
-  return state.snapshots;
+  const state: CdxState = {
+    mode: "global",
+    from,
+    to,
+    captureFrom: bounds.fromIso,
+    captureTo: bounds.toIso,
+    snapshots: selected,
+  };
+  await writeFile(cachePath, JSON.stringify(state), "utf8");
+  log({
+    event: "cdx_window",
+    from: bounds.fromIso,
+    to: bounds.toIso,
+    dates: selected.length,
+  });
+  return selected;
+}
+
+async function loadRegistry(noRegistry: boolean): Promise<{
+  companies: CauseListCompanyFixture[];
+  mwcMode: BackfillSummary["mwcRegistry"]["mode"];
+  retrievedAt: string | null;
+}> {
+  if (noRegistry) {
+    return { companies: [], mwcMode: "unmatched-no-registry", retrievedAt: null };
+  }
+  try {
+    await assertCacheFileFresh(
+      BD_REGISTER_CSV_PATH,
+      "BD register cache (run pnpm bd-register:fetch)",
+    );
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") throw new Error("BD register cache missing ENOENT");
+    throw error;
+  }
+  const { entries } = parseBdRegisterCsvFromBytes(await readFile(BD_REGISTER_CSV_PATH));
+  assertBdCsvSanity(sanityCountsFromEntries(entries));
+  const companies = entries
+    .filter((entry) => entry.registerType === "MWC" && !entry.unincorporated && (entry.nameEn || entry.nameZh))
+    .map((entry) => ({
+      id: entry.regNo,
+      namesEn: entry.nameEn ? [entry.nameEn] : [],
+      namesZh: entry.nameZh ? [entry.nameZh] : [],
+    }));
+  const retrievedAt = await resolveCandidateRetrievedAt(
+    BD_REGISTER_CSV_PATH,
+    BD_REGISTER_META_PATH,
+  );
+  return { companies, mwcMode: "offline-public-register", retrievedAt };
 }
 
 async function writeReport(input: {
@@ -224,8 +253,11 @@ async function writeReport(input: {
   complete: boolean;
   companies: CauseListCompanyFixture[];
   mwcMode: BackfillSummary["mwcRegistry"]["mode"];
+  retrievedAt: string | null;
+  stoppedReason?: BackfillSummary["stoppedReason"];
   snapshots: CauseListSnapshot[];
   cacheDir: string;
+  outDir: string;
   fetchFailures: number;
 }): Promise<BackfillSummary> {
   const files = await readdir(input.cacheDir).catch(() => [] as string[]);
@@ -237,6 +269,7 @@ async function writeReport(input: {
     legacyFormat: 0,
     parseFailures: 0,
     fetchFailures: input.fetchFailures,
+    noHearing: 0,
   };
   const parseFailures: BackfillSummary["parseFailures"] = [];
   const aggregator = createBackfillAggregator(input.companies);
@@ -246,6 +279,11 @@ async function writeReport(input: {
     if (!filename) continue;
     fetchedKeys.add(`${snap.court}|${snap.dateDdMmYyyy}`);
     const html = await readFile(path.join(input.cacheDir, filename), "utf8");
+    if (isNoHearingPage(html)) {
+      pages.noHearing += 1;
+      log({ event: "page", court: snap.court, date: snap.dateDdMmYyyy, result: "no_hearing" });
+      continue;
+    }
     if (detectLegacyCaseFormat(html)) pages.legacyFormat += 1;
     if (!pageLooksLikeCauseList(html)) {
       pages.unsupported += 1;
@@ -293,6 +331,8 @@ async function writeReport(input: {
     complete: input.complete,
     mwcMode: input.mwcMode,
     corporateCompanies: input.companies.length,
+    retrievedAt: input.retrievedAt,
+    stoppedReason: input.stoppedReason,
     snapshots: input.snapshots,
     fetchedKeys,
     rowsParsed,
@@ -302,17 +342,11 @@ async function writeReport(input: {
     parseFailures,
   });
 
-  const outDir = path.join(process.cwd(), "scripts", "output");
-  await mkdir(outDir, { recursive: true });
-  const csvPath = path.join(outDir, "cause-list-backfill.csv");
-  const summaryPath = path.join(outDir, "cause-list-backfill-summary.json");
+  await mkdir(input.outDir, { recursive: true });
+  const csvPath = path.join(input.outDir, "cause-list-backfill.csv");
+  const summaryPath = path.join(input.outDir, "cause-list-backfill-summary.json");
   await writeFile(csvPath, backfillRowsToCsv(aggregated.rows), "utf8");
   await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
-
-  const artifactDir = "/opt/cursor/artifacts";
-  await mkdir(artifactDir, { recursive: true });
-  await copyFile(csvPath, path.join(artifactDir, "cause-list-backfill.csv"));
-  await copyFile(summaryPath, path.join(artifactDir, "cause-list-backfill-summary.json"));
 
   log({
     event: "backfill_report",
@@ -320,33 +354,24 @@ async function writeReport(input: {
     dedupedCases: summary.totals.dedupedCases,
     distinctCompaniesA: summary.totals.distinctCompaniesA,
     distinctCompaniesB: summary.totals.distinctCompaniesB,
+    noHearing: summary.pages.noHearing,
     csv: csvPath,
     summary: summaryPath,
   });
   return summary;
 }
 
-async function main() {
-  const { from, to, reportOnly, refreshCdx } = parseArgs(process.argv.slice(2));
+async function main(): Promise<number> {
+  const { from, to, reportOnly, refreshCdx, noRegistry, outDir } = parseArgs(process.argv.slice(2));
   const cacheDir = path.join(process.cwd(), ".cache", "cause-list");
   await mkdir(cacheDir, { recursive: true });
 
-  let companies: CauseListCompanyFixture[] = [];
-  let mwcMode: BackfillSummary["mwcRegistry"]["mode"] = "unmatched-no-registry";
-  try {
-    const csvText = await readFile(
-      path.join(process.cwd(), "docs/sourcedata/registers_full_list.csv"),
-      "utf8",
-    );
-    companies = corporateRegistryFromRegistersCsv(csvText);
-    if (companies.length > 0) mwcMode = "offline-public-register";
-  } catch {
-    mwcMode = "unmatched-no-registry";
-  }
+  const { companies, mwcMode, retrievedAt } = await loadRegistry(noRegistry);
   log({
     event: "mwc_registry",
     mode: mwcMode,
     corporateCompanies: companies.length,
+    retrievedAt,
   });
 
   let stop = false;
@@ -360,6 +385,7 @@ async function main() {
   let archiveRules: string[] = [];
   let snapshots: CauseListSnapshot[] = [];
   let fetchFailures = 0;
+  let stoppedReason: BackfillSummary["stoppedReason"];
 
   if (!reportOnly) {
     await politeWait();
@@ -379,9 +405,8 @@ async function main() {
     );
     snapshots = await fetchSnapshots(cacheDir, from, to, refreshCdx, archiveRules);
   } else {
-    const cdxPath = path.join(cacheDir, "backfill-cdx.json");
-    const state = await loadCdxState(cdxPath, from, to, false);
-    snapshots = state.snapshots;
+    const cached = await loadCdxState(path.join(cacheDir, "backfill-cdx.json"), from, to, false);
+    snapshots = cached ?? [];
   }
 
   const byCourt = emptyRowsParsed();
@@ -396,77 +421,24 @@ async function main() {
   });
 
   if (!reportOnly) {
-    const existing = new Set(
-      (await readdir(cacheDir).catch(() => [] as string[]))
-        .map((name) => courtDateFromCacheName(name))
-        .filter((row): row is NonNullable<typeof row> => row !== null)
-        .map((row) => `${row.court}|${row.dateDdMmYyyy}`),
-    );
-    let done = 0;
-    const pending = snapshots.filter(
-      (snap) => !existing.has(`${snap.court}|${snap.dateDdMmYyyy}`),
-    );
+    const existing = new Set(await readdir(cacheDir).catch(() => [] as string[]));
+    const pending = snapshots.filter((snap) => !existing.has(snapshotCacheName(snap)));
     log({ event: "fetch_plan", pending: pending.length, cached: snapshots.length - pending.length });
-
-    for (const snap of pending) {
-      if (stop) break;
-      const rawUrl = buildWaybackRawUrl(snap.timestamp, snap.original);
-      const pathname = new URL(rawUrl).pathname;
-      if (isPathDisallowedByRobots(pathname, archiveRules)) {
-        log({ event: "fetch", court: snap.court, date: snap.dateDdMmYyyy, result: "robots_blocked" });
-        fetchFailures += 1;
-        continue;
-      }
-      await politeWait();
-      try {
-        const html = await fetchDclHtml(rawUrl, {
+    const fetched = await fetchMissingSnapshots(pending, {
+      cacheDir,
+      archiveRules,
+      politeWait,
+      fetchHtml: (url) =>
+        fetchDclHtml(url, {
           userAgent: CAUSE_LIST_USER_AGENT,
           timeoutMs: 45000,
           maxRetries: 4,
-        });
-        if (isTransientArchiveHtml(html)) {
-          fetchFailures += 1;
-          log({
-            event: "fetch",
-            court: snap.court,
-            date: snap.dateDdMmYyyy,
-            result: "transient",
-            bytes: html.length,
-          });
-          continue;
-        }
-        const outPath = path.join(cacheDir, snapshotCacheName(snap));
-        await writeFile(outPath, html, "utf8");
-        done += 1;
-        let probeRows = -1;
-        let probeKept = -1;
-        let probeResult = "cached";
-        try {
-          const parsed = PARSERS[snap.court](html, snap.dateDdMmYyyy);
-          probeRows = parsed.cases.length;
-          probeKept = countKeptCorporateRows(parsed.cases);
-        } catch (error) {
-          probeResult =
-            error instanceof Error && error.message.startsWith("DCL page date mismatch")
-              ? "date_mismatch"
-              : "parse_error";
-        }
-        log({
-          event: "fetch",
-          court: snap.court,
-          date: snap.dateDdMmYyyy,
-          result: probeResult,
-          bytes: html.length,
-          rows: probeRows,
-          kept: probeKept,
-          done,
-          pending: pending.length,
-        });
-      } catch {
-        fetchFailures += 1;
-        log({ event: "fetch", court: snap.court, date: snap.dateDdMmYyyy, result: "fetch_failed" });
-      }
-    }
+        }),
+      shouldStop: () => stop,
+      log,
+    });
+    fetchFailures = fetched.fetchFailures;
+    stoppedReason = fetched.stoppedReason;
   }
 
   const files = await readdir(cacheDir).catch(() => [] as string[]);
@@ -475,7 +447,11 @@ async function main() {
       .filter((snap) => findCachedHtml(files, snap))
       .map((snap) => `${snap.court}|${snap.dateDdMmYyyy}`),
   );
-  const complete = !stop && snapshots.every((snap) => have.has(`${snap.court}|${snap.dateDdMmYyyy}`));
+  const complete =
+    !stop &&
+    !stoppedReason &&
+    snapshots.length > 0 &&
+    snapshots.every((snap) => have.has(`${snap.court}|${snap.dateDdMmYyyy}`));
 
   await writeReport({
     from,
@@ -483,16 +459,21 @@ async function main() {
     complete,
     companies,
     mwcMode,
+    retrievedAt,
+    stoppedReason,
     snapshots,
     cacheDir,
+    outDir,
     fetchFailures,
   });
+  return stoppedReason === "rate_limited" ? 2 : 0;
 }
 
-main().catch((error) => {
-  const message = error instanceof Error ? error.message : "backfill_failed";
-  const safe =
-    message.length < 300 && !/[\u4e00-\u9fff]/.test(message) ? message : "backfill_failed";
-  console.error(JSON.stringify({ event: "backfill_failed", message: safe }));
-  process.exit(1);
-});
+main()
+  .then((code) => {
+    process.exit(code);
+  })
+  .catch((error) => {
+    console.error(JSON.stringify({ event: "backfill_failed", message: publicBackfillError(error) }));
+    process.exit(1);
+  });

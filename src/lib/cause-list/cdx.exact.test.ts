@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   calendarMonthChunks,
+  cdxCaptureWindow,
+  isNoHearingPage,
   isTransientArchiveHtml,
   parseCdxJson,
   selectCauseListSnapshots,
@@ -82,5 +84,34 @@ describe("cause list CDX selection", () => {
   it("does not treat a real cause-list page as a transient archive miss", () => {
     expect(isTransientArchiveHtml("The Wayback Machine has not archived that URL")).toBe(true);
     expect(isTransientArchiveHtml("<title>Daily List</title> DAILY CAUSE LIST")).toBe(false);
+  });
+
+  it("keeps a no-hearing page out of the transient bucket", () => {
+    const html = "<html><body>There is no hearing on this day</body></html>";
+    expect(isNoHearingPage(html)).toBe(true);
+    expect(isTransientArchiveHtml(html)).toBe(false);
+    expect(isNoHearingPage("<html>此日並無法庭聆訊</html>")).toBe(true);
+  });
+
+  it("selects a March list date captured in February, including escaped URLs", () => {
+    const snaps = selectCauseListSnapshots(
+      [
+        {
+          timestamp: "20250228120000",
+          original:
+            "https://e-services.judiciary.hk/dcl/view.jsp?lang=en&amp;date=03032025&amp;court=SMT",
+          status: "200",
+        },
+      ],
+      "2025-03-01",
+      "2025-03-31",
+    );
+    expect(snaps.map((snap) => `${snap.court}:${snap.dateDdMmYyyy}:${snap.timestamp}`)).toEqual([
+      "SMT:03032025:20250228120000",
+    ]);
+    const window = cdxCaptureWindow("2025-03-01", "2025-03-31", "2026-10-17");
+    expect(window.fromIso <= "2025-02-28").toBe(true);
+    expect(window.toIso >= "2025-03-31").toBe(true);
+    expect(cdxCaptureWindow("2026-10-01", "2026-10-17", "2026-10-17").toIso).toBe("2026-10-17");
   });
 });

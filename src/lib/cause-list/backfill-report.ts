@@ -185,6 +185,15 @@ function rowsFromAccumulators(byKey: Map<string, Accumulator>): BackfillRow[] {
   return rows;
 }
 
+const PUBLIC_BACKFILL_ERROR =
+  /^(robots\.txt disallows|robots\.txt unavailable|cdx_failed|fetch failed \d{3}|BD CSV|BD register cache|--from|--to|refusing non-)/;
+
+/** Log only known operational errors. Anything else becomes a fixed token. */
+export function publicBackfillError(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  return PUBLIC_BACKFILL_ERROR.test(message) ? message : "backfill_failed";
+}
+
 export function assertCorporateBackfillRows(rows: BackfillRow[]): void {
   for (const row of rows) {
     if (!isCorporateEntityName(row.companyName)) {
@@ -236,7 +245,10 @@ export type BackfillSummary = {
     source: string;
     corporateCompanies: number;
     mode: "offline-public-register" | "unmatched-no-registry";
+    retrievedAt: string | null;
+    note: string;
   };
+  stoppedReason?: "rate_limited";
   courts: Record<CauseListCourtCode, CourtBackfillSummary>;
   totals: {
     dedupedCases: number;
@@ -259,6 +271,7 @@ export type BackfillSummary = {
     legacyFormat: number;
     parseFailures: number;
     fetchFailures: number;
+    noHearing: number;
   };
   parseFailures: Array<{ court: CauseListCourtCode; date: string; kind: string }>;
 };
@@ -277,6 +290,8 @@ export function buildBackfillSummary(input: {
   rows: BackfillRow[];
   pages: BackfillSummary["pages"];
   parseFailures: BackfillSummary["parseFailures"];
+  retrievedAt?: string | null;
+  stoppedReason?: BackfillSummary["stoppedReason"];
 }): BackfillSummary {
   const courts = {} as BackfillSummary["courts"];
   const coverage = {} as BackfillSummary["coverage"];
@@ -329,10 +344,13 @@ export function buildBackfillSummary(input: {
     generatedAt: input.generatedAt,
     complete: input.complete,
     mwcRegistry: {
-      source: "docs/sourcedata/registers_full_list.csv",
+      source: ".cache/bd-register/registers_full_list.csv",
       corporateCompanies: input.corporateCompanies,
       mode: input.mwcMode,
+      retrievedAt: input.retrievedAt ?? null,
+      note: "registry is current snapshot; historical hearings may predate registration",
     },
+    ...(input.stoppedReason ? { stoppedReason: input.stoppedReason } : {}),
     courts,
     totals: {
       dedupedCases: input.rows.length,

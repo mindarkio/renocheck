@@ -3,6 +3,7 @@ import {
   aggregateCorporateDefendantRows,
   backfillRowsToCsv,
   buildBackfillSummary,
+  publicBackfillError,
 } from "./backfill-report";
 import { CAUSE_LIST_COMPANY_FIXTURES } from "./fixtures/companies.fixture";
 import type { ParsedCauseListCase } from "./types";
@@ -100,7 +101,14 @@ describe("cause-list backfill rows", () => {
       rowsParsed: { SMT: 4, DC: 0, CACFI: 0, LANDS: 0 },
       corporateRenovationRelevantRows: { SMT: 1, DC: 0, CACFI: 0, LANDS: 0 },
       rows,
-      pages: { empty: 0, unsupported: 0, legacyFormat: 0, parseFailures: 0, fetchFailures: 0 },
+      pages: {
+        empty: 0,
+        unsupported: 0,
+        legacyFormat: 0,
+        parseFailures: 0,
+        fetchFailures: 0,
+        noHearing: 0,
+      },
       parseFailures: [],
     });
     expect(summary.courts.SMT).toMatchObject({
@@ -115,6 +123,21 @@ describe("cause-list backfill rows", () => {
       unmatched: 0,
     });
     expect(summary.totals.distinctCompaniesA).toBe(1);
+    expect(summary.mwcRegistry.source).toBe(".cache/bd-register/registers_full_list.csv");
+    expect(summary.mwcRegistry.note).toContain("historical hearings");
+    expect(summary.pages.noHearing).toBe(0);
     expect(JSON.stringify(summary)).not.toContain(PERSON_A);
+  });
+
+  it("hides unexpected error text", () => {
+    expect(publicBackfillError(new Error("SYNTHETIC PERSON ALPHA v example"))).toBe(
+      "backfill_failed",
+    );
+    expect(publicBackfillError(new Error("BD register cache missing ENOENT"))).toBe(
+      "BD register cache missing ENOENT",
+    );
+    expect(publicBackfillError(new Error("cdx_failed 2024-11-01 2026-10-17"))).toMatch(
+      /^cdx_failed/,
+    );
   });
 });
