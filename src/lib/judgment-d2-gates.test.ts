@@ -90,7 +90,7 @@ describe("runD2Gates", () => {
     expect(r.reasons).toContain("ldbm_oc_applicant_defendant_not_contractor");
   });
 
-  it("keeps LDBM when OC applicant and defendant is engineering contractor", () => {
+  it("drops LDBM 6/1998 when no verified summary in SSOT", () => {
     const r = runD2Gates({
       row: baseRow(
         "德昌大廈業主立案法團(炮台街) 訴 成龍工程有限公司",
@@ -101,10 +101,11 @@ describe("runD2Gates", () => {
       mwcLeft: null,
       mwcRight: null,
     });
-    expect(r.disposition).toBe("keep");
+    expect(r.disposition).toBe("drop");
+    expect(r.reasons).toContain("manual_triage_no_verified_summary");
   });
 
-  it("keeps CACV 131/2005 IOC v contractor (owners_corporation_vs_contractor)", () => {
+  it("drops CACV 131/2005 when no verified summary in SSOT", () => {
     const r = runD2Gates({
       row: baseRow(
         "THE INCORPORATED OWNERS OF THE COLONNADES 訴 GORDON TSO & CO LTD",
@@ -115,8 +116,8 @@ describe("runD2Gates", () => {
       mwcLeft: null,
       mwcRight: null,
     });
-    expect(r.disposition).toBe("keep");
-    expect(r.reasons).toContain("owners_corporation_vs_contractor");
+    expect(r.disposition).toBe("drop");
+    expect(r.reasons).toContain("manual_triage_no_verified_summary");
   });
 
   it("keeps CACV when defendant has engineering keyword", () => {

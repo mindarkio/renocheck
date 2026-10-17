@@ -20,6 +20,15 @@ const MANUAL_DROP: Record<string, string> = {
   "CACV339/2005": "manual_triage_bankruptcy",
   "DCCJ797/2003": "manual_triage_plaintiff_not_defendant",
   "CACV593/2020": "defendant_work_injury_context",
+  "CACV131/2005": "manual_triage_no_verified_summary",
+  "DCCJ3800/2013": "manual_triage_no_verified_summary",
+  "DCCJ18510/2001": "manual_triage_no_verified_summary",
+  "DCCJ2220/2002": "manual_triage_no_verified_summary",
+  "HCA2269/2007": "manual_triage_no_verified_summary",
+  "LDBM6/1998": "manual_triage_no_verified_summary",
+  "HCSA40/2023": "manual_triage_no_verified_summary",
+  "HCA714/2007": "manual_triage_no_verified_summary",
+  "DCCJ3255/2004": "manual_triage_no_verified_summary",
 };
 
 const MANUAL_KEEP: Record<string, ManualKeepOverride> = {

@@ -6,6 +6,7 @@
  *   pnpm d2:filter-candidates --profile
  *   pnpm d2:filter-candidates --only="CACV 131/2005"
  *   pnpm d2:filter-candidates --changed
+ *   pnpm d2:filter-candidates --no-cache   # after manual triage / gate code changes
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";

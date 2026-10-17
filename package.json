@@ -19,6 +19,7 @@
     "db:reset": "supabase db reset",
     "import:mwc": "tsx scripts/import-mwc.ts",
     "import:judgments": "tsx scripts/import-judgments.ts",
+    "import:judgment-verified-summaries": "tsx scripts/import-judgment-verified-summaries.ts",
     "enrich:judgments-seed": "tsx scripts/enrich-judgments-seed-lookup.ts",
     "legal:lookup-smoke": "tsx scripts/legal-lookup-smoke.ts",
     "discover:judgments": "tsx scripts/discover-judgment-sources.ts",
