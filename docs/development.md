@@ -38,6 +38,10 @@ Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm d
 | `pnpm judgment:poc-smoke` | J3 PoC：10 條 local seed lookup + 可選 `--api-base=http://localhost:3000` 三場景 full search |
 | `pnpm tsx scripts/cause-list/fetch-cause-list.ts --date DDMMYYYY --court SMT` | Phase 3a：抓取 DCL HTML 至 `.cache/cause-list/`（3–5s 間隔；可選 `--wayback`） |
 | `pnpm tsx scripts/cause-list/dry-run-report.ts --from DDMMYYYY --to DDMMYYYY` | Phase 3a：解析 cache + fixture 公司名，輸出 A/B/C 摘要 CSV 至 `scripts/output/` |
+| `pnpm cause-list:export-mwc` | Phase 3a（本地，可選）：MWC 快照供 `dry-run-report`；`.cache/cause-list/mwc-companies-verify.json`（gitignored；勿 commit） |
+| `pnpm cause-list:verify-samples` | Phase 3a（本地）：解析 `~/renocheck-review/samples/view_en_*.html`；只印 rows／kept（裝修相關且含法人被告／答辯人）與案件編號 |
+
+`.cache/cause-list/` 內 DCL 原始 HTML 含當事人姓名；僅供離線開發，完成後應刪除或約 7 日內清理，勿長期保存。
 
 ## 健康檢查
 

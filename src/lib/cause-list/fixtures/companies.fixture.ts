@@ -10,25 +10,26 @@ export type CauseListCompanyFixture = {
 export const CAUSE_LIST_COMPANY_FIXTURES: CauseListCompanyFixture[] = [
   {
     id: "fixture-mega-eng",
-    namesEn: ["BEST MEGA ENGINEERING LIMITED"],
-    namesZh: ["萬德工程有限公司"],
-    aliasesEn: ["BEST MEGA ENGINEERING CO LTD"],
+    namesEn: ["FICTIVE MEGA ENGINEERING LIMITED"],
+    namesZh: ["示例工程有限公司"],
+    aliasesEn: ["FICTIVE MEGA ENGINEERING CO LTD"],
+    aliasesZh: ["示例工程（香港）有限公司"],
   },
   {
     id: "fixture-renova-hk",
-    namesEn: ["SUNRISE RENOVATION (HK) LIMITED"],
-    namesZh: ["旭日裝修（香港）有限公司"],
-    aliasesZh: ["旭日裝修有限公司"],
+    namesEn: ["FICTIVE RENOVATION (HK) LIMITED"],
+    namesZh: ["示例裝修（香港）有限公司"],
+    aliasesZh: ["示例裝修有限公司"],
   },
   {
-    id: "fixture-longi",
-    namesEn: ["LONGI SOLAR TECHNOLOGY LIMITED"],
-    namesZh: ["隆基樂葉科技有限公司"],
-    aliasesZh: ["隆基乐叶科技有限公司"],
+    id: "fixture-solar-tech",
+    namesEn: ["FICTIVE SOLAR TECHNOLOGY LIMITED"],
+    namesZh: ["示例光伏科技有限公司"],
+    aliasesZh: ["示例光伏科技有限公司"],
   },
   {
     id: "fixture-demo-io",
-    namesEn: ["INCORPORATED OWNERS OF OAK COURT"],
-    namesZh: ["橡樹苑業主立案法團"],
+    namesEn: ["INCORPORATED OWNERS OF SYNTHETIC COURT"],
+    namesZh: ["示例苑業主立案法團"],
   },
 ];

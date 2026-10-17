@@ -27,7 +27,6 @@ const EXCLUDED_PREFIXES = [
   "DCCC",
   "CWUP",
   "HCCW",
-  "FMC",
   "LDPD",
   "LDPE",
   "LDRT",

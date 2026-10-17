@@ -2,9 +2,12 @@
  * Fetch one Daily Cause List page (live or Wayback). Raw HTML → .cache/cause-list/
  * Usage: pnpm tsx scripts/cause-list/fetch-cause-list.ts --date 16102026 --court SMT
  *        pnpm tsx scripts/cause-list/fetch-cause-list.ts --date 16102026 --court SMT --wayback 20251016120000
+ *
+ * Cache TTL: delete `.cache/cause-list/` HTML after offline work (contains party names); not for long-term storage.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { checkRobotsAllowsFetch, fetchDclHtml } from "../../src/lib/cause-list/fetch-dcl";
 
 const LIVE_BASE =
   "https://e-services.judiciary.hk/dcl/view.jsp?lang=en&date={date}&court={court}";
@@ -46,14 +49,12 @@ async function main() {
   console.info(`Waiting ${delay}ms before fetch…`);
   await sleep(delay);
 
-  const url = buildUrl(date, court, wayback);
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
-  });
-  if (!res.ok) {
-    throw new Error(`fetch failed ${res.status} ${url}`);
+  if (!wayback) {
+    await checkRobotsAllowsFetch("https://e-services.judiciary.hk", USER_AGENT);
   }
-  const html = await res.text();
+
+  const url = buildUrl(date, court, wayback);
+  const html = await fetchDclHtml(url, { userAgent: USER_AGENT });
   const cacheDir = path.join(process.cwd(), ".cache", "cause-list");
   await mkdir(cacheDir, { recursive: true });
   const suffix = wayback ? `_wb${wayback}` : "";

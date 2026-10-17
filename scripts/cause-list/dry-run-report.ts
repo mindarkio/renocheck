@@ -4,9 +4,7 @@
  */
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import {
-  CAUSE_LIST_COMPANY_FIXTURES,
-} from "../../src/lib/cause-list/fixtures/companies.fixture";
+import { CAUSE_LIST_COMPANY_FIXTURES } from "../../src/lib/cause-list/fixtures/companies.fixture";
 import {
   matchCauseListCases,
   parseCacfiCauseListHtml,
@@ -15,10 +13,13 @@ import {
   parseSmtCauseListHtml,
   summarizeMatchesByLevel,
 } from "../../src/lib/cause-list";
+import { isDdMmYyyyInRange } from "../../src/lib/cause-list/date-range";
+import { csvField } from "../../src/lib/cause-list/csv";
+import type { ParsedCauseListCase } from "../../src/lib/cause-list/types";
 
 const PARSERS: Record<
   string,
-  (html: string, date: string) => ReturnType<typeof parseSmtCauseListHtml>
+  (html: string, date: string) => { cases: ParsedCauseListCase[] }
 > = {
   SMT: parseSmtCauseListHtml,
   DC: parseDcCauseListHtml,
@@ -39,25 +40,25 @@ function parseArgs(argv: string[]) {
   return { from, to };
 }
 
-function dateInRange(fileDate: string, from: string, to: string): boolean {
-  return fileDate >= from && fileDate <= to;
-}
-
 async function main() {
   const { from, to } = parseArgs(process.argv.slice(2));
   const cacheDir = path.join(process.cwd(), ".cache", "cause-list");
   const files = await readdir(cacheDir).catch(() => [] as string[]);
 
-  const allCases: ReturnType<typeof parseSmtCauseListHtml> = [];
+  const allCases: ParsedCauseListCase[] = [];
   for (const file of files) {
     const m = file.match(/^([A-Z]+)_(\d{8})(?:_wb\d+)?\.html$/);
     if (!m) continue;
     const [, court, date] = m;
-    if (!dateInRange(date, from, to)) continue;
+    if (!isDdMmYyyyInRange(date, from, to)) continue;
     const parser = PARSERS[court];
     if (!parser) continue;
-    const html = await readFile(path.join(cacheDir, file), "utf8");
-    allCases.push(...parser(html, date));
+    try {
+      const html = await readFile(path.join(cacheDir, file), "utf8");
+      allCases.push(...parser(html, date).cases);
+    } catch (e) {
+      console.warn(`skip ${file}: ${(e as Error).message}`);
+    }
   }
 
   const matches = matchCauseListCases(allCases, CAUSE_LIST_COMPANY_FIXTURES);
@@ -77,9 +78,9 @@ async function main() {
       m.case.caseNo,
       m.case.court,
       m.case.hearingDate,
-      (m.case.claimNature ?? "").replace(/,/g, " "),
+      csvField((m.case.claimNature ?? "").replace(/\n/g, " / ")),
       m.party.role,
-      m.matchedOn.replace(/,/g, " "),
+      csvField(m.matchedOn),
       m.reviewOnly ? "yes" : "no",
     ].join(","),
   );

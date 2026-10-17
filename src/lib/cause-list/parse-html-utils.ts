@@ -1,11 +1,27 @@
-/** Strip tags and collapse whitespace for cause-list table cells. */
-export function htmlCellText(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
+function decodeHtmlEntities(text: string): string {
+  return text
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\u00a0/g, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&#(\d+);/g, (_, n: string) =>
+      String.fromCodePoint(Number.parseInt(n, 10)),
+    )
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
+      String.fromCodePoint(Number.parseInt(hex, 16)),
+    );
+}
+
+/** Strip tags; preserve <br> as newlines. */
+export function htmlCellText(html: string): string {
+  return decodeHtmlEntities(
+    html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\u00a0/g, " "),
+  )
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n[ \t]+/g, "\n")
     .replace(/[ \t]{2,}/g, " ")
@@ -37,4 +53,10 @@ export function parseDclListDate(ddmmyyyy: string): string {
   const m = ddmmyyyy.match(/^(\d{2})(\d{2})(\d{4})$/);
   if (!m) throw new Error(`invalid DCL date: ${ddmmyyyy}`);
   return `${m[3]}-${m[2]}-${m[1]}`;
+}
+
+export function ddMmYyyyToSortable(ddmmyyyy: string): string {
+  const m = ddmmyyyy.match(/^(\d{2})(\d{2})(\d{4})$/);
+  if (!m) throw new Error(`invalid DCL date: ${ddmmyyyy}`);
+  return `${m[3]}${m[2]}${m[1]}`;
 }

@@ -11,7 +11,7 @@ const DATE = "16102026";
 
 describe("cause-list matcher (exact)", () => {
   it("SMT: exact A, t/a B, person dropped, renovation contribution excluded", () => {
-    const cases = parseSmtCauseListHtml(loadCauseListFixtureHtml("smt"), DATE);
+    const { cases } = parseSmtCauseListHtml(loadCauseListFixtureHtml("smt"), DATE);
     const matches = matchCauseListCases(cases, CAUSE_LIST_COMPANY_FIXTURES);
     const summary = summarizeMatchesByLevel(matches);
 
@@ -29,21 +29,36 @@ describe("cause-list matcher (exact)", () => {
     expect(summary.A).toBeGreaterThanOrEqual(1);
   });
 
+  it("dedupes same court/case/company", () => {
+    const { cases } = parseSmtCauseListHtml(loadCauseListFixtureHtml("smt"), DATE);
+    const doubled = [...cases, ...cases];
+    const matches = matchCauseListCases(doubled, CAUSE_LIST_COMPANY_FIXTURES);
+    const keys = new Set(matches.map((m) => `${m.case.court}|${m.case.caseNo}|${m.companyId}`));
+    expect(keys.size).toBe(matches.length);
+  });
+
+  it("omits natural person names from serialized matches", () => {
+    const { cases } = parseSmtCauseListHtml(loadCauseListFixtureHtml("smt"), DATE);
+    const matches = matchCauseListCases(cases, CAUSE_LIST_COMPANY_FIXTURES);
+    const blob = JSON.stringify(matches);
+    expect(blob).not.toContain("FAKE PERSON ALPHA");
+  });
+
   it("DC: includes DCCJ defendant, excludes DCEC", () => {
-    const cases = parseDcCauseListHtml(loadCauseListFixtureHtml("dc"), DATE);
+    const { cases } = parseDcCauseListHtml(loadCauseListFixtureHtml("dc"), DATE);
     const matches = matchCauseListCases(cases, CAUSE_LIST_COMPANY_FIXTURES);
     expect(matches.some((m) => m.case.caseNo === "DCCJ 5500/2026")).toBe(true);
     expect(matches.some((m) => m.case.caseNo === "DCEC 1200/2026")).toBe(false);
   });
 
   it("CACFI: HCA bilingual defendant", () => {
-    const cases = parseCacfiCauseListHtml(loadCauseListFixtureHtml("cacfi"), DATE);
+    const { cases } = parseCacfiCauseListHtml(loadCauseListFixtureHtml("cacfi"), DATE);
     const matches = matchCauseListCases(cases, CAUSE_LIST_COMPANY_FIXTURES);
     expect(matches.some((m) => m.case.caseNo === "HCA 88/2026")).toBe(true);
   });
 
   it("LANDS: LDBM respondent only", () => {
-    const cases = parseLandsCauseListHtml(loadCauseListFixtureHtml("lands"), DATE);
+    const { cases } = parseLandsCauseListHtml(loadCauseListFixtureHtml("lands"), DATE);
     const matches = matchCauseListCases(cases, CAUSE_LIST_COMPANY_FIXTURES);
     expect(matches.some((m) => m.case.caseNo === "LDBM 201/2026")).toBe(true);
     expect(matches.every((m) => m.party.role === "respondent")).toBe(true);

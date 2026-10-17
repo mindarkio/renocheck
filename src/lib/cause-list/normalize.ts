@@ -1,33 +1,16 @@
-/** Simplified → Traditional (HK subset + common company-name chars). */
-const S2HK_MAP: Record<string, string> = {
-  乐: "樂",
-  叶: "葉",
-  发: "發",
-  装: "裝",
-  饰: "飾",
-  维: "維",
-  护: "護",
-  门: "門",
-  东: "東",
-  国: "國",
-  华: "華",
-  万: "萬",
-  汇: "匯",
-  丰: "豐",
-  龙: "龍",
-  隆: "隆",
-};
+import { Converter } from "opencc-js";
+
+const cnToHk = Converter({ from: "cn", to: "hk" });
 
 export function toTraditionalHongKong(text: string): string {
-  let out = "";
-  for (const ch of text.normalize("NFKC")) {
-    out += S2HK_MAP[ch] ?? ch;
-  }
-  return out;
+  return cnToHk(text.normalize("NFKC"));
 }
 
 const EN_SUFFIX_RE =
   /\b(COMPANY LIMITED|CO\.?\s*LIMITED|COMPANY LTD|CO\.?\s*LTD|LIMITED|LTD\.?|INCORPORATED|INC\.?|CORPORATION|CORP\.?)\b/gi;
+
+const REGIONAL_ZH_RE = /（香港）|\(香港\)/gu;
+const REGIONAL_EN_RE = /\b(HONG KONG|\(HK\)|\bHK\b)\b/gi;
 
 export function normalizeEnglishCompanyName(input: string): {
   normStrict: string;
@@ -46,7 +29,9 @@ export function normalizeEnglishCompanyName(input: string): {
   s = s.replace(/\bCO\b/g, " CO ");
   s = s.replace(/\s+/g, " ").trim();
   const normStrict = s;
-  const normCore = normStrict.replace(/\s+LTD\s*$/i, "").replace(/\s+\(HK\)\s*$/i, "").trim();
+  let normCore = normStrict.replace(/\s+LTD\s*$/i, "").trim();
+  normCore = normCore.replace(/\s+\(HK\)\s*$/i, "").trim();
+  normCore = normCore.replace(REGIONAL_EN_RE, " ").replace(/\s+/g, " ").trim();
   return { normStrict, normCore };
 }
 
@@ -55,10 +40,12 @@ export function normalizeChineseCompanyName(input: string): {
   normCore: string;
 } {
   let s = toTraditionalHongKong(input);
+  s = s.replace(REGIONAL_ZH_RE, "");
   s = s.replace(/[（）()・．.，,、\s]/g, "");
   s = s.replace(/有限公司$/u, "有限公司");
   const normStrict = s;
-  const normCore = normStrict.replace(/有限公司$/u, "");
+  let normCore = normStrict.replace(/有限公司$/u, "");
+  normCore = normCore.replace(REGIONAL_ZH_RE, "");
   return { normStrict, normCore };
 }
 
@@ -86,11 +73,13 @@ export function normalizeCompanyName(input: string): {
   };
 }
 
-/** Levenshtein distance for CJK fuzzy (level C). */
+/** Levenshtein distance for CJK fuzzy (level C); code-point aware (L6). */
 export function cjkEditDistance(a: string, b: string): number {
-  if (a === b) return 0;
-  const m = a.length;
-  const n = b.length;
+  const ca = [...a];
+  const cb = [...b];
+  if (ca.join("") === cb.join("")) return 0;
+  const m = ca.length;
+  const n = cb.length;
   if (m === 0) return n;
   if (n === 0) return m;
   const dp = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
@@ -98,9 +87,19 @@ export function cjkEditDistance(a: string, b: string): number {
   for (let j = 0; j <= n; j++) dp[0][j] = j;
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const cost = ca[i - 1] === cb[j - 1] ? 0 : 1;
       dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
     }
   }
   return dp[m][n];
+}
+
+/** Split bilingual cause-list name without brackets (M6). */
+export function splitBilingualCompanyRaw(raw: string): { en?: string; zh?: string } {
+  const idx = raw.search(/[\u4e00-\u9fff]/u);
+  if (idx <= 0) return {};
+  const en = raw.slice(0, idx).replace(/[.,\s]+$/u, "").trim();
+  const zh = raw.slice(idx).trim();
+  if (!en || !zh) return {};
+  return { en, zh };
 }

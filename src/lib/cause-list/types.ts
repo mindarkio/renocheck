@@ -36,11 +36,31 @@ export type ParsedCorporateParty = {
 
 export type MatchConfidence = "A" | "B" | "C";
 
+/** Redacted case snapshot for match output (M4). */
+export type CauseListMatchCase = {
+  court: CauseListCourtCode;
+  caseNo: string;
+  hearingDate: string;
+  claimNature?: string;
+  hearingType?: string;
+};
+
+export type CauseListMatchParty = {
+  role: CauseListPartyRole;
+  position?: string;
+  legalName: string;
+  tradeName?: string;
+  formerlyTradedAs?: boolean;
+  incorporatedOwners?: boolean;
+  /** Natural persons redacted */
+  displayLabel: string;
+};
+
 export type CauseListMatch = {
   confidence: MatchConfidence;
   companyId: string;
-  case: ParsedCauseListCase;
-  party: ParsedCorporateParty;
+  case: CauseListMatchCase;
+  party: CauseListMatchParty;
   matchedOn: string;
   reviewOnly: boolean;
 };
