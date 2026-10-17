@@ -56,7 +56,9 @@
     "judgment:poc-smoke": "tsx scripts/judgment-track1-poc-smoke.ts",
     "eval:search-evidence": "tsx scripts/eval-search-evidence.ts",
     "eval:report-quality": "tsx scripts/eval-report-quality.ts",
-    "mwc:spot-check": "tsx scripts/mwc-spot-check.ts"
+    "mwc:spot-check": "tsx scripts/mwc-spot-check.ts",
+    "cause-list:verify-samples": "tsx scripts/cause-list/verify-real-samples.ts",
+    "cause-list:export-mwc": "tsx scripts/cause-list/export-mwc-verify-snapshot.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.111",
@@ -79,6 +81,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "jsdom": "^30.1.3",
+    "opencc-js": "^1.4.2",
     "playwright": "1.52.0",
     "supabase": "2.120.0",
     "tailwindcss": "^4",
