@@ -129,6 +129,27 @@ describe("setCachedReport ttlMs", () => {
     expect(maybeSingle).not.toHaveBeenCalled();
   });
 
+  it("warns and does not throw when upsert fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failingUpsert = vi
+      .fn()
+      .mockResolvedValue({ error: { message: "quota" } });
+    const failingSupabase = mockSupabase(maybeSingle, failingUpsert);
+
+    await expect(
+      setCachedReport(
+        failingSupabase,
+        "fp1",
+        { matchType: "company_name" },
+        report,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("search_cache upsert failed"),
+    );
+  });
+
   it("writes degraded report after prior healthy row expired", async () => {
     const healthy = {
       ...report,

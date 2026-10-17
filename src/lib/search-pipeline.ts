@@ -27,6 +27,7 @@ import { calibrateEvaluation } from "./risk-report-calibration-v2";
 import { synthesizeRiskReport } from "./llm-risk-report";
 import {
   getCachedReport,
+  isReportLegalLookupDegraded,
   LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
   logSearchEvent,
   setCachedReport,
@@ -86,7 +87,7 @@ export async function runSearchPipeline(
 
   if (!options?.skipCache) {
     const cached = await getCachedReport(supabase, fingerprint);
-    if (cached) {
+    if (cached && !isReportLegalLookupDegraded(cached)) {
       await logSearchEvent(supabase, fingerprint, true);
       return {
         fingerprint,
