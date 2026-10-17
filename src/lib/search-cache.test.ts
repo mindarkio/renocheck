@@ -7,11 +7,24 @@ import {
 import { REPORT_VERSION } from "./constants";
 import { buildEvaluationStub } from "./evaluation-stub";
 
+function mockSupabase(
+  maybeSingle: ReturnType<typeof vi.fn>,
+  upsert = vi.fn().mockResolvedValue({ error: null }),
+) {
+  return {
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({ maybeSingle })),
+      })),
+      upsert,
+    })),
+  } as unknown as SupabaseClient;
+}
+
 describe("setCachedReport ttlMs", () => {
   const upsert = vi.fn().mockResolvedValue({ error: null });
-  const supabase = {
-    from: vi.fn(() => ({ upsert })),
-  } as unknown as SupabaseClient;
+  const maybeSingle = vi.fn().mockResolvedValue({ data: null });
+  const supabase = mockSupabase(maybeSingle, upsert);
 
   const report = {
     reportVersion: REPORT_VERSION,
@@ -41,7 +54,7 @@ describe("setCachedReport ttlMs", () => {
       themes: [],
       retrievalEvidence: [],
       actionableClauses: [],
-      contractChecklist: [],
+      contractChecklist: ["有無書面合約？"],
     },
     disclaimerVersion: "1.0.0",
     generatedAt: "2026-10-17T12:00:00.000Z",
@@ -51,10 +64,32 @@ describe("setCachedReport ttlMs", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-17T12:00:00.000Z"));
     upsert.mockClear();
+    maybeSingle.mockReset();
+    maybeSingle.mockResolvedValue({ data: null });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("skips upsert when healthy non-degraded cache exists", async () => {
+    const healthy = {
+      ...report,
+      official: { mwcMatched: false, legalLookupStatus: "ok" as const },
+    };
+    maybeSingle.mockResolvedValueOnce({
+      data: {
+        report: healthy,
+        expires_at: "2026-10-18T12:00:00.000Z",
+      },
+    });
+
+    await setCachedReport(supabase, "fp1", { matchType: "company_name" }, report, {
+      ttlMs: LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
+      skipIfHealthyCacheExists: true,
+    });
+
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it("uses degraded TTL when options.ttlMs is set", async () => {

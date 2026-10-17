@@ -1,8 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { RiskReport } from "./report-schema";
-import { riskReportSchema } from "./report-schema";
 import type { NormalizedSearchInput } from "./normalize-search-input";
 import { REPORT_VERSION } from "./constants";
+import type { RiskReport } from "./report-schema";
+import { riskReportSchema } from "./report-schema";
+
+export function isReportLegalLookupDegraded(report: RiskReport): boolean {
+  const status = report.official.legalLookupStatus;
+  return status === "error" || status === "timeout";
+}
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -34,8 +39,18 @@ export async function setCachedReport(
   fingerprint: string,
   queryInput: NormalizedSearchInput,
   report: RiskReport,
-  options?: { ttlMs?: number },
+  options?: { ttlMs?: number; skipIfHealthyCacheExists?: boolean },
 ): Promise<void> {
+  if (
+    options?.skipIfHealthyCacheExists &&
+    isReportLegalLookupDegraded(report)
+  ) {
+    const existing = await getCachedReport(supabase, fingerprint);
+    if (existing && !isReportLegalLookupDegraded(existing)) {
+      return;
+    }
+  }
+
   const ttlMs = options?.ttlMs ?? CACHE_TTL_MS;
   const expiresAt = new Date(Date.now() + ttlMs).toISOString();
   const { error } = await supabase.from("search_cache").upsert({

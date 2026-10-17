@@ -25,6 +25,12 @@ import {
   partyRoleLabelZh,
 } from "@/lib/legal-event-display";
 import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
+import {
+  isReportLegalLookupDegraded,
+  reportCardHeaderBandLabel,
+  reportCardHeaderRiskBandZh,
+  reportCardShowFooterNotes,
+} from "@/lib/report-card-legal-degraded-ui";
 import { formatReportGeneratedAtHkt } from "@/lib/format-report-generated-at";
 import {
   formatMwcExpiryDateZh,
@@ -270,7 +276,6 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const showSaturationBanner =
     saturation === "unindexed" ||
     (saturation === "moderate" && highlights.length === 0);
-  const bandDetail = report.evaluation.riskBandDetailZh;
   const evidenceCount = report.signals.retrievalEvidence?.length ?? 0;
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
@@ -282,13 +287,11 @@ export function ReportCard({ report }: { report: RiskReport }) {
       ? "warning"
       : "muted";
 
-  const legalLookupDegraded =
-    report.official.legalLookupStatus === "error" ||
-    report.official.legalLookupStatus === "timeout";
-  const showFooterNotes =
-    !legalLookupDegraded &&
-    ((report.confidence === "medium" && highlights.length === 1) ||
-      report.evaluation.riskBandZh === "未見負面摘要");
+  const legalLookupDegraded = isReportLegalLookupDegraded(report);
+  const showFooterNotes = reportCardShowFooterNotes(
+    report,
+    highlights.length,
+  );
   const showThemes =
     highlights.length > 0 && report.signals.themes.length > 0;
   const bindFailure =
@@ -299,14 +302,8 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const legalEvents = report.official.legalEvents ?? [];
   const showLegalEvents = legalEvents.length > 0;
   const showLegalLookupDegraded = !showLegalEvents && legalLookupDegraded;
-  const headerRiskBandZh =
-    legalLookupDegraded && report.evaluation.riskBandZh === "未見負面摘要"
-      ? "中性"
-      : report.evaluation.riskBandZh;
-  const headerBandLabel =
-    legalLookupDegraded && report.evaluation.riskBandZh === "未見負面摘要"
-      ? headerRiskBandZh
-      : (bandDetail ?? report.evaluation.riskBandZh);
+  const headerRiskBandZh = reportCardHeaderRiskBandZh(report);
+  const headerBandLabel = reportCardHeaderBandLabel(report);
 
   return (
     <div className="space-y-4 text-left">
