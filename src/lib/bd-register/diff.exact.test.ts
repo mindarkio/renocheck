@@ -39,4 +39,14 @@ describe("diffBdMwc (exact)", () => {
     expect(diff.changed).toEqual(["MWC 11/2026"]);
     expect(diff.unchanged).toBe(2);
   });
+
+  it("treats renewalPending change as changed MWC row", () => {
+    const base = parseBdRegisterCsv(BASELINE);
+    const kappa = base.find((e) => e.regNo === "MWC 15/2026")!;
+    const cand = base.map((e) =>
+      e.regNo === "MWC 15/2026" ? { ...kappa, renewalPending: true } : e,
+    );
+    const diff = diffBdMwc(base, cand);
+    expect(diff.changed).toEqual(["MWC 15/2026"]);
+  });
 });

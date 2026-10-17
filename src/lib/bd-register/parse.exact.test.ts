@@ -7,6 +7,7 @@ import {
   BD_REGISTERS_CSV_HEADER,
 } from "./csv-header";
 import {
+  decodeBdRegisterCsvBytes,
   mwcCompanyRegNos,
   parseBdRegisterCsv,
   parseBdRegisterCsvRows,
@@ -161,6 +162,36 @@ describe("parseBdRegisterCsv (exact)", () => {
     expect(() => parseBdRegisterCsv("<?xml version=\"1.0\"?><Error>AccessDenied</Error>")).toThrow(
       /not a UTF-8 CSV/,
     );
+  });
+
+  it("maps FLAG @ to renewalPending (not flag)", () => {
+    const header = FIXTURE.split("\n")[0]!;
+    const row =
+      '"MWC 16/2026","MWC","","","SYNTHETIC LAMBDA LIMITED","合成己有限公司","","","","","","","01/06/2028","@","","","","","","","","",""';
+    const entry = parseBdRegisterCsv([header, row].join("\n")).find(
+      (e) => e.regNo === "MWC 16/2026",
+    )!;
+    expect(entry.renewalPending).toBe(true);
+    expect(entry.flag).toBeUndefined();
+  });
+
+  it("rejects Big5-encoded bytes (not UTF-8)", () => {
+    const big5Hk = Buffer.from([0xb9, 0x71, 0xa6, 0x57]);
+    expect(() => decodeBdRegisterCsvBytes(big5Hk)).toThrow(/not a UTF-8 CSV/);
+  });
+
+  it("throws CSV_INVALID_CLOSING_QUOTE on bad quotes", () => {
+    const header = FIXTURE.split("\n")[0]!;
+    const bad = `${header}\n"MWC 99/2026","MWC","","","BAD"QUOTE CO","短名有限公司","","","","","","","01/06/2028","","","","","","","","","",""`;
+    try {
+      parseBdRegisterCsvRows(bad);
+      expect.fail("expected throw");
+    } catch (e) {
+      const msg = (e as Error).message;
+      expect(msg).toMatch(/CSV_INVALID_CLOSING_QUOTE/);
+      expect(msg).not.toContain("BAD");
+      expect(msg).not.toContain("短名");
+    }
   });
 
   it("throws on inconsistent column count", () => {

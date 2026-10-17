@@ -17,10 +17,11 @@ function rowSignature(e: BdRegisterEntry): string {
     nameZh: e.nameZh ?? "",
     expiryDate: e.expiryDate ?? "",
     flag: e.flag ?? "",
+    renewalPending: e.renewalPending ?? false,
   });
 }
 
-/** Diff MWC company rows by regNo (names, expiry, flag). */
+/** Diff MWC company rows by regNo (names, expiry, flag, renewalPending). */
 export function diffBdMwc(base: BdRegisterEntry[], cand: BdRegisterEntry[]): BdMwcDiff {
   const baseMap = new Map<string, BdRegisterEntry>();
   const candMap = new Map<string, BdRegisterEntry>();

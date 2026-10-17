@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 import { BD_REGISTERS_CSV_HEADER } from "./csv-header";
-import { assertBdRegisterCsvText } from "./parse";
+import { assertBdRegisterCsvText, decodeBdRegisterCsvBytes } from "./parse";
+
+export class FetchFatal extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FetchFatal";
+  }
+}
 
 const RETRY_STATUS = new Set([429, 500, 502, 503, 504]);
 const RETRY_DELAYS_MS = [5000, 10000, 20000];
@@ -39,7 +46,7 @@ export async function fetchBdRegisterCsv(
       });
       if (!res.ok) {
         if (!RETRY_STATUS.has(res.status) || attempt === maxRetries) {
-          throw new Error(`fetch failed ${res.status} ${url}`);
+          throw new FetchFatal(`fetch failed ${res.status} ${url}`);
         }
         lastError = new Error(`fetch failed ${res.status}`);
       } else {
@@ -54,6 +61,7 @@ export async function fetchBdRegisterCsv(
         };
       }
     } catch (e) {
+      if (e instanceof FetchFatal) throw e;
       lastError = e;
       if (attempt === maxRetries) break;
     }
@@ -64,7 +72,7 @@ export async function fetchBdRegisterCsv(
 
 /** Validate downloaded bytes before writing to cache (no row content in errors). */
 export function validateBdRegisterCsvBytes(body: Buffer): void {
-  const text = body.toString("utf8");
+  const text = decodeBdRegisterCsvBytes(body);
   assertBdRegisterCsvText(text);
   const firstLine = text.split(/\r?\n/)[0]?.replace(/^\uFEFF/, "").trim() ?? "";
   if (firstLine !== BD_REGISTERS_CSV_HEADER) {

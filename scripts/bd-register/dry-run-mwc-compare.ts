@@ -10,6 +10,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { assertCacheFileFresh } from "../../src/lib/cause-list/cache-ttl";
+import { resolveCandidateRetrievedAt } from "../../src/lib/bd-register/candidate-meta";
 import { diffBdMwc } from "../../src/lib/bd-register/diff";
 import {
   BD_REGISTER_BASELINE_CSV_PATH,
@@ -18,8 +19,12 @@ import {
 } from "../../src/lib/bd-register/paths";
 import {
   mwcCompanyRegNos,
-  parseBdRegisterCsvWithMeta,
+  parseBdRegisterCsvFromBytes,
 } from "../../src/lib/bd-register/parse";
+import {
+  assertBdCsvSanity,
+  sanityCountsFromEntries,
+} from "../../src/lib/bd-register/sanity";
 
 function parseArgs(argv: string[]) {
   let baseline = BD_REGISTER_BASELINE_CSV_PATH;
@@ -31,34 +36,23 @@ function parseArgs(argv: string[]) {
   return { baseline, candidate };
 }
 
-async function readCandidateRetrievedAt(): Promise<string | undefined> {
-  try {
-    const raw = await readFile(BD_REGISTER_META_PATH, "utf8");
-    const meta = JSON.parse(raw) as { retrieved_at?: string };
-    return meta.retrieved_at;
-  } catch {
-    return undefined;
-  }
-}
-
 async function main() {
   const { baseline, candidate } = parseArgs(process.argv.slice(2));
   await assertCacheFileFresh(baseline, "BD register baseline CSV");
   await assertCacheFileFresh(candidate, "BD register cache");
 
-  const [baseText, candText] = await Promise.all([
-    readFile(baseline, "utf8"),
-    readFile(candidate, "utf8"),
+  const [baseBuf, candBuf] = await Promise.all([
+    readFile(baseline),
+    readFile(candidate),
   ]);
 
-  const baseParsed = parseBdRegisterCsvWithMeta(baseText);
-  const candParsed = parseBdRegisterCsvWithMeta(candText);
+  const baseParsed = parseBdRegisterCsvFromBytes(baseBuf);
+  const candParsed = parseBdRegisterCsvFromBytes(candBuf);
   const baseMwc = mwcCompanyRegNos(baseParsed.entries);
   const candMwc = mwcCompanyRegNos(candParsed.entries);
 
-  if (candParsed.entries.length < 10_000 || candMwc.size < 5_000) {
-    throw new Error("BD CSV sanity: too few rows");
-  }
+  assertBdCsvSanity(sanityCountsFromEntries(baseParsed.entries));
+  assertBdCsvSanity(sanityCountsFromEntries(candParsed.entries));
 
   const mwcDiff = diffBdMwc(baseParsed.entries, candParsed.entries);
 
@@ -72,7 +66,10 @@ async function main() {
     event: "bd_register_mwc_dry_run",
     baseline_path: path.relative(process.cwd(), baseline),
     candidate_path: path.relative(process.cwd(), candidate),
-    candidate_retrieved_at: await readCandidateRetrievedAt(),
+    candidate_retrieved_at: await resolveCandidateRetrievedAt(
+      candidate,
+      BD_REGISTER_META_PATH,
+    ),
     baseline_mwc_companies: baseMwc.size,
     candidate_mwc_companies: candMwc.size,
     overlap,

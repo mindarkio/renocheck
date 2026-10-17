@@ -28,7 +28,7 @@
 2. **個人資料**：屋宇署搜尋頁註明名冊內個人資料**不得用於其他目的**（*All personal data found therein should not be used for any other purposes*），僅限《建築物條例》相關用途。Renocheck 離線解析：**不將獨資／個人承建商姓名寫入 log、錯誤訊息或比對輸出**；`MWC(W)` 與非 limited 公司行只保留註冊編號（見 `parse.ts`）。
 3. **非 BR／非工程紀錄**：此 CSV 為屋宇署註冊，**不是**公司註冊處 BR 或 BRAVO 工程紀錄（見 `docs/sourcedata/README.md`）。
 4. **來源標示（再使用）**：報告或對外說明引用名冊摘錄時，須標示：**資料來源：屋宇署，經 DATA.GOV.HK 提供**／**Source: Buildings Department, via DATA.GOV.HK**（並註明擷取日期，見 `.cache/bd-register/registers_full_list.meta.json` 的 `retrieved_at`）。
-5. **`FLAG` 欄**：解析後存為 `flag`；值 `@` 表示名冊上未填寫狀態，輸出時視為未設定。
+5. **`FLAG` 欄**（見官方 data dictionary）：其他字元存為 `flag`；值 **`@` = 已申請續期**（過咗 `EXPIRY_DATE` 仍視為有效直至處理完成），解析為 `renewalPending: true`（唔寫入 `flag`）。真名冊約 **148** 行為 `@`。
 6. **HTTP 下載**：`pnpm bd-register:fetch` 使用 `Accept: text/csv`、120s timeout、binary 寫檔；收到非 CSV（例如 403 XML）**唔**寫入 `.cache/`。部分海外出口曾見 **403 AccessDenied**；須在**香港網絡**驗證 PSI URL 可用性（本 repo 未鎖定「已確認可用」日期，以營運 fetch 成功為準）。
 7. **`robots.txt`**：`checkRobotsAllowsFetch` 若 `robots.txt` 本身返非 2xx（例如 403），行為同 cause-list：**視為允許**繼續 fetch，避免因 robots 端點封鎖而誤判。
 

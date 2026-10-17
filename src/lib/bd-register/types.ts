@@ -9,8 +9,10 @@ export type BdRegisterEntry = {
   normCoreEn?: string;
   normCoreZh?: string;
   expiryDate?: string;
-  /** Raw FLAG column (`@` treated as unset). */
+  /** Raw FLAG column (other than `@`). */
   flag?: string;
+  /** FLAG `@` — renewal applied; registration remains valid past expiry until processed. */
+  renewalPending?: boolean;
   /** Non-limited / sole-prop style registration — no company names in output. */
   unincorporated?: boolean;
 };

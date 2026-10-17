@@ -41,10 +41,27 @@ function pickCompanyDisplayNames(row: BdCsvRow): { en?: string; zh?: string } {
   };
 }
 
-function pickFlag(row: BdCsvRow): string | undefined {
-  const flag = stripHtml(row.FLAG ?? "").trim();
-  if (!flag || flag === "@") return undefined;
-  return flag;
+function pickFlagFields(row: BdCsvRow): Pick<BdRegisterEntry, "flag" | "renewalPending"> {
+  const raw = stripHtml(row.FLAG ?? "").trim();
+  if (raw === "@") return { renewalPending: true };
+  if (!raw) return {};
+  return { flag: raw };
+}
+
+export function decodeBdRegisterCsvBytes(body: Buffer): string {
+  if (body.includes(0)) {
+    throw new Error("BD CSV: not a UTF-8 CSV (UTF-16 or HTML/XML error page)");
+  }
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(body);
+  } catch {
+    throw new Error("BD CSV: not a UTF-8 CSV (invalid UTF-8 sequence)");
+  }
+  if (text.includes("\uFFFD")) {
+    throw new Error("BD CSV: not a UTF-8 CSV (invalid UTF-8 sequence)");
+  }
+  return text;
 }
 
 export function assertBdRegisterCsvText(csvText: string): void {
@@ -59,7 +76,6 @@ export function parseBdRegisterCsvRows(csvText: string): BdCsvRow[] {
     return parse(csvText, {
       bom: true,
       skip_empty_lines: true,
-      relax_quotes: true,
       relax_column_count: false,
       columns: (headers: string[]) => {
         const trimmed = headers.map((h) => h.trim());
@@ -97,6 +113,10 @@ export function parseBdRegisterCsv(csvText: string): BdRegisterEntry[] {
   return parseBdRegisterCsvWithMeta(csvText).entries;
 }
 
+export function parseBdRegisterCsvFromBytes(body: Buffer): BdParseResult {
+  return parseBdRegisterCsvWithMeta(decodeBdRegisterCsvBytes(body));
+}
+
 export function parseBdRegisterCsvWithMeta(csvText: string): BdParseResult {
   const rows = parseBdRegisterCsvRows(csvText);
   const staged: BdRegisterEntry[] = [];
@@ -109,10 +129,10 @@ export function parseBdRegisterCsvWithMeta(csvText: string): BdParseResult {
     if (!regNo) continue;
 
     const expiryDate = parseBdRegistryExpiryDate(row.EXPIRY_DATE ?? "") ?? undefined;
-    const flag = pickFlag(row);
+    const flagFields = pickFlagFields(row);
 
     if (isBdIndividualContractorType(registerType)) {
-      staged.push({ registerType, regNo, expiryDate, flag });
+      staged.push({ registerType, regNo, expiryDate, ...flagFields });
       continue;
     }
 
@@ -125,7 +145,7 @@ export function parseBdRegisterCsvWithMeta(csvText: string): BdParseResult {
         registerType,
         regNo,
         expiryDate,
-        flag,
+        ...flagFields,
         unincorporated: true,
       });
       continue;
@@ -143,7 +163,7 @@ export function parseBdRegisterCsvWithMeta(csvText: string): BdParseResult {
       normCoreEn: normEn?.normCore,
       normCoreZh: normZh?.normCore,
       expiryDate,
-      flag,
+      ...flagFields,
     });
   }
 
