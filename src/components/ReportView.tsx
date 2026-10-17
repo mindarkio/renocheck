@@ -28,15 +28,14 @@ export function ReportView({ fingerprint }: { fingerprint: string }) {
 
     void (async () => {
       const cached = readSessionReport(fingerprint);
-      if (cached) {
-        if (!cancelled) setReport(cached);
-        return;
+      if (cached && !cancelled) {
+        setReport(cached);
       }
 
       try {
         const res = await fetch(`/api/report/${fingerprint}`);
         if (res.status === 503) {
-          if (!cancelled) {
+          if (!cancelled && !cached) {
             setError(
               "無法從伺服器讀取報告（請確認 .env.local 已設定 NEXT_PUBLIC_SUPABASE_URL 與 SUPABASE_SERVICE_ROLE_KEY，並重啟 pnpm dev）。請從首頁重新搜尋。",
             );
@@ -44,7 +43,9 @@ export function ReportView({ fingerprint }: { fingerprint: string }) {
           return;
         }
         if (!res.ok) {
-          if (!cancelled) setError("找不到報告或已過期，請重新搜尋。");
+          if (!cancelled && !cached) {
+            setError("找不到報告或已過期，請重新搜尋。");
+          }
           return;
         }
         const data = (await res.json()) as { report: RiskReport };
@@ -57,7 +58,7 @@ export function ReportView({ fingerprint }: { fingerprint: string }) {
           }
         }
       } catch {
-        if (!cancelled) setError("無法載入報告。");
+        if (!cancelled && !cached) setError("無法載入報告。");
       }
     })();
 

@@ -21,7 +21,7 @@ import {
   LEGAL_EVENTS_AUTO_SUMMARY_ZH,
   LEGAL_EVENTS_FACTS_ONLY_ZH,
   LEGAL_EVENTS_SCOPE_ZH,
-  LEGAL_LOOKUP_DEGRADED_ZH,
+  LEGAL_LOOKUP_DEGRADED_SECTION_ZH,
   partyRoleLabelZh,
 } from "@/lib/legal-event-display";
 import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
@@ -30,6 +30,7 @@ import {
   reportCardHeaderBandLabel,
   reportCardHeaderRiskBandZh,
   reportCardShowFooterNotes,
+  reportCardShowRiskBandFooterNote,
 } from "@/lib/report-card-legal-degraded-ui";
 import { formatReportGeneratedAtHkt } from "@/lib/format-report-generated-at";
 import {
@@ -675,7 +676,9 @@ export function ReportCard({ report }: { report: RiskReport }) {
           icon={FileText}
           title="公開判詞紀錄"
         >
-          <p className={`${reportMetaClass} -mt-1`}>{LEGAL_LOOKUP_DEGRADED_ZH}</p>
+          <p className={`${reportMetaClass} -mt-1`}>
+            {LEGAL_LOOKUP_DEGRADED_SECTION_ZH}
+          </p>
         </ReportBlock>
       ) : null}
 
@@ -755,7 +758,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
             </p>
           )}
 
-          {report.evaluation.riskBandZh === "未見負面摘要" && (
+          {reportCardShowRiskBandFooterNote(report) && (
             <p
               className={`rounded-lg px-3 py-2.5 ${reportBodyClass} text-muted-foreground ${riskBandSurfaceClass("未見負面摘要")}`}
             >

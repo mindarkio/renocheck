@@ -25,13 +25,19 @@ export function reportCardHeaderBandLabel(report: RiskReport): string {
   return bandDetail ?? report.evaluation.riskBandZh;
 }
 
+export function reportCardShowRiskBandFooterNote(report: RiskReport): boolean {
+  return (
+    report.evaluation.riskBandZh === "未見負面摘要" &&
+    !isReportLegalLookupDegraded(report)
+  );
+}
+
 export function reportCardShowFooterNotes(
   report: RiskReport,
   highlightCount: number,
 ): boolean {
-  if (isReportLegalLookupDegraded(report)) return false;
   return (
     (report.confidence === "medium" && highlightCount === 1) ||
-    report.evaluation.riskBandZh === "未見負面摘要"
+    reportCardShowRiskBandFooterNote(report)
   );
 }

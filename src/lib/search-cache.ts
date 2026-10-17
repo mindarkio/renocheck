@@ -60,7 +60,7 @@ export async function setCachedReport(
     expires_at: expiresAt,
   });
   if (error) {
-    throw new Error(`search_cache upsert failed: ${error.message}`);
+    console.warn(`search_cache upsert failed: ${error.message}`);
   }
 }
 

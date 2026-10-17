@@ -1,10 +1,11 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
+import { render, screen } from "@testing-library/react";
 import { ReportCard } from "./ReportCard";
 import { REPORT_VERSION } from "@/lib/constants";
 import { buildEvaluationStub } from "@/lib/evaluation-stub";
 import type { RiskReport } from "@/lib/report-schema";
-import { LEGAL_LOOKUP_DEGRADED_ZH } from "@/lib/legal-event-display";
+import { LEGAL_LOOKUP_DEGRADED_SECTION_ZH } from "@/lib/legal-event-display";
 import { summaryZhForLegalLookupDegraded } from "@/lib/search-pipeline-legal-summary";
 
 function degradedReport(): RiskReport {
@@ -61,10 +62,15 @@ describe("ReportCard legal lookup degraded", () => {
     expect(report.summaryZh).not.toContain("未見負面摘要");
     expect(report.summaryZh).toContain("建議自行核實");
 
-    const html = renderToStaticMarkup(<ReportCard report={report} />);
-    expect(html).toContain(">中性</p>");
-    expect(html).not.toContain("「未見負面摘要」僅表示");
-    expect(html).toContain(LEGAL_LOOKUP_DEGRADED_ZH);
-    expect(html).toContain(report.summaryZh);
+    render(<ReportCard report={report} />);
+    expect(screen.getByText("中性", { selector: "p" })).toBeTruthy();
+    expect(screen.queryByText(/「未見負面摘要」僅表示/)).toBeNull();
+    expect(screen.getByText(LEGAL_LOOKUP_DEGRADED_SECTION_ZH)).toBeTruthy();
+    expect(screen.getByText(report.summaryZh)).toBeTruthy();
+    expect(
+      screen.getByText(
+        "目前僅找到少量公開來源摘要，請自行核實是否與本次查詢對象為同一商號。",
+      ),
+    ).toBeTruthy();
   });
 });
