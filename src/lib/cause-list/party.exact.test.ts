@@ -4,6 +4,7 @@ import {
   isCorporateEntityName,
   parseCorporateParties,
   splitPartyBlock,
+  stripNonAliasTrailingBrackets,
 } from "./party";
 
 describe("cause-list party splitter (exact)", () => {
@@ -91,6 +92,25 @@ describe("cause-list party splitter (exact)", () => {
     );
     expect(wrapped).toHaveLength(1);
     expect(wrapped[0]?.legalName).toBe("SYNTH EXPRESS (HONG KONG) CO., LIMITED");
+  });
+
+  it("drops an unclosed final bracket and does not keep it as an alias", () => {
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (BY ORIGINAL ACTION")).toBe(
+      "SYNTH ALPHA LIMITED",
+    );
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (合成甲有限公司")).toBe(
+      "SYNTH ALPHA LIMITED",
+    );
+    expect(stripNonAliasTrailingBrackets("SYNTH ALPHA LIMITED (HK)")).toBe(
+      "SYNTH ALPHA LIMITED (HK)",
+    );
+    expect(isCorporateEntityName("SYNTH ALPHA LIMITED (BY ORIGINAL ACTION")).toBe(true);
+    expect(isCorporateEntityName("SYNTH ALPHA (BY ORIGINAL ACTION")).toBe(false);
+    const parties = parseCorporateParties(
+      splitPartyBlock("SYNTH ALPHA LIMITED (BY ORIGINAL ACTION", "defendant"),
+    );
+    expect(parties).toHaveLength(1);
+    expect(stripNonAliasTrailingBrackets(parties[0]?.legalName ?? "")).toBe("SYNTH ALPHA LIMITED");
   });
 
   it("keeps one corporate party from a comma-separated list", () => {

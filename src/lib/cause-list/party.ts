@@ -94,11 +94,26 @@ function mergeClauseSegments(parts: string[]): string[] {
   return merged;
 }
 
+function unmatchedOpens(name: string): number[] {
+  const opens: number[] = [];
+  for (let i = 0; i < name.length; i++) {
+    const ch = name[i];
+    if (ch === "(" || ch === "（") opens.push(i);
+    else if ((ch === ")" || ch === "）") && opens.length > 0) opens.pop();
+  }
+  return opens;
+}
+
 function stripTrailingBrackets(name: string): string {
   let cleaned = name.trim();
   let previous = "";
   while (cleaned !== previous) {
     previous = cleaned;
+    const opens = unmatchedOpens(cleaned);
+    if (opens.length > 0) {
+      cleaned = cleaned.slice(0, opens[opens.length - 1]).trim();
+      continue;
+    }
     cleaned = cleaned.replace(/\s*[（(][^（()）]*[）)]\s*$/u, "").trim();
   }
   return cleaned;
@@ -116,8 +131,14 @@ function stripFormerNameClause(name: string): string {
 const KEPT_TRAILING_BRACKET_RE =
   /LIMITED|LTD\.?|有限公司|有限責任公司|IN\s+LIQUIDATION|清盤|HONG\s+KONG|H\.K\.|香港|中國|國際|亞洲|(?:^|[^A-Z0-9])HK(?:[^A-Z0-9]|$)/i;
 
-function trailingBracket(name: string): { start: number; inner: string } | null {
+function trailingBracket(name: string): { start: number; inner: string; unclosed: boolean } | null {
   const trimmed = name.trimEnd();
+  if (!trimmed) return null;
+  const opens = unmatchedOpens(trimmed);
+  if (opens.length > 0) {
+    const start = opens[opens.length - 1];
+    return { start, inner: trimmed.slice(start + 1), unclosed: true };
+  }
   if (!trimmed.endsWith(")") && !trimmed.endsWith("）")) return null;
   let depth = 0;
   for (let i = trimmed.length - 1; i >= 0; i--) {
@@ -126,20 +147,20 @@ function trailingBracket(name: string): { start: number; inner: string } | null 
     else if (ch === "(" || ch === "（") {
       depth -= 1;
       if (depth === 0) {
-        return { start: i, inner: trimmed.slice(i + 1, trimmed.length - 1) };
+        return { start: i, inner: trimmed.slice(i + 1, trimmed.length - 1), unclosed: false };
       }
     }
   }
   return null;
 }
 
-/** Drop trailing notes. Keep alias, region, and liquidation brackets. */
+/** Drop trailing notes. Keep a closed alias, region, or liquidation bracket. An unclosed "(" is never kept. */
 export function stripNonAliasTrailingBrackets(name: string): string {
   let cleaned = name.trim();
   for (;;) {
     const span = trailingBracket(cleaned);
     if (!span) return cleaned;
-    if (KEPT_TRAILING_BRACKET_RE.test(span.inner)) return cleaned;
+    if (!span.unclosed && KEPT_TRAILING_BRACKET_RE.test(span.inner)) return cleaned;
     cleaned = cleaned.slice(0, span.start).trim();
   }
 }
