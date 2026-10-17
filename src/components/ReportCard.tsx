@@ -17,6 +17,7 @@ import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
 import {
   judgmentCategoryLabelZh,
+  LEGAL_EVENTS_AUTO_SUMMARY_ZH,
   LEGAL_EVENTS_FACTS_ONLY_ZH,
   LEGAL_EVENTS_SCOPE_ZH,
   partyRoleLabelZh,
@@ -570,13 +571,21 @@ export function ReportCard({ report }: { report: RiskReport }) {
                     {judgmentCategoryLabelZh(ev.judgmentCategory)}
                   </p>
                   {!factsOnly ? (
-                    <ul
-                      className={`mt-2 list-disc space-y-1 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
-                    >
-                      {ev.hearingKeyPointsZh.map((point) => (
-                        <li key={point}>{point}</li>
-                      ))}
-                    </ul>
+                    <>
+                      {ev.hearingPointsSource === "llm_draft" ||
+                      ev.hearingPointsSource === "ai_verified" ? (
+                        <p className={`mt-2 ${reportMetaClass}`}>
+                          {LEGAL_EVENTS_AUTO_SUMMARY_ZH}
+                        </p>
+                      ) : null}
+                      <ul
+                        className={`mt-2 list-disc space-y-1 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
+                      >
+                        {ev.hearingKeyPointsZh.map((point) => (
+                          <li key={point}>{point}</li>
+                        ))}
+                      </ul>
+                    </>
                   ) : null}
                   <a
                     href={ev.sourceUrl}

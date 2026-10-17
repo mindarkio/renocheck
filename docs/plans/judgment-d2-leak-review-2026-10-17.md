@@ -8,7 +8,7 @@
 | **X（自 167 剔除）** | **88** | 舊 keep 成員、現行 **drop**（`droppedFromPrior` 與現行 keep 無交集） |
 | **Y（新加 keep）** | **0** | 現行 **79** 宗均屬原 167 集合；**無**新案號淨增 |
 | **算式** | **167 − 88 = 79** | 79 + 88 = 167 ✓ |
-| **`d2:filter-candidates`（2026-10-17）** | keep **79** / drop **817** / review **1** | `--dry-run`，897 candidates |
+| **`d2:filter-candidates`（2026-10-17）** | keep **79** / drop **818** / review **0** | CACV 593/2020 → `defendant_work_injury_context` drop |
 | **Remote `legalref-lrs-ju`** | **79** | Supabase `official_legal_events` count [Certain 2026-10-17] |
 
 **過程備忘（唔改算式）：** 首輪漏網 dry-run 曾 **78** keep；修補行業排除／`mwc_plaintiff_only_pass` 等後曾 **86** 入庫；**CACV 131/2005** 由 `weak_renovation_signal` 改 **`owners_corporation_vs_contractor`**；LDBM 收緊 **−7** → **79**。

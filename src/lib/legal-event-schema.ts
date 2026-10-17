@@ -44,6 +44,14 @@ export type ProcedureStage = z.infer<typeof procedureStageSchema>;
 
 export const legalEventReviewStatusSchema = z.enum(["auto", "human_verified"]);
 
+/** DB `hearing_points_source` — pending migration 20261017100000 (do not apply until approved). */
+export const hearingPointsSourceSchema = z.enum([
+  "llm_draft",
+  "ai_verified",
+  "manual",
+  "placeholder",
+]);
+
 export const legalEventBusinessFormSchema = z.enum(["sole_proprietorship"]);
 
 export const officialLegalEventSchema = z.object({
@@ -56,6 +64,7 @@ export const officialLegalEventSchema = z.object({
   outcomeHint: outcomeHintSchema.optional(),
   procedureStage: procedureStageSchema.optional(),
   hearingKeyPointsZh: z.array(z.string().max(200)).min(1).max(8),
+  hearingPointsSource: hearingPointsSourceSchema.optional(),
   sourceUrl: z.string().url(),
   matchReasonZh: z.string().max(80),
   sourceLabel: z.string().max(40).optional(),

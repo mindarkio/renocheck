@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type OfficialLegalEvent,
+  hearingPointsSourceSchema,
   judgmentCategorySchema,
   partyRoleSchema,
   procedureStageSchema,
@@ -34,6 +35,8 @@ export type LegalJudgmentRow = {
   imported_at: string;
   review_status: string | null;
   topic_tags: string[] | null;
+  /** Present after migration 20261017100000 is applied. */
+  hearing_points_source?: string | null;
 };
 
 export type LegalLookupContext = {
@@ -52,7 +55,7 @@ const FETCH_PAGE_SIZE = 500;
 const MATCH_SELECT =
   "id, case_ref, company_name_normalized, lookup_aliases, topic_tags";
 const FULL_SELECT =
-  "id, source_type, case_ref, court, event_date, party_names, hearing_key_points_zh, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
+  "id, source_type, case_ref, court, event_date, party_names, hearing_key_points_zh, hearing_points_source, source_url, judgment_category, party_role, outcome_hint, procedure_stage, company_name_normalized, br_normalized, lookup_aliases, imported_at, review_status, topic_tags";
 
 function parseEnum<T extends string>(
   schema: { safeParse: (v: unknown) => { success: boolean; data?: T } },
@@ -116,6 +119,15 @@ function rowToEvent(
         })()
       : {}),
     hearingKeyPointsZh: points.slice(0, 8),
+    ...(row.hearing_points_source
+      ? (() => {
+          const v = parseEnum(
+            hearingPointsSourceSchema,
+            row.hearing_points_source,
+          );
+          return v ? { hearingPointsSource: v } : {};
+        })()
+      : {}),
     sourceUrl: row.source_url,
     matchReasonZh,
     sourceLabel: "司法機構刊憲",

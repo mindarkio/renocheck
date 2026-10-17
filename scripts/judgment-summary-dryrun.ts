@@ -155,6 +155,7 @@ async function main() {
   }
 
   const caseRefFilter = stringArg("case-ref");
+  const onlyRefsRaw = stringArg("only-refs");
   const allSeed = process.argv.includes("--all-seed");
   let pool = seed;
   if (caseRefFilter) {
@@ -162,6 +163,14 @@ async function main() {
     pool = seed.filter((r) => normRef(r.caseRef) === key);
     if (pool.length === 0) {
       throw new Error(`case_ref_not_in_seed: ${caseRefFilter}`);
+    }
+  } else if (onlyRefsRaw) {
+    const keys = new Set(
+      onlyRefsRaw.split(/[,;]/).map((s) => normRef(s.trim())).filter(Boolean),
+    );
+    pool = seed.filter((r) => keys.has(normRef(r.caseRef)));
+    if (pool.length === 0) {
+      throw new Error(`only_refs_not_in_seed: ${onlyRefsRaw}`);
     }
   } else if (!allSeed) {
     pool = seed.filter((r) =>
@@ -173,9 +182,9 @@ async function main() {
   }
   const batch = pool.slice(
     0,
-    caseRefFilter || allSeed ? pool.length : limit,
+    caseRefFilter || onlyRefsRaw || allSeed ? pool.length : limit,
   );
-  const forceLlm = Boolean(caseRefFilter) || allSeed;
+  const forceLlm = Boolean(caseRefFilter || onlyRefsRaw) || allSeed;
 
   const headers = [
     "caseRef",

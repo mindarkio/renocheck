@@ -19,6 +19,7 @@ const MANUAL_DROP: Record<string, string> = {
   "HCB4042/2011": "manual_triage_bankruptcy",
   "CACV339/2005": "manual_triage_bankruptcy",
   "DCCJ797/2003": "manual_triage_plaintiff_not_defendant",
+  "CACV593/2020": "defendant_work_injury_context",
 };
 
 const MANUAL_KEEP: Record<string, ManualKeepOverride> = {

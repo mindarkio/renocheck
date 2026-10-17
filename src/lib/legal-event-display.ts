@@ -31,6 +31,10 @@ export const LEGAL_EVENTS_SCOPE_ZH =
 export const LEGAL_EVENTS_FACTS_ONLY_ZH =
   "以下列出與查證對象對照之刊憲紀錄（案號、法院、日期、訴訟角色）及官方連結；聆訊要點待人手覆核前不顯示摘要內容。";
 
+/** Shown when hearing points are LLM-derived (DEC-0012). */
+export const LEGAL_EVENTS_AUTO_SUMMARY_ZH =
+  "自動摘要，以判詞原文為準。";
+
 export function partyRoleLabelZh(
   role: "defendant" | "plaintiff" | "third_party" | "unknown",
 ): string {
