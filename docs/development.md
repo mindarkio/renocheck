@@ -53,25 +53,21 @@ Prod 嘅 anon 已經讀唔到 `mwc_contractors`（migration `20261018140000`，�
 
 ```bash
 pnpm supabase start
-# 用 local stack 嘅 URL + service role 跑現有匯入（腳本本身會讀 .env.local，唔好指去 prod）
-pnpm import:mwc
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<local-service-role> pnpm import:mwc
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=<local-anon> pnpm test:d2
 ```
 
+`import:mwc` 會讀 `.env.local`，而且 `NEXT_PUBLIC_SUPABASE_URL` 優先；一定要喺命令前面 export local 嘅 URL 同 key，否則會寫入 `.env.local` 指住嘅 project（通常係 prod）。
+
 Dev project 就換嗰個 project 嘅 URL 同 anon key。Local DB 由自己控制，可以對 local 嘅 anon 開 select。
 
-`supabase start` 會套用 `20261018140000`，local anon 會讀唔到。下面呢段 **只可以喺 local／dev 跑，永遠唔好喺 prod 跑**，亦唔係 migration。RLS 仍然開住，淨係 `GRANT` 會得 0 行，所以要一齊加返 select policy：
+`supabase start` 會套用 `20261018140000`，local anon 會讀唔到。用 [`scripts/sql/d2-local-anon-read.sql`](../scripts/sql/d2-local-anon-read.sql)，永遠唔好喺 prod 跑，亦唔好搬入 `supabase/`：
 
-```sql
--- LOCAL / DEV ONLY. Never run on production.
-grant select on table public.mwc_contractors to anon;
-drop policy if exists mwc_contractors_select_anon on public.mwc_contractors;
-create policy mwc_contractors_select_anon
-  on public.mwc_contractors
-  for select
-  to anon
-  using (true);
+```bash
+PGOPTIONS='-c renocheck.d2_local_grant=yes' psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f scripts/sql/d2-local-anon-read.sql
 ```
+
+直接貼入 SQL editor 會被拒；只開 id/company_name/registration_no；唔好將呢個檔搬入 supabase/。
 
 42501／permission denied 會顯示「anon 讀唔到 mwc_contractors：D2 要用 local／dev DB」，唔會 log row。唔好 `source .env.local`（會把 `SUPABASE_SERVICE_ROLE_KEY` 帶入 shell）。
 

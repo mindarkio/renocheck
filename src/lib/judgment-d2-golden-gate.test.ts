@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
@@ -124,6 +126,50 @@ describe("decideD2GoldenRun", () => {
         SUPABASE_PROD_PROJECT_REFS: "prodprojectref",
       }),
     ).toEqual({ action: "run" });
+  });
+});
+
+describe("decideD2MwcDatabase", () => {
+  it("fails for the production project URL", () => {
+    expect(
+      decideD2MwcDatabase({
+        NEXT_PUBLIC_SUPABASE_URL: "https://lvrasvtilgzwtfsfjbzd.supabase.co",
+      }).action,
+    ).toBe("fail");
+  });
+
+  it("fails for an unrecognised host", () => {
+    expect(
+      decideD2MwcDatabase({
+        NEXT_PUBLIC_SUPABASE_URL: "https://example.com",
+      }).action,
+    ).toBe("fail");
+  });
+
+  it("runs for local Supabase", () => {
+    expect(
+      decideD2MwcDatabase({
+        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      }).action,
+    ).toBe("run");
+  });
+
+  it("filter script does not read .env.local and calls the prod gate", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "scripts/filter-judgment-candidates-d2.ts"),
+      "utf8",
+    );
+    expect(source).not.toContain(".env.local");
+    expect(source).toContain("decideD2MwcDatabase(");
+  });
+
+  it("write-golden script does not read .env.local and calls the prod gate", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "scripts/write-judgment-d2-filter-golden.ts"),
+      "utf8",
+    );
+    expect(source).not.toContain(".env.local");
+    expect(source).toContain("decideD2MwcDatabase(");
   });
 });
 

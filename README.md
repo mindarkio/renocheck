@@ -27,7 +27,13 @@ pnpm dev
 
 `pnpm test` runs Vitest and does not call Supabase. The D2 filter golden parity check is opt-in and skips when `RUN_D2_GOLDEN` is unset.
 
-Production anon can no longer read `mwc_contractors`. `pnpm test:d2` does not read `.env.local`. Use a local Supabase stack (`pnpm supabase start`, then `pnpm import:mwc` with that stack's service role) or a dev project, and export **that** database's URL and anon key:
+Production anon can no longer read `mwc_contractors`. `pnpm test:d2` does not read `.env.local`. Use a local Supabase stack (`pnpm supabase start`, then the local import below) or a dev project, and export **that** database's URL and anon key.
+
+`import:mwc` 會讀 `.env.local`，而且 `NEXT_PUBLIC_SUPABASE_URL` 優先；一定要喺命令前面 export local 嘅 URL 同 key，否則會寫入 `.env.local` 指住嘅 project（通常係 prod）。
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<local-service-role> pnpm import:mwc
+```
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=<local-anon> pnpm test:d2
@@ -35,18 +41,13 @@ NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=<l
 
 A production project ref is refused. `scripts/write-judgment-d2-filter-golden.ts` and `scripts/filter-judgment-candidates-d2.ts` use the same gate and do not read `.env.local`.
 
-`supabase start` applies `20261018140000`, so local anon cannot read until you run this **local-only** SQL on the database you control. Never run it on production. RLS stays enabled, so `GRANT` alone still returns no rows; the policy is what lets local anon `SELECT`.
+`supabase start` applies `20261018140000`, so local anon cannot read until you run [`scripts/sql/d2-local-anon-read.sql`](scripts/sql/d2-local-anon-read.sql) on the database you control. Never run it on production.
 
-```sql
--- LOCAL / DEV ONLY. Never run on production.
-grant select on table public.mwc_contractors to anon;
-drop policy if exists mwc_contractors_select_anon on public.mwc_contractors;
-create policy mwc_contractors_select_anon
-  on public.mwc_contractors
-  for select
-  to anon
-  using (true);
+```bash
+PGOPTIONS='-c renocheck.d2_local_grant=yes' psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f scripts/sql/d2-local-anon-read.sql
 ```
+
+直接貼入 SQL editor 會被拒；只開 id/company_name/registration_no；唔好將呢個檔搬入 supabase/。
 
 Do not `source .env.local` for this; it would also export `SUPABASE_SERVICE_ROLE_KEY` into the shell. See [docs/development.md](docs/development.md).
 
