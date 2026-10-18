@@ -3,17 +3,31 @@ import { REPORT_VERSION } from "./constants";
 import { buildEvaluationStub } from "./evaluation-stub";
 import type { RiskReport } from "./report-schema";
 import { shouldShowNonLimitedContractorNotice } from "./non-limited-contractor-notice";
-import { REPORT_TRUST_FORBIDDEN_ZH } from "./report-trust-copy-zh";
 import {
-  NON_LIMITED_CAUSE_LIST_SCOPE_ZH,
   NON_LIMITED_CONTRACTOR_NOTICE_ZH,
+  REPORT_TRUST_FORBIDDEN_ZH,
+  REPORT_TRUST_NEGATED_ALLOWLIST_ZH,
 } from "./report-trust-copy-zh";
 
-function reportWithLabel(searchLabelUsed: string): RiskReport {
+function assertClean(text: string): void {
+  let t = text;
+  for (const ok of REPORT_TRUST_NEGATED_ALLOWLIST_ZH) {
+    t = t.split(ok).join("");
+  }
+  for (const w of REPORT_TRUST_FORBIDDEN_ZH) {
+    expect(t).not.toContain(w);
+  }
+}
+
+function reportWithLabel(
+  searchLabelUsed: string,
+  official?: RiskReport["official"],
+): RiskReport {
+  const mwcMatched = official?.mwcMatched ?? false;
   const evaluation = buildEvaluationStub({
     overallGrade: "C",
     confidence: "medium",
-    mwcMatched: false,
+    mwcMatched,
     boundHitCount: 0,
     highlightCount: 0,
   });
@@ -30,7 +44,7 @@ function reportWithLabel(searchLabelUsed: string): RiskReport {
     confidence: "medium",
     evaluation,
     summaryZh: "摘要",
-    official: { mwcMatched: false },
+    official: { mwcMatched: false, ...official },
     signals: {
       discussionCount: 0,
       themes: [],
@@ -46,9 +60,13 @@ function reportWithLabel(searchLabelUsed: string): RiskReport {
 describe("shouldShowNonLimitedContractorNotice", () => {
   it("shows for non-corporate search label", () => {
     expect(
-      shouldShowNonLimitedContractorNotice(
-        reportWithLabel("合成裝修工程"),
-      ),
+      shouldShowNonLimitedContractorNotice(reportWithLabel("合成裝修工程")),
+    ).toBe(true);
+  });
+
+  it("shows for SYNTH DECOR style name", () => {
+    expect(
+      shouldShowNonLimitedContractorNotice(reportWithLabel("SYNTH DECOR")),
     ).toBe(true);
   });
 
@@ -60,10 +78,30 @@ describe("shouldShowNonLimitedContractorNotice", () => {
     ).toBe(false);
   });
 
+  it("hides for phone-only label", () => {
+    expect(
+      shouldShowNonLimitedContractorNotice(reportWithLabel("91234567")),
+    ).toBe(false);
+  });
+
+  it("hides for BR-only label", () => {
+    expect(
+      shouldShowNonLimitedContractorNotice(reportWithLabel("12345678")),
+    ).toBe(false);
+  });
+
+  it("uses official company name when MWC matched", () => {
+    expect(
+      shouldShowNonLimitedContractorNotice(
+        reportWithLabel("合成測試有限公司", {
+          mwcMatched: true,
+          details: { companyName: "合成工程" },
+        }),
+      ),
+    ).toBe(true);
+  });
+
   it("notice copy avoids forbidden terms", () => {
-    const blob = `${NON_LIMITED_CONTRACTOR_NOTICE_ZH}\n${NON_LIMITED_CAUSE_LIST_SCOPE_ZH}`;
-    for (const term of REPORT_TRUST_FORBIDDEN_ZH) {
-      expect(blob).not.toContain(term);
-    }
+    assertClean(NON_LIMITED_CONTRACTOR_NOTICE_ZH);
   });
 });

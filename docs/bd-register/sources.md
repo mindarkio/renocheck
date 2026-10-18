@@ -50,11 +50,12 @@
 
 | 用途 | URL | `verified_at` |
 |------|-----|---------------|
-| ICRIS 查冊首頁 | `https://www.icris.cr.gov.hk/csci/` | 2026-10-18 |
+| 公司註冊處電子服務（查冊入口） | `https://www.e-services.cr.gov.hk/` | 2026-10-18 |
 | 政府一站通 BR 查詢 | `https://www.gov.hk/tc/residents/taxes/etax/services/brn_enquiry.htm` | 2026-10-18 |
-| 破產管理署首頁 | `https://www.oro.gov.hk/eng/home/home.html` | 2026-10-18 |
+| 破產管理署：強制性清盤紀錄查冊 | `https://www.oro.gov.hk/cht/our_services/electronic_services/compulsory.html` | 2026-10-18 |
 | 屋宇署註冊承建商搜尋 | `https://www.bd.gov.hk/tc/resources/online-tools/registers-search/registrationsearch.html` | 2026-10-18 |
 | 屋宇署小型工程（誰可進行） | `https://www.bd.gov.hk/tc/building-works/minor-works/minor-works-items/who-can-carry-out-minor-works/index.html` | 2026-10-18 |
+| 屋宇署指定豁免工程 | `https://www.bd.gov.hk/tc/building-works/minor-works/designated-exempted-works/index.html` | 2026-10-18 |
 | 屋宇署 BRAVO 樓宇紀錄 | `https://www.bd.gov.hk/tc/resources/online-tools/BRAVO-online-building-records/index.html` | 2026-10-18 |
 | 司法機構審訊案件表（e-services） | `https://e-services.judiciary.hk/dcl/index.jsp?lang=tc` | 2026-10-18 |
 

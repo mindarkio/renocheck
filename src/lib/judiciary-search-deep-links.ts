@@ -1,5 +1,8 @@
 import { buildLrsPartiesSearchResultUrl } from "./lrs-search-url";
-import { JUDICIARY_DAILY_CAUSE_LIST_URL } from "./report-trust-copy-zh";
+import {
+  DAILY_CAUSE_LIST_HERO_NOTE_ZH,
+  JUDICIARY_DAILY_CAUSE_LIST_URL,
+} from "./report-trust-copy-zh";
 
 /** Prefilled external search links (一撲即查); user leaves site to verify. */
 export function buildJudiciaryDeepLinks(searchLabel: string) {
@@ -9,7 +12,6 @@ export function buildJudiciaryDeepLinks(searchLabel: string) {
     lrsPartiesSearch: buildLrsPartiesSearchResultUrl(q),
     hkliiSearch: `https://v2.hklii.hk/search?q=${encoded}`,
     dailyCauseListSearch: JUDICIARY_DAILY_CAUSE_LIST_URL,
-    dailyCauseListNote:
-      "排期表請於司法機構網站以公司／訴訟方名稱自行查閱；小額錢債審裁處多數裁決不刊憲。",
+    dailyCauseListNote: DAILY_CAUSE_LIST_HERO_NOTE_ZH,
   };
 }

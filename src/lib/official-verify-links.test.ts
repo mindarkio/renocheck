@@ -3,7 +3,7 @@ import { REPORT_VERSION } from "./constants";
 import { buildEvaluationStub } from "./evaluation-stub";
 import type { RiskReport } from "./report-schema";
 import { buildOfficialVerifyLinks } from "./official-verify-links";
-import { ICRIS_HOME_URL } from "./report-trust-copy-zh";
+import { CR_ESERVICES_URL } from "./report-trust-copy-zh";
 
 function baseReport(overrides: Partial<RiskReport> = {}): RiskReport {
   const evaluation = buildEvaluationStub({
@@ -42,11 +42,17 @@ function baseReport(overrides: Partial<RiskReport> = {}): RiskReport {
 }
 
 describe("buildOfficialVerifyLinks", () => {
-  it("includes ICRIS home without query string", () => {
+  it("includes CR e-services home without query string", () => {
     const links = buildOfficialVerifyLinks(baseReport());
     const icris = links.find((l) => l.id === "icris");
-    expect(icris?.url).toBe(ICRIS_HOME_URL);
-    expect(icris?.url).not.toContain("?");
+    expect(icris?.url).toBe(CR_ESERVICES_URL);
+    expect(icris?.url).toBe("https://www.e-services.cr.gov.hk/");
+    expect(links.some((l) => l.id === "bd-discipline")).toBe(false);
+  });
+
+  it("uses unique urls per link", () => {
+    const urls = buildOfficialVerifyLinks(baseReport()).map((l) => l.url);
+    expect(new Set(urls).size).toBe(urls.length);
   });
 
   it("uses deep MWC search when license active", () => {

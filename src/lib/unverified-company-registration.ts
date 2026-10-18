@@ -1,36 +1,15 @@
 import type { RiskReport } from "./report-schema";
 import { isReportLegalLookupDegraded } from "./search-cache";
 
-type BdRegisterMatch = {
-  registrationStatus?: string;
-};
-
-function hasEffectiveGbcMatch(report: RiskReport): boolean {
-  const matches = (
-    report.official as { bdRegisterMatches?: BdRegisterMatch[] }
-  ).bdRegisterMatches;
-  if (!matches?.length) return false;
-  return matches.some((m) => m.registrationStatus !== "expired");
-}
-
-function companiesRegistryPreventsUnverifiedBanner(
-  report: RiskReport,
-): boolean {
-  const cr = (
-    report.official as { companiesRegistry?: { matched?: boolean } }
-  ).companiesRegistry;
-  if (cr === undefined) return false;
-  return cr.matched === true;
-}
-
-/** C.2c — MWC/GBC miss + no LRS + legal lookup ok; CR when present must not be matched. */
+/** C.2c：屋宇署 MWC 名冊冇對應＋判詞查詢冇 degraded＋冇判詞紀錄；純 BR 搜尋唔顯示（MWC 名冊唔以 BR 索引）。
+ *  bdRegisterMatches／companiesRegistry 未入 schema，會被 zod strip；入 schema 之後先再加。 */
 export function shouldShowUnverifiedCompanyRegistrationMode(
   report: RiskReport,
 ): boolean {
-  if (isReportLegalLookupDegraded(report)) return false;
   if (report.official.mwcMatched) return false;
-  if (hasEffectiveGbcMatch(report)) return false;
-  if (companiesRegistryPreventsUnverifiedBanner(report)) return false;
+  if (isReportLegalLookupDegraded(report)) return false;
   if ((report.official.legalEvents ?? []).length > 0) return false;
+  const label = report.entity.searchLabelUsed.trim();
+  if (report.entity.matchType === "br" && !/\p{L}/u.test(label)) return false;
   return true;
 }

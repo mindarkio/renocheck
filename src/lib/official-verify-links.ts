@@ -2,7 +2,6 @@ import { buildBdMwcRegistrySearchUrl } from "./bd-mwc-registry-url";
 import type { RiskReport } from "./report-schema";
 import {
   BD_BRAVO_BUILDING_RECORDS_URL,
-  BD_DISCIPLINE_REGISTER_SEARCH_URL,
   BD_MWC_REGISTER_SEARCH_URL,
   GOV_HK_BR_ENQUIRY_URL,
   ICRIS_HOME_URL,
@@ -30,6 +29,7 @@ export function buildOfficialVerifyLinks(report: RiskReport): OfficialVerifyLink
       id: "br-enquiry",
       labelZh: OFFICIAL_VERIFY_LINK_LABELS.brEnquiry,
       url: GOV_HK_BR_ENQUIRY_URL,
+      noteZh: OFFICIAL_VERIFY_LINK_NOTES.brEnquiry,
     },
     {
       id: "oro",
@@ -40,12 +40,7 @@ export function buildOfficialVerifyLinks(report: RiskReport): OfficialVerifyLink
       id: "bd-register",
       labelZh: OFFICIAL_VERIFY_LINK_LABELS.bdRegister,
       url: BD_MWC_REGISTER_SEARCH_URL,
-    },
-    {
-      id: "bd-discipline",
-      labelZh: OFFICIAL_VERIFY_LINK_LABELS.bdDiscipline,
-      url: BD_DISCIPLINE_REGISTER_SEARCH_URL,
-      noteZh: OFFICIAL_VERIFY_LINK_NOTES.bdDiscipline,
+      noteZh: OFFICIAL_VERIFY_LINK_NOTES.bdRegister,
     },
     {
       id: "bravo",

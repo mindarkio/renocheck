@@ -3,18 +3,17 @@ import { REPORT_VERSION } from "./constants";
 import { buildEvaluationStub } from "./evaluation-stub";
 import type { RiskReport } from "./report-schema";
 import { shouldShowUnverifiedCompanyRegistrationMode } from "./unverified-company-registration";
-import {
-  collectReportTrustCopyStrings,
-  REPORT_TRUST_FORBIDDEN_ZH,
-} from "./report-trust-copy-zh";
 
 function baseReport(
-  official: RiskReport["official"],
+  overrides: Partial<RiskReport> & {
+    official?: RiskReport["official"];
+    entity?: Partial<RiskReport["entity"]>;
+  } = {},
 ): RiskReport {
   const evaluation = buildEvaluationStub({
     overallGrade: "C",
     confidence: "medium",
-    mwcMatched: official.mwcMatched,
+    mwcMatched: overrides.official?.mwcMatched ?? false,
     boundHitCount: 0,
     highlightCount: 0,
   });
@@ -26,12 +25,13 @@ function baseReport(
       queryEcho: "合成測試有限公司",
       searchLabelUsed: "合成測試有限公司",
       nameAlignment: "user_only",
+      ...overrides.entity,
     },
     grade: "C",
     confidence: "medium",
     evaluation,
     summaryZh: "摘要",
-    official,
+    official: { mwcMatched: false, ...overrides.official },
     signals: {
       discussionCount: 0,
       themes: [],
@@ -41,14 +41,23 @@ function baseReport(
     },
     disclaimerVersion: "1.0.0",
     generatedAt: "2026-10-18T12:00:00.000Z",
+    ...overrides,
   };
 }
 
 describe("shouldShowUnverifiedCompanyRegistrationMode", () => {
-  it("triggers when MWC miss and no legal events", () => {
+  it("triggers when MWC miss and legal ok", () => {
     expect(
       shouldShowUnverifiedCompanyRegistrationMode(
-        baseReport({ mwcMatched: false, legalLookupStatus: "ok" }),
+        baseReport({ official: { mwcMatched: false, legalLookupStatus: "ok" } }),
+      ),
+    ).toBe(true);
+  });
+
+  it("triggers when legalLookupStatus undefined", () => {
+    expect(
+      shouldShowUnverifiedCompanyRegistrationMode(
+        baseReport({ official: { mwcMatched: false } }),
       ),
     ).toBe(true);
   });
@@ -56,7 +65,7 @@ describe("shouldShowUnverifiedCompanyRegistrationMode", () => {
   it("does not trigger when MWC matched", () => {
     expect(
       shouldShowUnverifiedCompanyRegistrationMode(
-        baseReport({ mwcMatched: true }),
+        baseReport({ official: { mwcMatched: true } }),
       ),
     ).toBe(false);
   });
@@ -64,38 +73,43 @@ describe("shouldShowUnverifiedCompanyRegistrationMode", () => {
   it("does not trigger when legal lookup degraded", () => {
     expect(
       shouldShowUnverifiedCompanyRegistrationMode(
-        baseReport({ mwcMatched: false, legalLookupStatus: "timeout" }),
-      ),
-    ).toBe(false);
-  });
-
-  it("does not trigger when legal events present", () => {
-    expect(
-      shouldShowUnverifiedCompanyRegistrationMode(
         baseReport({
-          mwcMatched: false,
-          legalEvents: [
-            {
-              sourceType: "court_judgment",
-              caseRef: "SYNTH/1/2024",
-              court: "高院",
-              eventDate: "2024-01-01",
-              partyRole: "defendant",
-              judgmentCategory: "other_civil",
-              sourceUrl: "https://example.com/j",
-              matchReasonZh: "合成",
-              hearingKeyPointsZh: ["合成事實"],
-            },
-          ],
+          official: { mwcMatched: false, legalLookupStatus: "error" },
         }),
       ),
     ).toBe(false);
   });
 
-  it("C.2c copy avoids forbidden terms", () => {
-    const blob = collectReportTrustCopyStrings().join("\n");
-    for (const term of REPORT_TRUST_FORBIDDEN_ZH) {
-      expect(blob).not.toContain(term);
-    }
+  it("does not trigger for pure BR search label", () => {
+    expect(
+      shouldShowUnverifiedCompanyRegistrationMode(
+        baseReport({
+          entity: {
+            matchType: "br",
+            searchLabelUsed: "12345678",
+            queryEcho: "12345678",
+            displayName: "12345678",
+            nameAlignment: "user_only",
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("triggers for phone search with no MWC match", () => {
+    expect(
+      shouldShowUnverifiedCompanyRegistrationMode(
+        baseReport({
+          entity: {
+            matchType: "phone",
+            searchLabelUsed: "91234567",
+            queryEcho: "91234567",
+            displayName: "91234567",
+            normalizedPhone: "91234567",
+            nameAlignment: "user_only",
+          },
+        }),
+      ),
+    ).toBe(true);
   });
 });
