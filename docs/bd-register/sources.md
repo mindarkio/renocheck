@@ -61,3 +61,37 @@
 | 司法機構審訊案件表（e-services） | `https://e-services.judiciary.hk/dcl/index.jsp?lang=tc` | 2026-10-18 |
 
 **備註：** `https://www.judiciary.hk/zh/court_services_facilities/daily_cause_list.html` 於 2026-10-18 smoke 返 **404**；產品改用 **e-services** 入口（見上表）。`lang=tc` 為語言參數，**唔**預填公司名。
+
+## 公司註冊處開放數據 API（PR-CR；2026-10-18 核實）
+
+| 項目 | 內容 |
+|------|------|
+| **資料集** | Registered Office Address of **Live Local Companies**（只涵蓋存續本地公司） |
+| **入口** | [data.cr.gov.hk](https://data.cr.gov.hk/) |
+| **Local JSON endpoint** | `https://data.cr.gov.hk/cr/api/api/v1/api_builder/json/local/search` |
+| **查詢參數** | `query[0][key1]` + `query[0][key2]` + `query[0][key3]` + `format=json` |
+| **按編號** | `key1=Brn`, `key2=equal`, `key3=<值>` |
+| **按名稱** | `key1=Comp_name`, `key2=begins_with`, `key3=<前綴>`（**僅前綴**，唔支援 contains） |
+| **無結果** | HTTP **400**，JSON `{"status":400,"message":"No result found."}` |
+| **Auth** | 無 |
+| **Timeout（產品）** | 5s |
+| **Throttle（產品）** | 全 process ≤1 req/s（`src/lib/cr-register/throttle.ts`） |
+| **條款** | [DATA.GOV.HK 使用條款及細則](https://data.gov.hk/tc/terms-and-conditions) — **容許商業用途**（須標示來源） |
+
+### `Brn` 欄位（唔等同稅務局 8 位商業登記號）
+
+`Brn` 係名冊上嘅公司編號，常見格式包括 **`C` + 7 位數字**（例 `C1566911`）或 **8 位數字**（例 `81390375`）。用戶喺 Renocheck 輸入嘅 **稅務局 8 位商業登記號** 與 `Brn` **未必一致**（例 `12345678` → API 400）。**只有**輸入符合 `^C\d{7}$` 時，產品才用 `Brn equal` 查詢；純 8 位稅務局 BR 搜尋 **唔** 呼叫 `Brn equal`，改以公司名稱 `begins_with`（如有）或唔發出會產生 `not_found` 嘅查詢。
+
+### `Comp_name` begins_with（中／英）
+
+2026-10-18 smoke：`begins_with` 對 **中文前綴**（例 `香港樂群`）及 **英文前綴**（例 `HONG KONG FORTUNATE`）均返回 JSON 陣列；同一公司中英記錄在同一結果集內以不同欄位呈現。
+
+### 回傳欄位（`fields_seen`）
+
+`Brn`, `Chinese_Company_Name`, `English_Company_Name`, `Address_of_Registered_Office`, `Company_Type`, `Date_of_Incorporation`（`DD-MM-YYYY`）、`Re-domiciliation_Date`
+
+**未有：** 解散／剔除 `status`、`dissolved`、公司改名日期或改名歷史 → 產品 **唔** 做解散提示或「近期改名」提示。
+
+### Rate limit
+
+官網無明文 quota；2026-10-18 連續 5 次 BR lookup 均 HTTP 200。產品仍以 ≤1 req/s + 10 分鐘 in-memory cache（只存已 map 嘅 schema 欄位，**唔** cache 地址或 API 原始 row）為上限。

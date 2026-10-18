@@ -14,9 +14,11 @@ import {
   REPORT_SCOPE_LIMITS_HEADING_ZH,
   REPORT_TRUST_FORBIDDEN_ZH,
   REPORT_TRUST_NEGATED_ALLOWLIST_ZH,
-  UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,
-  UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH,
+  CR_ESERVICES_URL,
+  MWC_MISS_NOTE_HEADING_ZH,
+  UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
 } from "@/lib/report-trust-copy-zh";
+import type { CompaniesRegistryOfficial } from "@/lib/report-schema";
 import { summaryZhForLegalLookupDegraded } from "@/lib/search-pipeline-legal-summary";
 
 const REPORT_TRUST_BANNED_SUBSTRINGS_ZH = [
@@ -95,6 +97,19 @@ function degradedReport(): RiskReport {
   };
 }
 
+function crRegistry(
+  overrides: Partial<CompaniesRegistryOfficial> = {},
+): CompaniesRegistryOfficial {
+  return {
+    lookupStatus: "ok",
+    retrievedAt: "2026-10-18T12:00:00.000Z",
+    hints: ["not_found_in_active_list"],
+    matched: false,
+    icrisHomeUrl: CR_ESERVICES_URL,
+    ...overrides,
+  };
+}
+
 function minimalReport(overrides: Partial<RiskReport> = {}): RiskReport {
   const evaluation = buildEvaluationStub({
     overallGrade: "C",
@@ -116,7 +131,11 @@ function minimalReport(overrides: Partial<RiskReport> = {}): RiskReport {
     confidence: "medium",
     evaluation,
     summaryZh: "公開資料摘要。",
-    official: { mwcMatched: false, legalLookupStatus: "ok" },
+    official: {
+      mwcMatched: false,
+      legalLookupStatus: "ok",
+      companiesRegistry: crRegistry(),
+    },
     signals: {
       discussionCount: 0,
       themes: [],
@@ -138,26 +157,59 @@ describe("ReportCard legal lookup degraded", () => {
     expect(screen.queryByText(/「未見負面摘要」僅表示/)).toBeNull();
     expect(screen.getByText(LEGAL_LOOKUP_DEGRADED_SECTION_ZH)).toBeTruthy();
     expect(
-      screen.queryByText(UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH),
+      screen.queryByText(UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH),
     ).toBeNull();
   });
 });
 
 describe("ReportCard report trust (PR-BC)", () => {
-  it("ok 冇對應有限公司：alert、豁免工程、六條簽約提問", () => {
+  it("CR not_found + MWC miss：alert 未能核實、六條簽約提問", () => {
     const { container } = render(<ReportCard report={minimalReport()} />);
     assertClean(container.textContent ?? "");
     const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain("屋宇署");
-    expect(alert.textContent).toContain(
-      UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,
-    );
+    expect(alert.textContent).toContain("未能核實此公司註冊");
+    expect(alert.textContent).toContain("公司註冊處");
     for (const q of DEFAULT_CONTRACT_CHECKLIST_ZH) {
       expect(screen.getByText(q)).toBeTruthy();
     }
   });
 
-  it("非有限公司冇對應：單一 alert 與 note", () => {
+  it("CR matched + MWC miss：0 alert、MWC note", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({ matched: true, hints: [] }),
+          },
+        })}
+      />,
+    );
+    assertClean(container.textContent ?? "");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText(MWC_MISS_NOTE_HEADING_ZH)).toBeTruthy();
+    expect(screen.getByRole("note")).toBeTruthy();
+  });
+
+  it("CR ambiguous：0 alert", () => {
+    render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({
+              matched: false,
+              matchAmbiguous: true,
+              hints: [],
+            }),
+          },
+        })}
+      />,
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("非有限公司：note 非 alert", () => {
     const { container } = render(
       <ReportCard
         report={minimalReport({
@@ -168,11 +220,20 @@ describe("ReportCard report trust (PR-BC)", () => {
             searchLabelUsed: "合成裝修工程",
             nameAlignment: "user_only",
           },
+          official: {
+            mwcMatched: false,
+            companiesRegistry: {
+              lookupStatus: "skipped",
+              retrievedAt: "2026-10-18T12:00:00.000Z",
+              hints: [],
+              icrisHomeUrl: CR_ESERVICES_URL,
+            },
+          },
         })}
       />,
     );
     assertClean(container.textContent ?? "");
-    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByRole("note")).toBeTruthy();
     expect(screen.getByText(NON_LIMITED_NOTICE_HEADING_ZH)).toBeTruthy();
   });

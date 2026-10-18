@@ -73,6 +73,15 @@ vi.mock("./mwc-lookup", () => ({
   }),
 }));
 
+vi.mock("./cr-registry-lookup", () => ({
+  lookupCompaniesRegistryForSearch: vi.fn().mockResolvedValue({
+    lookupStatus: "skipped",
+    retrievedAt: "2026-10-18T12:00:00.000Z",
+    hints: [],
+    icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
+  }),
+}));
+
 vi.mock("./llm-risk-report", () => ({
   synthesizeRiskReport: vi.fn(),
 }));
