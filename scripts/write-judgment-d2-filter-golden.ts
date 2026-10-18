@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { judgmentCandidatesManifestSchema } from "../src/lib/judgment-candidates-schema";
 import { MwcContractorsMemoryIndex } from "../src/lib/mwc-contractors-memory-index";
+import { loadD2GoldenMwcRows } from "../src/lib/judgment-d2-golden-gate";
 import { runD2FilterPipeline } from "../src/lib/judgment-d2-filter-pipeline";
 
 const GOLDEN_PATH = resolve(
@@ -45,9 +46,11 @@ async function main() {
   loadEnvLocal();
   const url =
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    console.error("Missing Supabase env");
+    console.error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    );
     process.exit(1);
   }
 
@@ -75,7 +78,9 @@ async function main() {
   const supabase = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const mwcIndex = await MwcContractorsMemoryIndex.loadAll(supabase);
+  const mwcIndex = new MwcContractorsMemoryIndex(
+    await loadD2GoldenMwcRows(supabase),
+  );
   const mwcSnapshotSha = mwcIndex.snapshotContentHash();
 
   const { entries, counts } = runD2FilterPipeline({

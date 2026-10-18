@@ -17,6 +17,7 @@ export class MwcContractorsMemoryIndex {
     this.rows = rows;
   }
 
+  /** @deprecated D2 用 loadD2GoldenMwcRows；呢個會讀 primary_signatory_name */
   static async loadAll(supabase: SupabaseClient): Promise<MwcContractorsMemoryIndex> {
     const pageSize = 1000;
     let from = 0;
