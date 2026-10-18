@@ -31,7 +31,8 @@ describe("decideD2GoldenRun", () => {
     expect(decision.action).toBe("fail");
     if (decision.action !== "fail") return;
     expect(decision.reason).toContain("prodprojectref");
-    expect(decision.reason).toContain("SUPABASE_PROD_PROJECT_REFS");
+    expect(decision.reason).toContain("is listed in SUPABASE_PROD_PROJECT_REFS");
+    expect(decision.reason).not.toContain("built-in production project ref");
     expect(decision.reason).toContain("Refusing to read production");
     expect(decision.reason).toContain("D2_GOLDEN_ALLOW_PROD_READONLY=1");
   });
@@ -44,6 +45,8 @@ describe("decideD2GoldenRun", () => {
     expect(decision.action).toBe("fail");
     if (decision.action !== "fail") return;
     expect(decision.reason).toContain("lvrasvtilgzwtfsfjbzd");
+    expect(decision.reason).toContain("is a built-in production project ref");
+    expect(decision.reason).not.toContain("listed in SUPABASE_PROD_PROJECT_REFS");
     expect(decision.reason).toContain("Refusing to read production");
   });
 
@@ -55,6 +58,8 @@ describe("decideD2GoldenRun", () => {
     expect(decision.action).toBe("fail");
     if (decision.action !== "fail") return;
     expect(decision.reason).toContain("lvrasvtilgzwtfsfjbzd");
+    expect(decision.reason).toContain("is a built-in production project ref");
+    expect(decision.reason).toContain("Refusing to read production");
   });
 
   it("fails for an unrecognised host", () => {
@@ -164,6 +169,7 @@ function nameRows(count: number, start = 0): NameRow[] {
 
 function fakeMwcClient(pages: NameRow[][], count: number) {
   const selectArgs: unknown[][] = [];
+  const orderCalls: Array<[string, { ascending: boolean }]> = [];
   let index = 0;
   const client = {
     from(table: string) {
@@ -173,9 +179,7 @@ function fakeMwcClient(pages: NameRow[][], count: number) {
           selectArgs.push(args);
           return {
             order(column: string, options: { ascending: boolean }) {
-              if (column !== "id" || options.ascending !== true) {
-                throw new Error("expected order id ascending");
-              }
+              orderCalls.push([column, options]);
               return {
                 range(from: number, to: number) {
                   if (to !== from + 999) throw new Error(`unexpected range ${from}-${to}`);
@@ -193,12 +197,13 @@ function fakeMwcClient(pages: NameRow[][], count: number) {
   return {
     client: client as unknown as Pick<SupabaseClient, "from">,
     selectArgs,
+    orderCalls,
   };
 }
 
 describe("loadD2GoldenMwcRows", () => {
   it("pages 1000/1000/341 when count is 2341", async () => {
-    const { client, selectArgs } = fakeMwcClient(
+    const { client, selectArgs, orderCalls } = fakeMwcClient(
       [nameRows(1000, 0), nameRows(1000, 1000), nameRows(341, 2000)],
       2341,
     );
@@ -206,9 +211,13 @@ describe("loadD2GoldenMwcRows", () => {
     expect(rows).toHaveLength(2341);
     expect(rows[0]?.primary_signatory_name).toBeNull();
     expect(rows[0]?.phone).toBeNull();
-    expect(selectArgs[0]?.[0]).toBe("company_name, registration_no");
-    expect(selectArgs.every((args) => args[0] === "company_name, registration_no")).toBe(
-      true,
+    expect(selectArgs.length).toBeGreaterThan(0);
+    for (const args of selectArgs) {
+      expect(args[0]).toBe("company_name, registration_no");
+      expect(args[1]).toEqual({ count: "exact" });
+    }
+    expect(orderCalls).toEqual(
+      selectArgs.map(() => ["id", { ascending: true }]),
     );
   });
 

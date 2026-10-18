@@ -145,9 +145,15 @@ export function decideD2GoldenRun(env: D2GoldenEnv): D2GoldenDecision {
     d2GoldenProdProjectRefs(env).includes(ref) &&
     !flagOn(env, D2_GOLDEN_ALLOW_PROD_READONLY_ENV)
   ) {
+    const builtIn = DEFAULT_SUPABASE_PROD_PROJECT_REFS.some(
+      (item) => item.toLowerCase() === ref,
+    );
+    const where = builtIn
+      ? "is a built-in production project ref"
+      : "is listed in SUPABASE_PROD_PROJECT_REFS";
     return {
       action: "fail",
-      reason: `Supabase project ref "${ref}" is listed in SUPABASE_PROD_PROJECT_REFS. Refusing to read production. Set D2_GOLDEN_ALLOW_PROD_READONLY=1 to allow a read-only run.`,
+      reason: `Supabase project ref "${ref}" ${where}. Refusing to read production. Set D2_GOLDEN_ALLOW_PROD_READONLY=1 to allow a read-only run.`,
     };
   }
 
