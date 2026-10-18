@@ -23,6 +23,20 @@ cp .env.example .env.local
 pnpm dev
 ```
 
+## Tests
+
+`pnpm test` runs Vitest and does not call Supabase. The D2 filter golden parity check is opt-in.
+
+`pnpm test:d2` does not read `.env.local`. Export a non-production project explicitly:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://<dev-ref>.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon> pnpm test:d2
+```
+
+Production (`lvrasvtilgzwtfsfjbzd`) is refused unless `D2_GOLDEN_ALLOW_PROD_READONLY=1` (anon key only).
+
+Do not `source .env.local` for this; it would also export `SUPABASE_SERVICE_ROLE_KEY` into the shell. See [docs/development.md](docs/development.md).
+
 ## Agent setup
 
 See [AGENTS.md](AGENTS.md) and `.cursor/rules/`.
