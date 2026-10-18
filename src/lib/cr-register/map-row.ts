@@ -5,6 +5,8 @@ import {
   parseCrIncorporationDateToIso,
 } from "./parse-date";
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 export function mapCrApiRowToSnapshot(
   row: CrApiLocalRow,
   opts: {
@@ -15,9 +17,12 @@ export function mapCrApiRowToSnapshot(
   import("./types").CrMappedSnapshot,
   "matched" | "matchAmbiguous"
 > {
-  const incorporationDate = parseCrIncorporationDateToIso(
+  let incorporationDate = parseCrIncorporationDateToIso(
     row.Date_of_Incorporation,
   );
+  if (incorporationDate && !ISO_DATE.test(incorporationDate)) {
+    incorporationDate = undefined;
+  }
   const hints: Array<"incorporation_under_one_year" | "not_found_in_active_list"> =
     [];
   if (
@@ -26,19 +31,19 @@ export function mapCrApiRowToSnapshot(
   ) {
     hints.push("incorporation_under_one_year");
   }
-  const nameZh =
+  const nameZhRaw =
     row.Chinese_Company_Name &&
     row.Chinese_Company_Name !== "NULL" &&
     row.Chinese_Company_Name.trim()
       ? row.Chinese_Company_Name.trim()
       : undefined;
-  const nameEn = row.English_Company_Name?.trim() || undefined;
+  const nameEnRaw = row.English_Company_Name?.trim() || undefined;
   return {
     matchTier: opts.matchTier,
-    brNo: row.Brn?.trim() || undefined,
-    companyType: row.Company_Type?.trim() || undefined,
-    nameZh,
-    nameEn,
+    brNo: row.Brn?.trim().slice(0, 32) || undefined,
+    companyType: row.Company_Type?.trim().slice(0, 120) || undefined,
+    nameZh: nameZhRaw?.slice(0, 200),
+    nameEn: nameEnRaw?.slice(0, 200),
     incorporationDate,
     retrievedAt: opts.retrievedAt,
     hints,
@@ -61,6 +66,17 @@ export function ambiguousCrSnapshot(
   return {
     matched: false,
     matchAmbiguous: true,
+    retrievedAt,
+    hints: [],
+    icrisHomeUrl: CR_ESERVICES_URL,
+  };
+}
+
+export function inconclusiveCrSnapshot(
+  retrievedAt: string,
+): import("./types").CrMappedSnapshot {
+  return {
+    matched: false,
     retrievedAt,
     hints: [],
     icrisHomeUrl: CR_ESERVICES_URL,

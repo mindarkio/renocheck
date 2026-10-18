@@ -74,13 +74,13 @@
 | **按名稱** | `key1=Comp_name`, `key2=begins_with`, `key3=<前綴>`（**僅前綴**，唔支援 contains） |
 | **無結果** | HTTP **400**，JSON `{"status":400,"message":"No result found."}` |
 | **Auth** | 無 |
-| **Timeout（產品）** | 5s |
-| **Throttle（產品）** | 全 process ≤1 req/s（`src/lib/cr-register/throttle.ts`） |
+| **Timeout（產品）** | 單次 lookup 總預算 6s（`cr-registry-lookup.ts`） |
+| **Throttle（產品）** | 每個 serverless instance ≤1 req/s（非全域；`throttle.ts` 串行化）。接受理由：DATA.GOV.HK 無全域配額文件，instance 級節流避免單一冷啟動打爆上游。 |
 | **條款** | [DATA.GOV.HK 使用條款及細則](https://data.gov.hk/tc/terms-and-conditions) — **容許商業用途**（須標示來源） |
 
 ### `Brn` 欄位（唔等同稅務局 8 位商業登記號）
 
-`Brn` 係名冊上嘅公司編號，常見格式包括 **`C` + 7 位數字**（例 `C1566911`）或 **8 位數字**（例 `81390375`）。用戶喺 Renocheck 輸入嘅 **稅務局 8 位商業登記號** 與 `Brn` **未必一致**（例 `12345678` → API 400）。**只有**輸入符合 `^C\d{7}$` 時，產品才用 `Brn equal` 查詢；純 8 位稅務局 BR 搜尋 **唔** 呼叫 `Brn equal`，改以公司名稱 `begins_with`（如有）或唔發出會產生 `not_found` 嘅查詢。
+`Brn` 主要係 **8 位數字**，少數係 **`C` + 7 位**；8 位值同稅務局商業登記號頭 8 位係咪一致 **未核實**。產品暫時只對 `^C\d{7}$` 用 `Brn equal`。日後若用 8 位做 `equal`，只可以做正面 match；HTTP 400 **唔可以**觸發 C.2c alert。純稅務局 8 位 BR 搜尋 **唔** 呼叫 `Brn equal`，改以公司名稱 `begins_with`（如有）或唔發出會產生 `not_found` 嘅查詢。
 
 ### `Comp_name` begins_with（中／英）
 

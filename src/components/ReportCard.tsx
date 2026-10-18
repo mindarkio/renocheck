@@ -41,15 +41,18 @@ import {
   REPORT_SCOPE_LIMITS_HEADING_ZH,
   CR_DATA_ATTRIBUTION_ZH,
   CR_LOOKUP_DEGRADED_ZH,
-  MWC_MISS_NOTE_BODY_PARAGRAPHS_ZH,
+  MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH,
+  MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_BODY_PARAGRAPHS_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
   crHintIncorporationUnderOneYearZh,
+  mwcMissNoteBodyParagraphsZh,
 } from "@/lib/report-trust-copy-zh";
 import {
+  shouldShowMwcMissFallbackNote,
   shouldShowMwcMissWithCrFoundNote,
   shouldShowUnverifiedCompanyRegistrationAlert,
 } from "@/lib/unverified-company-registration";
@@ -337,21 +340,17 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const showCrRegistrationAlert =
     shouldShowUnverifiedCompanyRegistrationAlert(report);
   const showMwcMissNote = shouldShowMwcMissWithCrFoundNote(report);
+  const showMwcMissFallbackNote = shouldShowMwcMissFallbackNote(report);
   const showCrLookupDegraded =
     companiesRegistry?.lookupStatus === "error" ||
     companiesRegistry?.lookupStatus === "timeout";
-  const showCrAttribution =
-    companiesRegistry?.lookupStatus === "ok" &&
-    Boolean(
-      companiesRegistry.matched ||
-        companiesRegistry.hints.some(
-          (h) => h === "incorporation_under_one_year",
-        ),
-    );
   const showCrIncorporationHint =
     companiesRegistry?.lookupStatus === "ok" &&
     companiesRegistry.incorporationDate &&
     companiesRegistry.hints.includes("incorporation_under_one_year");
+  const mwcMissNoteParagraphs = mwcMissNoteBodyParagraphsZh(
+    companiesRegistry?.matchTier,
+  );
   const showNonLimitedNotice = shouldShowNonLimitedContractorNotice(report);
   const officialVerifyLinks = buildOfficialVerifyLinks(report);
   const saturation = report.evaluation.dataSaturation;
@@ -406,6 +405,24 @@ export function ReportCard({ report }: { report: RiskReport }) {
           {UNVERIFIED_COMPANY_REGISTRATION_ALERT_BODY_PARAGRAPHS_ZH.map((p) => (
             <p key={p}>{p}</p>
           ))}
+          <p>{MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH}</p>
+          <p className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4">
+            <ReportExternalLink
+              href={BD_MINOR_WORKS_OFFICIAL_URL}
+              className="inline-flex items-center font-medium text-amber-950 underline-offset-2 hover:underline"
+            >
+              {NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH}
+            </ReportExternalLink>
+            <ReportExternalLink
+              href={BD_EXEMPTED_WORKS_URL}
+              className="inline-flex items-center font-medium text-amber-950 underline-offset-2 hover:underline"
+            >
+              {UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH}
+            </ReportExternalLink>
+          </p>
+          <p className="text-amber-900/85 text-xs sm:text-sm">
+            {CR_DATA_ATTRIBUTION_ZH}
+          </p>
           <p className="text-amber-900/90">
             {UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH}
           </p>
@@ -634,7 +651,39 @@ export function ReportCard({ report }: { report: RiskReport }) {
           className="bg-muted/20"
         >
           <div className={`${reportBodyClass} space-y-2`} role="note">
-            {MWC_MISS_NOTE_BODY_PARAGRAPHS_ZH.map((p) => (
+            {mwcMissNoteParagraphs.map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+            <p className="text-muted-foreground text-xs sm:text-sm">
+              {CR_DATA_ATTRIBUTION_ZH}
+            </p>
+            <p className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4">
+              <ReportExternalLink
+                href={BD_MINOR_WORKS_OFFICIAL_URL}
+                className="inline-flex items-center font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH}
+              </ReportExternalLink>
+              <ReportExternalLink
+                href={BD_EXEMPTED_WORKS_URL}
+                className="inline-flex items-center font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH}
+              </ReportExternalLink>
+            </p>
+          </div>
+        </ReportBlock>
+      ) : null}
+
+      {showMwcMissFallbackNote ? (
+        <ReportBlock
+          id="mwc-miss-fallback-heading"
+          icon={Info}
+          title={MWC_MISS_NOTE_HEADING_ZH}
+          className="bg-muted/20"
+        >
+          <div className={`${reportBodyClass} space-y-2`} role="note">
+            {MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH.map((p) => (
               <p key={p}>{p}</p>
             ))}
             <p className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4">
@@ -688,12 +737,9 @@ export function ReportCard({ report }: { report: RiskReport }) {
       {showCrIncorporationHint && companiesRegistry?.incorporationDate ? (
         <p className={`${reportBodyClass} text-muted-foreground`}>
           {crHintIncorporationUnderOneYearZh(companiesRegistry.incorporationDate)}
-        </p>
-      ) : null}
-
-      {showCrAttribution ? (
-        <p className={`${reportMetaClass} text-muted-foreground`}>
-          {CR_DATA_ATTRIBUTION_ZH}
+          <span className="mt-2 block text-xs sm:text-sm">
+            {CR_DATA_ATTRIBUTION_ZH}
+          </span>
         </p>
       ) : null}
 

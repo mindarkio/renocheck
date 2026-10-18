@@ -4,6 +4,7 @@ import { CR_ESERVICES_URL } from "./report-trust-copy-zh";
 import { buildEvaluationStub } from "./evaluation-stub";
 import type { CompaniesRegistryOfficial, RiskReport } from "./report-schema";
 import {
+  shouldShowMwcMissFallbackNote,
   shouldShowMwcMissWithCrFoundNote,
   shouldShowUnverifiedCompanyRegistrationAlert,
 } from "./unverified-company-registration";
@@ -143,6 +144,22 @@ describe("C.2c alert (CR not_found)", () => {
       ),
     ).toBe(false);
   });
+
+  it("does not trigger for non-corporate name (B2)", () => {
+    expect(
+      shouldShowUnverifiedCompanyRegistrationAlert(
+        baseReport({
+          entity: {
+            displayName: "合成裝修工程",
+            matchType: "company_name",
+            queryEcho: "合成裝修工程",
+            searchLabelUsed: "合成裝修工程",
+            nameAlignment: "user_only",
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("MWC miss note (CR matched)", () => {
@@ -162,6 +179,40 @@ describe("MWC miss note (CR matched)", () => {
   it("does not show note when CR not_found", () => {
     expect(
       shouldShowMwcMissWithCrFoundNote(
+        baseReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crBase({
+              matched: false,
+              hints: ["not_found_in_active_list"],
+            }),
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("MWC miss fallback note (L7)", () => {
+  it("shows when CR ambiguous and MWC miss", () => {
+    expect(
+      shouldShowMwcMissFallbackNote(
+        baseReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crBase({
+              matched: false,
+              matchAmbiguous: true,
+            }),
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not show when alert would show", () => {
+    expect(
+      shouldShowMwcMissFallbackNote(
         baseReport({
           official: {
             mwcMatched: false,

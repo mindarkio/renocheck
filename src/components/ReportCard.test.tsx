@@ -14,7 +14,9 @@ import {
   REPORT_SCOPE_LIMITS_HEADING_ZH,
   REPORT_TRUST_FORBIDDEN_ZH,
   REPORT_TRUST_NEGATED_ALLOWLIST_ZH,
+  CR_DATA_ATTRIBUTION_ZH,
   CR_ESERVICES_URL,
+  CR_LOOKUP_DEGRADED_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
 } from "@/lib/report-trust-copy-zh";
@@ -163,18 +165,20 @@ describe("ReportCard legal lookup degraded", () => {
 });
 
 describe("ReportCard report trust (PR-BC)", () => {
-  it("CR not_found + MWC miss：alert 未能核實、六條簽約提問", () => {
+  it("CR not_found + MWC miss：alert、attribution、六條簽約提問", () => {
     const { container } = render(<ReportCard report={minimalReport()} />);
     assertClean(container.textContent ?? "");
     const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain("未能核實此公司註冊");
-    expect(alert.textContent).toContain("公司註冊處");
+    expect(alert.textContent).toContain(
+      UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
+    );
+    expect(alert.textContent).toContain(CR_DATA_ATTRIBUTION_ZH);
     for (const q of DEFAULT_CONTRACT_CHECKLIST_ZH) {
       expect(screen.getByText(q)).toBeTruthy();
     }
   });
 
-  it("CR matched + MWC miss：0 alert、MWC note", () => {
+  it("CR matched + MWC miss：0 alert、MWC note + attribution", () => {
     const { container } = render(
       <ReportCard
         report={minimalReport({
@@ -189,6 +193,36 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText(MWC_MISS_NOTE_HEADING_ZH)).toBeTruthy();
     expect(screen.getByRole("note")).toBeTruthy();
+    expect(container.textContent).toContain(CR_DATA_ATTRIBUTION_ZH);
+  });
+
+  it("MWC matched + CR matched（無 hint）：唔顯示 CR attribution (L1)", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: true,
+            companiesRegistry: crRegistry({ matched: true, hints: [] }),
+          },
+        })}
+      />,
+    );
+    expect(container.textContent ?? "").not.toContain(CR_DATA_ATTRIBUTION_ZH);
+  });
+
+  it("CR degraded：顯示 degraded 文案、冇 alert", () => {
+    render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({ lookupStatus: "error" }),
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText(CR_LOOKUP_DEGRADED_ZH)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("CR ambiguous：0 alert", () => {
