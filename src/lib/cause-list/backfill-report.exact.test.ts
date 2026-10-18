@@ -255,5 +255,14 @@ describe("cause-list backfill rows", () => {
     expect(publicBackfillError(new Error("cdx_failed 2024-11-01 2026-10-17"))).toMatch(
       /^cdx_failed/,
     );
+    expect(publicBackfillError(new Error("robots.txt unavailable (403)"))).toBe(
+      "robots.txt unavailable (403)",
+    );
+    expect(publicBackfillError(new Error("robots.txt unavailable (network)"))).toBe(
+      "robots.txt unavailable (network)",
+    );
+    expect(publicBackfillError(new Error("robots.txt unavailable (redirect)"))).toBe(
+      "robots.txt unavailable (redirect)",
+    );
   });
 });

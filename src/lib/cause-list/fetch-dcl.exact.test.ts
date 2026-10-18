@@ -6,8 +6,25 @@ import {
   FetchFatal,
   fetchDclHtml,
   isPathDisallowedByRobots,
+  loadJudiciaryRobotsPrefixes,
   parseRobotsDisallowPrefixes,
 } from "./fetch-dcl";
+
+const PRIMARY = "https://e-services.judiciary.hk/robots.txt";
+const FALLBACK = "https://www.e-services.judiciary.hk/robots.txt";
+
+function headersOf(values: Record<string, string> = {}) {
+  return { get: (name: string) => values[name.toLowerCase()] ?? null };
+}
+
+function http(status: number, body = "", location?: string) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: headersOf(location ? { location } : {}),
+    text: async () => body,
+  };
+}
 
 describe("robots.txt", () => {
   it("blocks /dcl via prefix disallow", () => {
@@ -56,6 +73,184 @@ describe("robots.txt", () => {
     await expect(
       assertLiveDclRobotsAllowed(buildDclLiveUrl("16102026", "SMT"), "ua-test"),
     ).resolves.toBeUndefined();
+    vi.unstubAllGlobals();
+  });
+
+  it("covers each judiciary robots decision", async () => {
+    const log = vi.fn();
+    const calls = () => vi.mocked(fetch).mock.calls.map((call) => String(call[0]));
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(http(200, "User-agent: *\nDisallow:\n")));
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).resolves.toEqual([]);
+    expect(log).toHaveBeenLastCalledWith({
+      event: "robots_decision",
+      host: "e-services.judiciary.hk",
+      status: 200,
+      result: "parsed",
+    });
+    expect(calls()).toEqual([PRIMARY]);
+
+    log.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(http(200, "User-agent: *\nDisallow: /dcl/view\n")),
+    );
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).resolves.toEqual(["/dcl/view"]);
+    expect(calls()).toEqual([PRIMARY]);
+
+    for (const status of [404, 410]) {
+      log.mockClear();
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(http(status)));
+      await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).resolves.toEqual([]);
+      expect(log).toHaveBeenLastCalledWith({
+        event: "robots_decision",
+        host: "e-services.judiciary.hk",
+        status,
+        result: "allow",
+      });
+      expect(calls()).toEqual([PRIMARY]);
+    }
+
+    for (const status of [401, 403, 429, 400]) {
+      log.mockClear();
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(http(status, "secret-body")));
+      await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).rejects.toThrow(
+        `robots.txt unavailable (${status})`,
+      );
+      expect(log).toHaveBeenLastCalledWith({
+        event: "robots_decision",
+        host: "e-services.judiciary.hk",
+        status,
+        result: "fail_closed",
+      });
+      expect(JSON.stringify(log.mock.calls)).not.toContain("secret-body");
+      expect(calls()).toEqual([PRIMARY]);
+    }
+
+    log.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === PRIMARY) return http(502, "gateway");
+        if (url === FALLBACK) return http(302, "", "/judservice-web/robots.txt");
+        if (url === "https://www.e-services.judiciary.hk/judservice-web/robots.txt") {
+          return http(404);
+        }
+        return http(500);
+      }),
+    );
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).resolves.toEqual([]);
+    expect(log).toHaveBeenLastCalledWith({
+      event: "robots_decision",
+      host: "www.e-services.judiciary.hk",
+      status: 404,
+      result: "allow",
+    });
+    expect(calls()).toEqual([
+      PRIMARY,
+      FALLBACK,
+      "https://www.e-services.judiciary.hk/judservice-web/robots.txt",
+    ]);
+
+    log.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === PRIMARY) return http(503);
+        return http(200, "User-agent: *\nAllow: /\n");
+      }),
+    );
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).resolves.toEqual([]);
+    expect(log).toHaveBeenLastCalledWith({
+      event: "robots_decision",
+      host: "www.e-services.judiciary.hk",
+      status: 200,
+      result: "parsed",
+    });
+
+    log.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === PRIMARY) throw new TypeError("network down");
+        return http(410);
+      }),
+    );
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).resolves.toEqual([]);
+    expect(log).toHaveBeenLastCalledWith({
+      event: "robots_decision",
+      host: "www.e-services.judiciary.hk",
+      status: 410,
+      result: "allow",
+    });
+
+    log.mockClear();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(http(502)));
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).rejects.toThrow(
+      "robots.txt unavailable (5xx)",
+    );
+    expect(log).toHaveBeenLastCalledWith({
+      event: "robots_decision",
+      host: "www.e-services.judiciary.hk",
+      status: 502,
+      result: "fail_closed",
+    });
+    expect(calls()).toEqual([PRIMARY, FALLBACK]);
+
+    log.mockClear();
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).rejects.toThrow(
+      "robots.txt unavailable (network)",
+    );
+    expect(log).toHaveBeenLastCalledWith({
+      event: "robots_decision",
+      host: "www.e-services.judiciary.hk",
+      status: 0,
+      result: "fail_closed",
+    });
+
+    log.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => (url === PRIMARY ? http(500) : http(403, "nope"))),
+    );
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).rejects.toThrow(
+      "robots.txt unavailable (403)",
+    );
+    expect(JSON.stringify(log.mock.calls)).not.toContain("nope");
+
+    log.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === PRIMARY) return http(502);
+        return http(302, "", "https://evil.example/robots.txt");
+      }),
+    );
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).rejects.toThrow(
+      "robots.txt unavailable (redirect)",
+    );
+    expect(calls().some((url) => url.includes("evil.example"))).toBe(false);
+    expect(log).toHaveBeenLastCalledWith({
+      event: "robots_decision",
+      host: "www.e-services.judiciary.hk",
+      status: 302,
+      result: "fail_closed",
+    });
+
+    log.mockClear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === PRIMARY) return http(502);
+        return http(302, "", `${url}#next`);
+      }),
+    );
+    await expect(loadJudiciaryRobotsPrefixes("ua-test", log)).rejects.toThrow(
+      "robots.txt unavailable (redirect)",
+    );
+    expect(calls().filter((url) => url.startsWith(FALLBACK))).toHaveLength(4);
+
     vi.unstubAllGlobals();
   });
 
