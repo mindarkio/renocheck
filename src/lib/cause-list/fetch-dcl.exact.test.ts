@@ -497,16 +497,27 @@ describe("robots.txt", () => {
   });
 
   it("treats an HTML 200 without a robots record as a 5xx", async () => {
+    const log = vi.fn();
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(http(200, "<html>…", undefined, "text/html")),
     );
-    await expect(assertLiveDclRobotsAllowed(live, "ua-test")).rejects.toThrow(
+    await expect(assertLiveDclRobotsAllowed(live, "ua-test", log)).rejects.toThrow(
       "robots.txt unavailable (5xx)",
     );
     expect(calls()).toEqual([PRIMARY]);
+    expect(log).toHaveBeenLastCalledWith({
+      event: "robots_decision",
+      host: "e-services.judiciary.hk",
+      status: 200,
+      reason: "html_not_robots",
+      result: "fail_closed",
+      appliedTo: "e-services.judiciary.hk",
+      basis: "primary",
+    });
     vi.unstubAllGlobals();
 
+    log.mockClear();
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
@@ -515,9 +526,45 @@ describe("robots.txt", () => {
       }),
     );
     await expect(
-      loadJudiciaryRobotsPrefixes("ua-test", undefined, { allowFallback: true }),
+      loadJudiciaryRobotsPrefixes("ua-test", log, { allowFallback: true }),
     ).resolves.toEqual([]);
     expect(calls()).toEqual([PRIMARY, FALLBACK]);
+    expect(log).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        primaryStatus: 200,
+        primaryReason: "html_not_robots",
+        basis: "fallback_host",
+      }),
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it("logs the robots basis from assertCauseListFetchAllowed", async () => {
+    const log = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === PRIMARY) return http(502);
+        if (url === FALLBACK) return http(404);
+        return http(200, "User-agent: *\n");
+      }),
+    );
+    await expect(
+      assertCauseListFetchAllowed(live, "ua-test", waybackOf(), log),
+    ).resolves.toBeUndefined();
+    expect(log).toHaveBeenLastCalledWith(
+      expect.objectContaining({ basis: "fallback_host", primaryStatus: 502 }),
+    );
+    vi.unstubAllGlobals();
+
+    log.mockClear();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(http(502)));
+    await expect(assertCauseListFetchAllowed(live, "ua-test", undefined, log)).rejects.toThrow(
+      "robots.txt unavailable (5xx)",
+    );
+    expect(log).toHaveBeenLastCalledWith(
+      expect.objectContaining({ result: "fail_closed", basis: "primary", status: 502 }),
+    );
     vi.unstubAllGlobals();
   });
 

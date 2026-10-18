@@ -30,8 +30,8 @@
 4. **來源標示（再使用）**：報告或對外說明引用名冊摘錄時，須標示：**資料來源：屋宇署，經 DATA.GOV.HK 提供**／**Source: Buildings Department, via DATA.GOV.HK**（並註明擷取日期，見 `.cache/bd-register/registers_full_list.meta.json` 的 `retrieved_at`）。
 5. **`FLAG` 欄**（見官方 data dictionary）：其他字元存為 `flag`；值 **`@` = 已申請續期**（過咗 `EXPIRY_DATE` 仍視為有效直至處理完成），解析為 `renewalPending: true`（唔寫入 `flag`）。真名冊約 **148** 行為 `@`。
 6. **HTTP 下載**：`pnpm bd-register:fetch` 使用 `Accept: text/csv`、120s timeout、binary 寫檔；收到非 CSV（例如 403 XML）**唔**寫入 `.cache/`。部分海外出口曾見 **403 AccessDenied**；須在**香港網絡**驗證 PSI URL 可用性（本 repo 未鎖定「已確認可用」日期，以營運 fetch 成功為準）。
-7. **`robots.txt`**：`checkRobotsAllowsFetch` 若 `robots.txt` 本身返非 2xx（例如 403），行為同 cause-list：**視為允許**繼續 fetch，避免因 robots 端點封鎖而誤判。
-8. Judiciary robots：主域 e-services.judiciary.hk/robots.txt 5xx／網絡錯誤時，只限 Wayback backfill 改看 www.e-services.judiciary.hk（最多 3 次同 host redirect）；live 抓取一律以主域為準（RFC 9309 §2.3.1.4）。批准：Aaron 2026-10-18。主域恢復後即以主域為準。
+7. **`robots.txt`**：BD 嘅 checkRobotsAllowsFetch 遇到 robots.txt 非 2xx（例如 403）仍然視為允許；Judiciary cause-list 規則唔同，見第 8 點。
+8. Judiciary robots：主域 e-services.judiciary.hk/robots.txt 5xx／網絡錯誤時，只限 Wayback backfill 改看 www.e-services.judiciary.hk（最多 3 次 redirect，只准 https、預設 port、e-services.judiciary.hk／www.e-services.judiciary.hk 兩個 host）；live 抓取一律以主域為準（RFC 9309 §2.3.1.4）。批准：Aaron 2026-10-18。主域恢復後即以主域為準。
 
 ## 本地副本（gitignored）
 

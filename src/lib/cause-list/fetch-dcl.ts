@@ -70,7 +70,7 @@ type RobotsFetchResponse = {
 };
 
 type RobotsHop =
-  | { kind: "done"; status: number; body: string; host: string }
+  | { kind: "done"; status: number; body: string; host: string; reason?: "html_not_robots" }
   | { kind: "network"; host: string }
   | { kind: "bad_redirect"; status: number; host: string };
 
@@ -156,7 +156,7 @@ async function fetchRobotsUrl(startUrl: string, userAgent: string): Promise<Robo
       return { kind: "network", host };
     }
     if (isHtmlRobotsImposter(res, body)) {
-      return { kind: "done", status: 502, body: "", host };
+      return { kind: "done", status: res.status, body: "", host, reason: "html_not_robots" };
     }
     return { kind: "done", status: res.status, body, host };
   }
@@ -170,13 +170,14 @@ function robotsUnavailable(status: number | "network" | "redirect"): Error {
 }
 
 type RobotsClass =
-  | { action: "prefixes"; prefixes: string[]; host: string; status: number }
-  | { action: "allow"; host: string; status: number }
+  | { action: "prefixes"; prefixes: string[]; host: string; status: number; reason?: "html_not_robots" }
+  | { action: "allow"; host: string; status: number; reason?: "html_not_robots" }
   | { action: "fallback" }
-  | { action: "fail"; host: string; status: number; error: Error };
+  | { action: "fail"; host: string; status: number; error: Error; reason?: "html_not_robots" };
 
 function classifyRobotsHop(hop: RobotsHop): RobotsClass {
   if (hop.kind === "network") return { action: "fallback" };
+  if (hop.kind === "done" && hop.reason === "html_not_robots") return { action: "fallback" };
   if (hop.kind === "bad_redirect") {
     return {
       action: "fail",
@@ -207,10 +208,12 @@ function classifyRobotsHop(hop: RobotsHop): RobotsClass {
 
 type SettledRobots = Exclude<RobotsClass, { action: "fallback" }>;
 
-type DecisionMeta = { basis: "primary" } | { basis: "fallback_host"; primaryStatus: number };
+type DecisionMeta =
+  | { basis: "primary" }
+  | { basis: "fallback_host"; primaryStatus: number; primaryReason?: "html_not_robots" };
 
 function decisionEvent(
-  classified: { host: string; status: number },
+  classified: { host: string; status: number; reason?: "html_not_robots" },
   result: "parsed" | "allow" | "fail_closed",
   meta: DecisionMeta,
 ): Record<string, string | number> {
@@ -222,7 +225,11 @@ function decisionEvent(
     appliedTo: APPLIED_TO_HOST,
     basis: meta.basis,
   };
-  if (meta.basis === "fallback_host") event.primaryStatus = meta.primaryStatus;
+  if (classified.reason) event.reason = classified.reason;
+  if (meta.basis === "fallback_host") {
+    event.primaryStatus = meta.primaryStatus;
+    if (meta.primaryReason) event.primaryReason = meta.primaryReason;
+  }
   return event;
 }
 
@@ -266,6 +273,15 @@ function failClosed(hop: RobotsHop): SettledRobots {
       error: robotsUnavailable("redirect"),
     };
   }
+  if (hop.reason === "html_not_robots") {
+    return {
+      action: "fail",
+      host: hop.host,
+      status: hop.status,
+      reason: hop.reason,
+      error: robotsUnavailable(500),
+    };
+  }
   if (hop.status >= 500) {
     return {
       action: "fail",
@@ -301,7 +317,11 @@ export async function loadJudiciaryRobotsPrefixes(
 
   const fallbackHop = await fetchRobotsUrl(JUDICIARY_ROBOTS_FALLBACK, userAgent);
   const fallback = classifyRobotsHop(fallbackHop);
-  const meta: DecisionMeta = { basis: "fallback_host", primaryStatus };
+  const meta: DecisionMeta = {
+    basis: "fallback_host",
+    primaryStatus,
+    ...(primaryHop.kind === "done" && primaryHop.reason ? { primaryReason: primaryHop.reason } : {}),
+  };
   if (fallback.action === "fallback") return settleRobots(failClosed(fallbackHop), log, meta);
   return settleRobots(fallback, log, meta);
 }
@@ -354,8 +374,9 @@ export async function assertCauseListFetchAllowed(
   liveUrl: string,
   userAgent: string,
   waybackRequestUrl?: string,
+  log?: RobotsDecisionLogger,
 ): Promise<void> {
-  await assertLiveDclRobotsAllowed(liveUrl, userAgent, undefined, {
+  await assertLiveDclRobotsAllowed(liveUrl, userAgent, log, {
     allowFallback: Boolean(waybackRequestUrl),
   });
   if (!waybackRequestUrl) return;
