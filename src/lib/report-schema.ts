@@ -110,6 +110,31 @@ export const evaluationSchema = z.object({
 
 export type Evaluation = z.infer<typeof evaluationSchema>;
 
+export const companiesRegistryHintSchema = z.enum([
+  "incorporation_under_one_year",
+  "not_found_in_active_list",
+]);
+
+export const companiesRegistrySchema = z.object({
+  lookupStatus: z.enum(["ok", "error", "timeout", "skipped"]),
+  matched: z.boolean().optional(),
+  matchAmbiguous: z.boolean().optional(),
+  matchTier: z.enum(["A", "B", "C"]).optional(),
+  brNo: z.string().max(32).optional(),
+  companyType: z.string().max(120).optional(),
+  nameZh: z.string().max(200).optional(),
+  nameEn: z.string().max(200).optional(),
+  incorporationDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  retrievedAt: z.string().datetime(),
+  hints: z.array(companiesRegistryHintSchema),
+  icrisHomeUrl: z.string().url(),
+});
+
+export type CompaniesRegistryOfficial = z.infer<typeof companiesRegistrySchema>;
+
 const riskReportBaseSchema = z.object({
   reportVersion: z.string().min(1),
   entity: z.object({
@@ -149,6 +174,8 @@ const riskReportBaseSchema = z.object({
     legalRegistryAsOf: z.string().datetime().optional(),
     /** Set when Track 1 lookup ran; error/timeout → UI degraded message */
     legalLookupStatus: z.enum(["ok", "error", "timeout"]).optional(),
+    /** PR-CR: Companies Registry open data (company-level only; no personal names) */
+    companiesRegistry: companiesRegistrySchema.optional(),
   }),
   signals: z.object({
     discussionCount: z.number().int().nonnegative(),
