@@ -4,32 +4,12 @@ import {
 } from "../cause-list/normalize";
 import type { CrApiLocalRow } from "./types";
 
-export function buildNameSearchPrefixes(label: string): string[] {
-  const trimmed = label.trim();
-  if (!trimmed) return [];
-  const hasCjk = /[\u4e00-\u9fff]/u.test(trimmed);
-  const hasLatin = /[A-Za-z]/.test(trimmed);
-  const prefixes: string[] = [];
-  if (hasCjk) {
-    const zh = normalizeChineseCompanyName(trimmed);
-    const core = zh.normCore || zh.normStrict;
-    if (core.length >= 2) {
-      prefixes.push(core.slice(0, Math.min(8, core.length)));
-    }
-    const strict = zh.normStrict;
-    if (strict.length >= 2 && strict !== core) {
-      prefixes.push(strict.slice(0, Math.min(8, strict.length)));
-    }
-  }
-  if (hasLatin) {
-    const en = normalizeEnglishCompanyName(trimmed);
-    const core = en.normCore || en.normStrict;
-    if (core.length >= 2) {
-      prefixes.push(core.slice(0, Math.min(12, core.length)));
-    }
-  }
-  return [...new Set(prefixes)];
-}
+export {
+  allNameSearchPrefixAttempts,
+  buildNameSearchPrefixes,
+} from "./prefix";
+
+const TIER_RANK: Record<"A" | "B" | "C", number> = { A: 0, B: 1, C: 2 };
 
 function rowDisplayNames(row: CrApiLocalRow): { zh: string; en: string } {
   const zh =
@@ -42,7 +22,7 @@ function rowDisplayNames(row: CrApiLocalRow): { zh: string; en: string } {
   return { zh, en };
 }
 
-function tierForRow(
+export function tierForRow(
   row: CrApiLocalRow,
   searchLabel: string,
 ): "A" | "B" | "C" | null {
@@ -72,15 +52,24 @@ export function pickMatchedRows(
   rows: CrApiLocalRow[],
   searchLabel: string,
 ): { tier: "A" | "B" | "C"; row: CrApiLocalRow } | "ambiguous" | null {
+  if (rows.length >= 100) {
+    const hasB = rows.some((r) => tierForRow(r, searchLabel) === "B");
+    if (!hasB) return null;
+  }
+
   const hits: { tier: "A" | "B" | "C"; row: CrApiLocalRow }[] = [];
   for (const row of rows) {
     const tier = tierForRow(row, searchLabel);
     if (tier) hits.push({ tier, row });
   }
   if (hits.length === 0) return null;
-  if (hits.length > 1) {
-    const brns = new Set(hits.map((h) => h.row.Brn));
-    if (brns.size > 1) return "ambiguous";
-  }
-  return hits[0]!;
+
+  const bestRank = Math.min(...hits.map((h) => TIER_RANK[h.tier]));
+  const bestTier = (["A", "B", "C"] as const).find(
+    (t) => TIER_RANK[t] === bestRank,
+  )!;
+  const atBest = hits.filter((h) => h.tier === bestTier);
+  const brns = new Set(atBest.map((h) => h.row.Brn));
+  if (brns.size > 1) return "ambiguous";
+  return atBest[0]!;
 }

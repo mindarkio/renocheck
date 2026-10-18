@@ -1,3 +1,5 @@
+import { isCorporateEntityName } from "./cause-list/party";
+import { shouldShowNonLimitedContractorNotice } from "./non-limited-contractor-notice";
 import type { RiskReport } from "./report-schema";
 import { isReportLegalLookupDegraded } from "./search-cache";
 
@@ -29,11 +31,11 @@ function baseC2cBlockers(report: RiskReport): boolean {
   const label = report.entity.searchLabelUsed.trim();
   if (report.entity.matchType === "br" && !/\p{L}/u.test(label)) return true;
   const cr = report.official.companiesRegistry;
+  if (!cr) return true;
   if (
-    cr &&
-    (cr.lookupStatus === "error" ||
-      cr.lookupStatus === "timeout" ||
-      cr.lookupStatus === "skipped")
+    cr.lookupStatus === "error" ||
+    cr.lookupStatus === "timeout" ||
+    cr.lookupStatus === "skipped"
   ) {
     return true;
   }
@@ -41,23 +43,41 @@ function baseC2cBlockers(report: RiskReport): boolean {
   return false;
 }
 
-/** C.2c alert：CR API 400 not_found + MWC miss（Amendment 18 + PR-CR） */
+/** C.2c alert：CR API 400 not_found + MWC miss */
 export function shouldShowUnverifiedCompanyRegistrationAlert(
   report: RiskReport,
 ): boolean {
+  if (!isCorporateEntityName(report.entity.searchLabelUsed.trim())) {
+    return false;
+  }
   if (baseC2cBlockers(report)) return false;
   if (!crLookupOkForC2c(report)) return false;
   if (!crNotFoundInActiveList(report)) return false;
   return true;
 }
 
-/** MWC miss + CR 已查到 → note（唔用 alert） */
+/** MWC miss + CR 已查到（名稱對得上）→ note */
 export function shouldShowMwcMissWithCrFoundNote(
   report: RiskReport,
 ): boolean {
+  if (shouldShowNonLimitedContractorNotice(report)) return false;
   if (baseC2cBlockers(report)) return false;
   if (!crMatched(report)) return false;
   return !report.official.mwcMatched;
+}
+
+/** CR inconclusive + MWC miss → PR #13 fallback note */
+export function shouldShowMwcMissFallbackNote(report: RiskReport): boolean {
+  if (report.official.mwcMatched) return false;
+  if (isReportLegalLookupDegraded(report)) return false;
+  if ((report.official.legalEvents ?? []).length > 0) return false;
+  if (shouldShowUnverifiedCompanyRegistrationAlert(report)) return false;
+  if (shouldShowMwcMissWithCrFoundNote(report)) return false;
+  if (shouldShowNonLimitedContractorNotice(report)) return false;
+  const cr = report.official.companiesRegistry;
+  if (!cr || cr.lookupStatus !== "ok") return false;
+  if (cr.hints.includes("not_found_in_active_list")) return false;
+  return cr.matchAmbiguous === true || cr.matched === false;
 }
 
 /** @deprecated use shouldShowUnverifiedCompanyRegistrationAlert */
