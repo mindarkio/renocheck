@@ -8,6 +8,7 @@ import type { RiskReport } from "@/lib/report-schema";
 import { LEGAL_LOOKUP_DEGRADED_SECTION_ZH } from "@/lib/legal-event-display";
 import {
   DEFAULT_CONTRACT_CHECKLIST_ZH,
+  LEGAL_EVENT_SOURCE_LINK_LABEL_ZH,
   NEXT_STEPS_HEADING_ZH,
   NON_LIMITED_NOTICE_HEADING_ZH,
   REPORT_SCOPE_LIMITS_HEADING_ZH,
@@ -18,6 +19,17 @@ import {
 } from "@/lib/report-trust-copy-zh";
 import { summaryZhForLegalLookupDegraded } from "@/lib/search-pipeline-legal-summary";
 
+const REPORT_TRUST_BANNED_SUBSTRINGS_ZH = [
+  "刊憲",
+  "數日",
+  "小型申索",
+  "觸犯",
+  "LRS",
+  "傢俬",
+  "授權前",
+  "匿名條數",
+] as const;
+
 function assertClean(text: string): void {
   let t = text;
   for (const ok of REPORT_TRUST_NEGATED_ALLOWLIST_ZH) {
@@ -25,6 +37,9 @@ function assertClean(text: string): void {
   }
   for (const w of REPORT_TRUST_FORBIDDEN_ZH) {
     expect(t).not.toContain(w);
+  }
+  for (const s of REPORT_TRUST_BANNED_SUBSTRINGS_ZH) {
+    expect(t).not.toContain(s);
   }
 }
 
@@ -196,5 +211,6 @@ describe("ReportCard report trust (PR-BC)", () => {
     );
     assertClean(container.textContent ?? "");
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText(LEGAL_EVENT_SOURCE_LINK_LABEL_ZH)).toBeTruthy();
   });
 });

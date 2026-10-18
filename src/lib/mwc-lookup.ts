@@ -17,7 +17,7 @@ export type MwcLookupResult = {
 };
 
 function throwIfMwcLookupFailed(error: { message: string } | null): void {
-  if (error) throw new Error("mwc_lookup_failed");
+  if (error) throw new Error("mwc_lookup_failed", { cause: error });
 }
 
 export async function lookupMwcWithMeta(

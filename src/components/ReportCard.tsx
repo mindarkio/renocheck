@@ -27,6 +27,7 @@ import {
   DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH,
   DAILY_CAUSE_LIST_SELF_SERVICE_HEADING_ZH,
   JUDICIARY_DAILY_CAUSE_LIST_URL,
+  LEGAL_EVENT_SOURCE_LINK_LABEL_ZH,
   NEXT_STEPS_HEADING_ZH,
   NEXT_STEPS_INTRO_ZH,
   NEXT_STEPS_ITEMS,
@@ -743,15 +744,12 @@ export function ReportCard({ report }: { report: RiskReport }) {
                       </ul>
                     </>
                   ) : null}
-                  <a
+                  <ReportExternalLink
                     href={ev.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 hover:underline"
+                    className="mt-2 inline-flex items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
                   >
-                    <ExternalLink className="size-3.5 shrink-0" aria-hidden />
-                    司法機構刊憲連結
-                  </a>
+                    {LEGAL_EVENT_SOURCE_LINK_LABEL_ZH}
+                  </ReportExternalLink>
                   <p className={`mt-1.5 ${reportMetaClass}`}>
                     {ev.matchReasonZh}
                   </p>

@@ -35,10 +35,10 @@ export const LEGAL_EVENTS_EMPTY_ZH =
   "已檢索本次匯入的公開判詞紀錄；未見與查證對象對照之紀錄。此結果並不表示該方從未涉及司法程序。";
 
 export const LEGAL_EVENTS_SCOPE_ZH =
-  "以下為本次已匯入的公開判詞要點摘要，並附官方或刊憲連結；並非完整案情或法律意見。";
+  "以下為本次已匯入的公開判詞要點摘要，並附司法機構官方連結；並非完整案情或法律意見。";
 
 export const LEGAL_EVENTS_FACTS_ONLY_ZH =
-  "以下列出與查證對象對照之刊憲紀錄（案號、法院、日期、訴訟角色）及官方連結；聆訊要點待人手覆核前不顯示摘要內容。";
+  "以下列出與查證對象對照之公開判詞紀錄（案號、法院、日期、訴訟角色）及官方連結；聆訊要點待人手覆核前不顯示摘要內容。";
 
 /** Shown when hearing points are LLM-derived (DEC-0012). */
 export const LEGAL_EVENTS_AUTO_SUMMARY_ZH =
