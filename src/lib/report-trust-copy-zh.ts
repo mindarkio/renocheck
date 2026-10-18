@@ -175,6 +175,22 @@ export const MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH: readonly string[] = [
   MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
 ];
 
+export const MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH =
+  "今次查過公司註冊處存續本地公司開放數據，但未能確定對應嘅公司紀錄；屋宇署註冊小型工程承建商名冊亦未有對應紀錄。";
+
+export function mwcMissFallbackBodyParagraphsZh(
+  lookupStatus?: string,
+): readonly string[] {
+  if (lookupStatus === "ok") {
+    return [
+      MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[0],
+      MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH,
+      MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
+    ];
+  }
+  return MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH;
+}
+
 export function mwcMissNoteBodyParagraphsZh(
   matchTier?: "A" | "B" | "C",
 ): readonly string[] {
@@ -258,6 +274,7 @@ export function collectReportTrustCopyStrings(): string[] {
     ...MWC_MISS_NOTE_BODY_PARAGRAPHS_ZH,
     MWC_MISS_NOTE_CR_SIMILAR_ZH,
     ...MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH,
+    MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH,
     CR_DATA_ATTRIBUTION_ZH,
     crHintIncorporationUnderOneYearZh("2026-01-01"),
     CR_LOOKUP_DEGRADED_ZH,

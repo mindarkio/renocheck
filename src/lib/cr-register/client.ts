@@ -116,6 +116,7 @@ async function fetchLocalSearch(
     } catch (e) {
       const msg = e instanceof Error ? e.name : "fetch_failed";
       if (msg === "TimeoutError" || msg === "AbortError") {
+        recordCrApiFailure(0);
         return { kind: "error" as const, message: "timeout" };
       }
       recordCrApiFailure(0);

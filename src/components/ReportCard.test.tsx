@@ -17,6 +17,8 @@ import {
   CR_DATA_ATTRIBUTION_ZH,
   CR_ESERVICES_URL,
   CR_LOOKUP_DEGRADED_ZH,
+  MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH,
+  MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH,
   MWC_MISS_NOTE_CR_SIMILAR_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
@@ -227,7 +229,7 @@ describe("ReportCard report trust (PR-BC)", () => {
   });
 
   it("CR timeout：degraded + fallback note（L-c）", () => {
-    render(
+    const { container } = render(
       <ReportCard
         report={minimalReport({
           official: {
@@ -238,9 +240,16 @@ describe("ReportCard report trust (PR-BC)", () => {
         })}
       />,
     );
+    assertClean(container.textContent ?? "");
     expect(screen.getByText(CR_LOOKUP_DEGRADED_ZH)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText(MWC_MISS_NOTE_HEADING_ZH)).toBeTruthy();
+    expect(
+      screen.getByText(MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[1]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH),
+    ).toBeNull();
   });
 
   it("tier C match shows MWC_MISS_NOTE_CR_SIMILAR_ZH (L-T)", () => {
@@ -261,13 +270,14 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(screen.getByText(MWC_MISS_NOTE_CR_SIMILAR_ZH)).toBeTruthy();
   });
 
-  it("CR ambiguous：0 alert", () => {
-    render(
+  it("CR ambiguous + MWC miss：inconclusive fallback copy（c-L1）", () => {
+    const { container } = render(
       <ReportCard
         report={minimalReport({
           official: {
             mwcMatched: false,
             companiesRegistry: crRegistry({
+              lookupStatus: "ok",
               matched: false,
               matchAmbiguous: true,
               hints: [],
@@ -276,7 +286,42 @@ describe("ReportCard report trust (PR-BC)", () => {
         })}
       />,
     );
+    assertClean(container.textContent ?? "");
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText(MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH)).toBeTruthy();
+    expect(
+      screen.queryByText(MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[1]),
+    ).toBeNull();
+  });
+
+  it("CR skipped（phone）：fallback 用原句（c-L1）", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          entity: {
+            displayName: "91234567",
+            matchType: "phone",
+            queryEcho: "91234567",
+            searchLabelUsed: "91234567",
+            nameAlignment: "user_only",
+          },
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({
+              lookupStatus: "skipped",
+              hints: [],
+            }),
+          },
+        })}
+      />,
+    );
+    assertClean(container.textContent ?? "");
+    expect(
+      screen.getByText(MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[1]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH),
+    ).toBeNull();
   });
 
   it("非有限公司：note 非 alert", () => {

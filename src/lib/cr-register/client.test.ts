@@ -148,6 +148,24 @@ describe("searchCrLocalByNameBeginsWith", () => {
     vi.useRealTimers();
   });
 
+  it("three consecutive upstream timeouts open circuit (c-L3)", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockImplementation(() => {
+      const err = new Error("The operation was aborted");
+      err.name = "AbortError";
+      return Promise.reject(err);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    for (let i = 0; i < 3; i++) {
+      await searchCrLocalByNameBeginsWith(`t${i}`);
+      vi.advanceTimersByTime(1100);
+    }
+    const blocked = await searchCrLocalByNameBeginsWith("blocked");
+    expect(blocked).toEqual({ kind: "error", message: "circuit_open" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+  });
+
   it("aborted signal → timeout without counting as failure (L-a)", async () => {
     const controller = new AbortController();
     controller.abort();

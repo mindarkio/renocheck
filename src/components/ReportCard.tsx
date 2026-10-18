@@ -41,7 +41,7 @@ import {
   REPORT_SCOPE_LIMITS_HEADING_ZH,
   CR_DATA_ATTRIBUTION_ZH,
   CR_LOOKUP_DEGRADED_ZH,
-  MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH,
+  mwcMissFallbackBodyParagraphsZh,
   MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_BODY_PARAGRAPHS_ZH,
@@ -683,7 +683,9 @@ export function ReportCard({ report }: { report: RiskReport }) {
           className="bg-muted/20"
         >
           <div className={`${reportBodyClass} space-y-2`} role="note">
-            {MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH.map((p) => (
+            {mwcMissFallbackBodyParagraphsZh(
+              companiesRegistry?.lookupStatus,
+            ).map((p) => (
               <p key={p}>{p}</p>
             ))}
             <p className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4">
