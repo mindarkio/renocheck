@@ -34,16 +34,28 @@ import {
   NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH,
   NON_LIMITED_CONTRACTOR_NOTICE_ZH,
   NON_LIMITED_NOTICE_HEADING_ZH,
+  OFFICIAL_VERIFY_LINK_LABELS,
   OFFICIAL_VERIFY_SECTION_HEADING_ZH,
   REPORT_SCOPE_LIMITS_BULLETS_ZH,
   REPORT_SCOPE_LIMITS_CLOSING_ZH,
   REPORT_SCOPE_LIMITS_HEADING_ZH,
-  UNVERIFIED_COMPANY_REGISTRATION_BODY_PARAGRAPHS_ZH,
+  CR_DATA_ATTRIBUTION_ZH,
+  CR_LOOKUP_DEGRADED_ZH,
+  mwcMissFallbackBodyParagraphsZh,
+  MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
+  MWC_MISS_NOTE_HEADING_ZH,
+  UNVERIFIED_COMPANY_REGISTRATION_ALERT_BODY_PARAGRAPHS_ZH,
+  UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,
-  UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
+  crHintIncorporationUnderOneYearZh,
+  mwcMissNoteBodyParagraphsZh,
 } from "@/lib/report-trust-copy-zh";
-import { shouldShowUnverifiedCompanyRegistrationMode } from "@/lib/unverified-company-registration";
+import {
+  shouldShowMwcMissFallbackNote,
+  shouldShowMwcMissWithCrFoundNote,
+  shouldShowUnverifiedCompanyRegistrationAlert,
+} from "@/lib/unverified-company-registration";
 import {
   judgmentCategoryLabelZh,
   LEGAL_EVENTS_AI_VERIFIED_ZH,
@@ -324,8 +336,21 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const highlights = report.signals.highlights ?? [];
   const contractQuestions = DEFAULT_CONTRACT_CHECKLIST_ZH;
   const actionable = report.signals.actionableClauses ?? [];
-  const showUnverifiedRegistration =
-    shouldShowUnverifiedCompanyRegistrationMode(report);
+  const companiesRegistry = report.official.companiesRegistry;
+  const showCrRegistrationAlert =
+    shouldShowUnverifiedCompanyRegistrationAlert(report);
+  const showMwcMissNote = shouldShowMwcMissWithCrFoundNote(report);
+  const showMwcMissFallbackNote = shouldShowMwcMissFallbackNote(report);
+  const showCrLookupDegraded =
+    companiesRegistry?.lookupStatus === "error" ||
+    companiesRegistry?.lookupStatus === "timeout";
+  const showCrIncorporationHint =
+    companiesRegistry?.lookupStatus === "ok" &&
+    companiesRegistry.incorporationDate &&
+    companiesRegistry.hints.includes("incorporation_under_one_year");
+  const mwcMissNoteParagraphs = mwcMissNoteBodyParagraphsZh(
+    companiesRegistry?.matchTier,
+  );
   const showNonLimitedNotice = shouldShowNonLimitedContractorNotice(report);
   const officialVerifyLinks = buildOfficialVerifyLinks(report);
   const saturation = report.evaluation.dataSaturation;
@@ -364,7 +389,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
 
   return (
     <div className="space-y-4 text-left">
-    {showUnverifiedRegistration ? (
+    {showCrRegistrationAlert ? (
       <div
         className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm sm:px-5 sm:py-5"
         role="alert"
@@ -374,25 +399,29 @@ export function ReportCard({ report }: { report: RiskReport }) {
           id="unverified-registration-heading"
           className="text-base font-semibold leading-snug sm:text-lg"
         >
-          {UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH}
+          {UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH}
         </h2>
         <div className="mt-3 space-y-2 text-sm leading-[1.65] sm:text-[15px]">
-          {UNVERIFIED_COMPANY_REGISTRATION_BODY_PARAGRAPHS_ZH.map((p) => (
+          {UNVERIFIED_COMPANY_REGISTRATION_ALERT_BODY_PARAGRAPHS_ZH.map((p) => (
             <p key={p}>{p}</p>
           ))}
+          <p>{MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH}</p>
           <p className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4">
             <ReportExternalLink
               href={BD_MINOR_WORKS_OFFICIAL_URL}
-              className="inline-flex items-center font-medium text-amber-950 underline underline-offset-2"
+              className="inline-flex items-center font-medium text-amber-950 underline-offset-2 hover:underline"
             >
               {NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH}
             </ReportExternalLink>
             <ReportExternalLink
               href={BD_EXEMPTED_WORKS_URL}
-              className="inline-flex items-center font-medium text-amber-950 underline underline-offset-2"
+              className="inline-flex items-center font-medium text-amber-950 underline-offset-2 hover:underline"
             >
               {UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH}
             </ReportExternalLink>
+          </p>
+          <p className="text-amber-900/85 text-xs sm:text-sm">
+            {CR_DATA_ATTRIBUTION_ZH}
           </p>
           <p className="text-amber-900/90">
             {UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH}
@@ -614,6 +643,69 @@ export function ReportCard({ report }: { report: RiskReport }) {
         </p>
       </header>
 
+      {showMwcMissNote ? (
+        <ReportBlock
+          id="mwc-miss-note-heading"
+          icon={Info}
+          title={MWC_MISS_NOTE_HEADING_ZH}
+          className="bg-muted/20"
+        >
+          <div className={`${reportBodyClass} space-y-2`} role="note">
+            {mwcMissNoteParagraphs.map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+            <p className="text-muted-foreground text-xs sm:text-sm">
+              {CR_DATA_ATTRIBUTION_ZH}
+            </p>
+            <p className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4">
+              <ReportExternalLink
+                href={BD_MINOR_WORKS_OFFICIAL_URL}
+                className="inline-flex items-center font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH}
+              </ReportExternalLink>
+              <ReportExternalLink
+                href={BD_EXEMPTED_WORKS_URL}
+                className="inline-flex items-center font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH}
+              </ReportExternalLink>
+            </p>
+          </div>
+        </ReportBlock>
+      ) : null}
+
+      {showMwcMissFallbackNote ? (
+        <ReportBlock
+          id="mwc-miss-fallback-heading"
+          icon={Info}
+          title={MWC_MISS_NOTE_HEADING_ZH}
+          className="bg-muted/20"
+        >
+          <div className={`${reportBodyClass} space-y-2`} role="note">
+            {mwcMissFallbackBodyParagraphsZh(
+              companiesRegistry?.lookupStatus,
+            ).map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+            <p className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-4">
+              <ReportExternalLink
+                href={BD_MINOR_WORKS_OFFICIAL_URL}
+                className="inline-flex items-center font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH}
+              </ReportExternalLink>
+              <ReportExternalLink
+                href={BD_EXEMPTED_WORKS_URL}
+                className="inline-flex items-center font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH}
+              </ReportExternalLink>
+            </p>
+          </div>
+        </ReportBlock>
+      ) : null}
+
       {showNonLimitedNotice ? (
         <ReportBlock
           id="non-limited-notice-heading"
@@ -625,6 +717,32 @@ export function ReportCard({ report }: { report: RiskReport }) {
             <p>{NON_LIMITED_CONTRACTOR_NOTICE_ZH}</p>
           </div>
         </ReportBlock>
+      ) : null}
+
+      {showCrLookupDegraded ? (
+        <div
+          className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-sm text-muted-foreground"
+          role="status"
+        >
+          <p>{CR_LOOKUP_DEGRADED_ZH}</p>
+          <p className="mt-2">
+            <ReportExternalLink
+              href={companiesRegistry!.icrisHomeUrl}
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {OFFICIAL_VERIFY_LINK_LABELS.icris}
+            </ReportExternalLink>
+          </p>
+        </div>
+      ) : null}
+
+      {showCrIncorporationHint && companiesRegistry?.incorporationDate ? (
+        <p className={`${reportBodyClass} text-muted-foreground`}>
+          {crHintIncorporationUnderOneYearZh(companiesRegistry.incorporationDate)}
+          <span className="mt-2 block text-xs sm:text-sm">
+            {CR_DATA_ATTRIBUTION_ZH}
+          </span>
+        </p>
       ) : null}
 
       {showLegalEvents ? (

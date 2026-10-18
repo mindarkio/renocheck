@@ -143,15 +143,83 @@ export const NON_LIMITED_NOTICE_HEADING_ZH = "非有限公司提示";
 export const NON_LIMITED_CONTRACTOR_NOTICE_ZH =
   "根據你輸入或者名冊顯示嘅名稱，對方未必係有限公司（名稱冇「有限公司」或「Limited」）。如果對方係獨資或合夥經營，東主或合夥人一般要對業務債務負無限責任。簽約前請核對商業登記證上嘅商號名稱、號碼同東主／合夥人資料同合約一致，並以書面寫明付款、保養同終止安排。";
 
-export const UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH =
+export const UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH =
+  "公司註冊處同屋宇署名冊都未有對應紀錄";
+
+export const UNVERIFIED_COMPANY_REGISTRATION_ALERT_BODY_PARAGRAPHS_ZH: readonly string[] =
+  [
+    "今次喺公司註冊處存續本地公司開放數據同屋宇署註冊小型工程承建商名冊，都搵唔到同呢個名稱對應嘅紀錄。",
+    "搵唔到紀錄唔代表對方有問題，可能係名稱寫法唔同，或者用咗另一個登記名稱。建議要對方出示商業登記證同公司註冊證明書核對。",
+  ];
+
+/** C.2c note：MWC miss + CR matched */
+export const MWC_MISS_NOTE_HEADING_ZH =
   "屋宇署小型工程承建商名冊未有對應紀錄";
 
-export const UNVERIFIED_COMPANY_REGISTRATION_BODY_PARAGRAPHS_ZH: readonly string[] =
-  [
-    "未有對應紀錄唔代表對方有問題：可能係名稱寫法唔同、用咗另一個登記名稱，或者今次工程本身唔需要註冊承建商。",
-    "今次只對照咗本站匯入嘅屋宇署註冊小型工程承建商名冊，冇對照公司註冊處或者稅務局商業登記署嘅即時紀錄。",
-    "一般室內裝修（小型工程除外），例如油漆、室內批灰、貼牆紙，或者維修、更換衞生設備，屬《建築物條例》訂明嘅豁免工程，一般唔需要由註冊承建商進行；但部分室內工程，例如拆改單位間隔牆、開鑿樓板洞口、加厚樓板，可能屬小型工程，要由合資格嘅屋宇署註冊承建商進行。詳情以屋宇署官方說明為準。",
-  ];
+export const MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH =
+  "一般室內裝修（小型工程除外），例如油漆、室內批灰、貼牆紙，或者維修、更換衞生設備，屬《建築物條例》訂明嘅豁免工程，一般唔需要由註冊承建商進行；但部分室內工程，例如拆改單位間隔牆、開鑿樓板洞口、加厚樓板，可能屬小型工程，要由合資格嘅屋宇署註冊承建商進行。詳情以屋宇署官方說明為準。";
+
+export const MWC_MISS_NOTE_BODY_PARAGRAPHS_ZH: readonly string[] = [
+  "未有對應紀錄唔代表對方有問題：可能係名稱寫法唔同、用咗另一個登記名稱，或者今次工程本身唔需要註冊承建商。",
+  "公司註冊處有呢間公司嘅紀錄，但屋宇署註冊小型工程承建商名冊未有對應紀錄。",
+  MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
+];
+
+export const MWC_MISS_NOTE_CR_SIMILAR_ZH =
+  "公司註冊處有名稱相近嘅公司紀錄，請核對完整名稱同公司編號。";
+
+/** PR #13 fallback when CR inconclusive + MWC miss */
+export const MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH: readonly string[] = [
+  "未有對應紀錄唔代表對方有問題：可能係名稱寫法唔同、用咗另一個登記名稱，或者今次工程本身唔需要註冊承建商。",
+  "今次只對照咗本站匯入嘅屋宇署註冊小型工程承建商名冊，冇對照公司註冊處或者稅務局商業登記署嘅即時紀錄。",
+  MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
+];
+
+export const MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH =
+  "今次查過公司註冊處存續本地公司開放數據，但未能確定對應嘅公司紀錄；屋宇署註冊小型工程承建商名冊亦未有對應紀錄。";
+
+export function mwcMissFallbackBodyParagraphsZh(
+  lookupStatus?: string,
+): readonly string[] {
+  if (lookupStatus === "ok") {
+    return [
+      MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[0],
+      MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH,
+      MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
+    ];
+  }
+  return MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH;
+}
+
+export function mwcMissNoteBodyParagraphsZh(
+  matchTier?: "A" | "B" | "C",
+): readonly string[] {
+  if (matchTier === "C") {
+    return [
+      MWC_MISS_NOTE_BODY_PARAGRAPHS_ZH[0],
+      MWC_MISS_NOTE_CR_SIMILAR_ZH,
+      MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
+    ];
+  }
+  return MWC_MISS_NOTE_BODY_PARAGRAPHS_ZH;
+}
+
+/** @deprecated use alert/note headings */
+export const UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH =
+  MWC_MISS_NOTE_HEADING_ZH;
+
+export const UNVERIFIED_COMPANY_REGISTRATION_BODY_PARAGRAPHS_ZH =
+  MWC_MISS_NOTE_BODY_PARAGRAPHS_ZH;
+
+export const CR_DATA_ATTRIBUTION_ZH =
+  "資料來源：香港特別行政區政府公司註冊處，經 DATA.GOV.HK 提供";
+
+export const CR_LOOKUP_DEGRADED_ZH =
+  "公司註冊處開放數據暫時未能查詢；請稍後再試或自行查閱公司註冊處電子服務。";
+
+export function crHintIncorporationUnderOneYearZh(incorporationDateIso: string): string {
+  return `公司註冊處紀錄顯示成立日期為 ${incorporationDateIso}（查詢時成立未滿一年）。`;
+}
 
 export const UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH =
   "屋宇署「指定豁免工程」";
@@ -200,8 +268,16 @@ export function collectReportTrustCopyStrings(): string[] {
     DAILY_CAUSE_LIST_HERO_NOTE_ZH,
     NON_LIMITED_NOTICE_HEADING_ZH,
     NON_LIMITED_CONTRACTOR_NOTICE_ZH,
-    UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH,
-    ...UNVERIFIED_COMPANY_REGISTRATION_BODY_PARAGRAPHS_ZH,
+    UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
+    ...UNVERIFIED_COMPANY_REGISTRATION_ALERT_BODY_PARAGRAPHS_ZH,
+    MWC_MISS_NOTE_HEADING_ZH,
+    ...MWC_MISS_NOTE_BODY_PARAGRAPHS_ZH,
+    MWC_MISS_NOTE_CR_SIMILAR_ZH,
+    ...MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH,
+    MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH,
+    CR_DATA_ATTRIBUTION_ZH,
+    crHintIncorporationUnderOneYearZh("2026-01-01"),
+    CR_LOOKUP_DEGRADED_ZH,
     UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,
     UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
     LEGAL_EVENT_SOURCE_LINK_LABEL_ZH,

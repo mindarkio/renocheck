@@ -47,6 +47,7 @@ import {
 } from "./search-pipeline-legal-lookup";
 import { summaryZhForLegalLookupDegraded } from "./search-pipeline-legal-summary";
 import { isLegalEventsEnabled } from "./legal-events-config";
+import { lookupCompaniesRegistryForSearch } from "./cr-registry-lookup";
 
 export type SearchPipelineResult = {
   fingerprint: string;
@@ -109,6 +110,11 @@ export async function runSearchPipeline(
 
   const mwcOpts = mwc ? { mwcCompanyName: mwc.company_name } : undefined;
   const searchLabelUsed = resolveAuthoritativeSearchLabel(input, mwcOpts);
+  const companiesRegistryPromise = lookupCompaniesRegistryForSearch(
+    input,
+    searchLabelUsed,
+    mwc,
+  );
   const queryEcho = buildQueryEcho(input);
   const nameAlignment = computeNameAlignment(
     input,
@@ -168,7 +174,10 @@ export async function runSearchPipeline(
   }
 
   const serpMs = Math.round(performance.now() - serpStart);
-  const legalLookup = await legalLookupPromise;
+  const [legalLookup, companiesRegistry] = await Promise.all([
+    legalLookupPromise,
+    companiesRegistryPromise,
+  ]);
 
   const webHitsForLlm = filterWebSearchHitsForLlm(rawHits, tokens, l1Opts);
   const boundHitCount = webHitsForLlm.length;
@@ -298,6 +307,7 @@ export async function runSearchPipeline(
       ...(legalLookup.attempted
         ? { legalLookupStatus: legalLookup.status }
         : {}),
+      companiesRegistry,
     },
   };
 

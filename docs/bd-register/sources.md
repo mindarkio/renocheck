@@ -61,3 +61,37 @@
 | 司法機構審訊案件表（e-services） | `https://e-services.judiciary.hk/dcl/index.jsp?lang=tc` | 2026-10-18 |
 
 **備註：** `https://www.judiciary.hk/zh/court_services_facilities/daily_cause_list.html` 於 2026-10-18 smoke 返 **404**；產品改用 **e-services** 入口（見上表）。`lang=tc` 為語言參數，**唔**預填公司名。
+
+## 公司註冊處開放數據 API（PR-CR；2026-10-18 核實）
+
+| 項目 | 內容 |
+|------|------|
+| **資料集** | Registered Office Address of **Live Local Companies**（只涵蓋存續本地公司） |
+| **入口** | [data.cr.gov.hk](https://data.cr.gov.hk/) |
+| **Local JSON endpoint** | `https://data.cr.gov.hk/cr/api/api/v1/api_builder/json/local/search` |
+| **查詢參數** | `query[0][key1]` + `query[0][key2]` + `query[0][key3]` + `format=json` |
+| **按編號** | `key1=Brn`, `key2=equal`, `key3=<值>` |
+| **按名稱** | `key1=Comp_name`, `key2=begins_with`, `key3=<前綴>`（**僅前綴**，唔支援 contains） |
+| **無結果** | HTTP **400**，JSON `{"status":400,"message":"No result found."}` |
+| **Auth** | 無 |
+| **Timeout（產品）** | 單次 lookup 總預算 6s（`cr-registry-lookup.ts`） |
+| **Throttle（產品）** | 每個 serverless instance ≤1 req/s（非全域；`throttle.ts` 串行化）。接受理由：DATA.GOV.HK 無全域配額文件，instance 級節流避免單一冷啟動打爆上游。 |
+| **條款** | [DATA.GOV.HK 使用條款及細則](https://data.gov.hk/tc/terms-and-conditions) — **容許商業用途**（須標示來源） |
+
+### `Brn` 欄位（同稅務局 BR 是否一致未核實）
+
+`Brn` 主要係 **8 位數字**，少數係 **`C` + 7 位**；8 位值同稅務局商業登記號頭 8 位係咪一致 **未核實**。產品暫時只對 `^C\d{7}$` 用 `Brn equal`。日後若用 8 位做 `equal`，只可以做正面 match；HTTP 400 **唔可以**觸發 C.2c alert。純稅務局 8 位 BR 搜尋 **唔** 呼叫 `Brn equal`，改以公司名稱 `begins_with`（如有）或唔發出會產生 `not_found` 嘅查詢。
+
+### `Comp_name` begins_with（中／英）
+
+2026-10-18 smoke：`begins_with` 對 **中文前綴**（例 `香港樂群`）及 **英文前綴**（例 `HONG KONG FORTUNATE`）均返回 JSON 陣列；同一公司中英記錄在同一結果集內以不同欄位呈現。
+
+### 回傳欄位（`fields_seen`）
+
+`Brn`, `Chinese_Company_Name`, `English_Company_Name`, `Address_of_Registered_Office`, `Company_Type`, `Date_of_Incorporation`（`DD-MM-YYYY`）、`Re-domiciliation_Date`
+
+**未有：** 解散／剔除 `status`、`dissolved`、公司改名日期或改名歷史 → 產品 **唔** 做解散提示或「近期改名」提示。
+
+### Rate limit
+
+官網無明文 quota；2026-10-18 連續 5 次 BR lookup 均 HTTP 200。產品仍以 ≤1 req/s + 10 分鐘 in-memory cache（只存已 map 嘅 schema 欄位，**唔** cache 地址或 API 原始 row）為上限。
