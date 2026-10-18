@@ -1,7 +1,8 @@
-import packageJson from "../../package.json";
-
-/** Site / deploy label (from package.json). */
-export const APP_VERSION = packageJson.version;
+/**
+ * Site / deploy label. `next.config.ts` inlines `package.json` `version` as
+ * `NEXT_PUBLIC_APP_VERSION` so client bundles do not import package.json.
+ */
+export const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0";
 
 /** Primary brand tagline (HK 繁中); see docs/design/brand-identity.md */
 export const BRAND_TAGLINE_LINES = [
