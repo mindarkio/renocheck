@@ -59,7 +59,7 @@ describe("splitMixedLabelParts / prefixes (B1)", () => {
       "ＺＺＱ　ＴＥＳＴＩＮＧ　ＬＩＭＩＴＥＤ 合成測試有限公司",
       ["合成測試", "ZZQ TESTING"],
     ],
-    ["ZZQ TESTING LIMITED合成測試有限公司", ["合成測試"]],
+    ["ZZQ TESTING LIMITED合成測試有限公司", ["合成測試", "ZZQ TESTING"]],
     ["合成 測試有限公司 ZZQ TESTING LIMITED", ["合成 測試", "ZZQ TESTING"]],
     [
       "ABC裝修有限公司ABC DECORATION LIMITED",
@@ -73,6 +73,11 @@ describe("splitMixedLabelParts / prefixes (B1)", () => {
     ["ECO環保工程有限公司", ["ECO環保工程"]],
     ["TACO工程有限公司", ["TACO工程"]],
     ["HOME DECO裝修有限公司", ["DECO裝修", "HOME"]],
+    ["ZZQ ENONLY LIMITED合成英文有限公司", ["合成英文", "ZZQ ENONLY"]],
+    ["ZZQ TRADE LTD合成貿易商行", ["合成貿易商行", "ZZQ TRADE"]],
+    ["A&CO裝修有限公司", ["A&CO裝修有限公司"]],
+    ["CO合成有限公司", ["CO合成"]],
+    ["合成測試有限公司/ZZQTESTING", ["合成測試", "ZZQTESTING"]],
   ];
 
   it.each(prefixCases)("%s", (label, expected) => {
@@ -84,6 +89,16 @@ describe("splitMixedLabelParts / prefixes (B1)", () => {
       zh: "合成有限公司",
       en: "ABC LTD",
     });
+  });
+
+  it("peels & CO LIMITED glued head into English segment", () => {
+    expect(
+      splitMixedLabelParts("ZZQ TESTING & CO LIMITED合成和記有限公司").en,
+    ).toBe("ZZQ TESTING CO LIMITED");
+  });
+
+  it("peels ZZQ CO glued before Chinese company name", () => {
+    expect(splitMixedLabelParts("ZZQ CO合成有限公司").en).toBe("ZZQ CO");
   });
 
   it("paren normalization on zh segment", () => {
@@ -112,5 +127,12 @@ describe("splitMixedLabelParts / prefixes (B1)", () => {
     const t0 = performance.now();
     buildNameSearchPrefixes(label);
     expect(performance.now() - t0).toBeLessThan(50);
+  });
+
+  it("splitMixedLabelParts stays linear on long LTD glue prefix (perf)", () => {
+    const label = "A ".repeat(50_000) + "LTD合成有限公司";
+    const t0 = performance.now();
+    splitMixedLabelParts(label);
+    expect(performance.now() - t0).toBeLessThan(200);
   });
 });

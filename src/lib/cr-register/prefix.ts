@@ -102,47 +102,15 @@ export function splitMixedLabelParts(label: string): { zh?: string; en?: string 
     const enParts: string[] = [];
     const isLatinTok = (t?: string) =>
       t !== undefined && !HAN_RE.test(t) && /[A-Za-z]/.test(t);
-    const latinBeforeGluedHanLtd = (from: number): boolean => {
-      for (let j = from; j < tokens.length; j++) {
-        const t = tokens[j]!;
-        if (
-          HAN_RE.test(t) &&
-          /^(?:LIMITED|LTD\.?)\p{Script=Han}/iu.test(t)
-        ) {
-          return true;
-        }
-        if (HAN_RE.test(t)) return false;
-      }
-      return false;
-    };
-
     tokens.forEach((tok, i) => {
       if (!HAN_RE.test(tok)) {
-        if (/[A-Za-z]/.test(tok) && !latinBeforeGluedHanLtd(i)) {
-          enParts.push(tok);
-        }
+        if (/[A-Za-z]/.test(tok)) enParts.push(tok);
         return;
       }
       let zhTok = tok;
       const head = zhTok.match(GLUED_EN_HEAD_RE);
-      const peelHead =
-        head &&
-        (isLatinTok(tokens[i - 1]) ||
-          (i === 0 && tokens.length === 1));
-      if (peelHead) {
-        const bareSuffix = /^(?:LIMITED|LTD\.?|CO\.?)$/i.test(head[1]!.trim());
-        if (bareSuffix) {
-          if (
-            isLatinTok(tokens[i - 1]) &&
-            !isLatinTok(tokens[i - 2])
-          ) {
-            enParts.push(
-              `${tokens[i - 1]!.trim()} ${head[1]!.trim()}`,
-            );
-          }
-        } else {
-          enParts.push(head[1]!);
-        }
+      if (head && isLatinTok(tokens[i - 1])) {
+        enParts.push(head[1]!);
         zhTok = zhTok.slice(head[1]!.length);
       }
       if (
