@@ -33,7 +33,7 @@ Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm d
 | `pnpm lint` | ESLint |
 | `pnpm test` | 預設唔會打 Supabase（admin client 已 mock，service-role key 會被清走） |
 | `pnpm test:watch` | 監聽模式 |
-| `pnpm test:d2` | D2 filter golden parity。唔會讀 .env.local，要明確 export 非 prod 嘅 URL 同 anon key；prod 預設拒絕；唔好 source .env.local |
+| `pnpm test:d2` | D2 filter golden parity。唔讀 `.env.local`。prod anon 已經讀唔到 `mwc_contractors`，要用 local／dev DB（見下方）。打 prod ref 會拒絕 |
 | `pnpm import:judgments` | 匯入 `official_legal_events`（見 [supabase.md](supabase.md)） |
 | `pnpm legal:lookup-smoke` | 僅 DB 判詞 lookup（唔食 Serp／LLM） |
 | `pnpm judgment:poc-smoke` | J3 PoC：10 條 local seed lookup + 可選 `--api-base=http://localhost:3000` 三場景 full search |
@@ -44,6 +44,36 @@ Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm d
 | `pnpm cause-list:backfill` | Phase 3a（本地）：Wayback CDX 回補 2024-11-01 至今 SMT／DC／CACFI／LANDS；法人被告列寫入 `scripts/output/cause-list-backfill.csv`（可續跑；唔寫 DB）。名冊讀 `.cache/bd-register/`（7 日 TTL，先 `pnpm bd-register:fetch`）；冇名冊就失敗，唔會靜默 unmatched |
 | `pnpm bd-register:fetch` | Phase 4：下載屋宇署名冊 CSV → `.cache/bd-register/`（7 日 TTL） |
 | `pnpm bd-register:dry-run` | Phase 4：`.cache` baseline vs candidate MWC 比對 → `scripts/output/`（見 [bd-register/sources.md](bd-register/sources.md)） |
+
+### `pnpm test:d2`
+
+Prod 嘅 anon 已經讀唔到 `mwc_contractors`（migration `20261018140000`，未 apply 之前以 Aaron 批核為準；apply 之後 prod anon 冇 select）。D2 golden、`scripts/write-judgment-d2-filter-golden.ts`、`scripts/filter-judgment-candidates-d2.ts` 都用 anon key，而且用同一個 prod gate：打 prod project ref 就拒絕。三個都唔會自動讀 `.env.local`。冇 `RUN_D2_GOLDEN=1` 時，`pnpm test` 會 skip golden。
+
+用 local Supabase，或者一個 dev project。Export **嗰個** DB 嘅 URL 同 anon key：
+
+```bash
+pnpm supabase start
+# 用 local stack 嘅 URL + service role 跑現有匯入（腳本本身會讀 .env.local，唔好指去 prod）
+pnpm import:mwc
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=<local-anon> pnpm test:d2
+```
+
+Dev project 就換嗰個 project 嘅 URL 同 anon key。Local DB 由自己控制，可以對 local 嘅 anon 開 select。
+
+`supabase start` 會套用 `20261018140000`，local anon 會讀唔到。下面呢段 **只可以喺 local／dev 跑，永遠唔好喺 prod 跑**，亦唔係 migration。RLS 仍然開住，淨係 `GRANT` 會得 0 行，所以要一齊加返 select policy：
+
+```sql
+-- LOCAL / DEV ONLY. Never run on production.
+grant select on table public.mwc_contractors to anon;
+drop policy if exists mwc_contractors_select_anon on public.mwc_contractors;
+create policy mwc_contractors_select_anon
+  on public.mwc_contractors
+  for select
+  to anon
+  using (true);
+```
+
+42501／permission denied 會顯示「anon 讀唔到 mwc_contractors：D2 要用 local／dev DB」，唔會 log row。唔好 `source .env.local`（會把 `SUPABASE_SERVICE_ROLE_KEY` 帶入 shell）。
 
 `.cache/cause-list/` 內 DCL 原始 HTML 與 `mwc-companies-verify.json` 含當事人／公司名；僅供離線開發，**7 日 TTL**（`cache-ttl.ts`；過期需重新 fetch／`pnpm cause-list:export-mwc`），勿 commit。
 

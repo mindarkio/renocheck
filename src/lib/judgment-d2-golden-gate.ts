@@ -19,7 +19,10 @@ export const D2_GOLDEN_MIN_MWC_ROWS = 1000;
 
 export const D2_GOLDEN_RUN_ENV = "RUN_D2_GOLDEN";
 export const D2_GOLDEN_PROD_REFS_ENV = "SUPABASE_PROD_PROJECT_REFS";
-export const D2_GOLDEN_ALLOW_PROD_READONLY_ENV = "D2_GOLDEN_ALLOW_PROD_READONLY";
+
+/** Shown for SQLSTATE 42501 / permission denied. Never include row text. */
+export const D2_MWC_ANON_DENIED_MESSAGE =
+  "anon 讀唔到 mwc_contractors：D2 要用 local／dev DB";
 
 export type D2GoldenEnv = Record<string, string | undefined>;
 
@@ -40,9 +43,14 @@ type D2MwcNameRow = {
   registration_no: string | null;
 };
 
+type D2MwcPageError = {
+  code?: string | null;
+  message?: string | null;
+};
+
 type D2MwcPage = {
   data: D2MwcNameRow[] | null;
-  error: { code?: string | null } | null;
+  error: D2MwcPageError | null;
   count: number | null;
 };
 
@@ -100,24 +108,16 @@ export function d2GoldenMwcSelectList(): string {
 }
 
 /**
- * Skip unless opted in. Fail closed when the URL is missing, not a known host,
- * or a production project ref without the read-only allow flag.
+ * Fail closed when the URL is missing, not a known host, or a production project ref.
+ * Production is always refused. Localhost and non-prod `*.supabase.co` refs may run.
  */
-export function decideD2GoldenRun(env: D2GoldenEnv): D2GoldenDecision {
-  if (!flagOn(env, D2_GOLDEN_RUN_ENV)) {
-    return {
-      action: "skip",
-      reason:
-        "RUN_D2_GOLDEN is not 1; D2 filter golden parity is opt-in (pnpm test:d2).",
-    };
-  }
-
+export function decideD2MwcDatabase(env: D2GoldenEnv): D2GoldenDecision {
   const rawUrl = supabaseUrl(env);
   if (!rawUrl) {
     return {
       action: "fail",
       reason:
-        "RUN_D2_GOLDEN=1 but NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL is missing.",
+        "NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL is missing. D2 要用 local／dev DB。",
     };
   }
 
@@ -141,10 +141,7 @@ export function decideD2GoldenRun(env: D2GoldenEnv): D2GoldenDecision {
     };
   }
 
-  if (
-    d2GoldenProdProjectRefs(env).includes(ref) &&
-    !flagOn(env, D2_GOLDEN_ALLOW_PROD_READONLY_ENV)
-  ) {
+  if (d2GoldenProdProjectRefs(env).includes(ref)) {
     const builtIn = DEFAULT_SUPABASE_PROD_PROJECT_REFS.some(
       (item) => item.toLowerCase() === ref,
     );
@@ -153,11 +150,64 @@ export function decideD2GoldenRun(env: D2GoldenEnv): D2GoldenDecision {
       : "is listed in SUPABASE_PROD_PROJECT_REFS";
     return {
       action: "fail",
-      reason: `Supabase project ref "${ref}" ${where}. Refusing to read production. Set D2_GOLDEN_ALLOW_PROD_READONLY=1 to allow a read-only run.`,
+      reason: `Supabase project ref "${ref}" ${where}. Refusing to read production. ${D2_MWC_ANON_DENIED_MESSAGE}`,
     };
   }
 
   return { action: "run" };
+}
+
+/**
+ * Skip unless opted in. Otherwise the same prod gate as `decideD2MwcDatabase`.
+ */
+export function decideD2GoldenRun(env: D2GoldenEnv): D2GoldenDecision {
+  if (!flagOn(env, D2_GOLDEN_RUN_ENV)) {
+    return {
+      action: "skip",
+      reason:
+        "RUN_D2_GOLDEN is not 1; D2 filter golden parity is opt-in (pnpm test:d2).",
+    };
+  }
+
+  const decision = decideD2MwcDatabase(env);
+  if (decision.action === "fail" && !supabaseUrl(env)) {
+    return {
+      action: "fail",
+      reason:
+        "RUN_D2_GOLDEN=1 but NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL is missing.",
+    };
+  }
+  return decision;
+}
+
+function errorText(error: unknown): { code: string; message: string } {
+  if (typeof error !== "object" || error === null) {
+    return { code: "", message: error instanceof Error ? error.message : "" };
+  }
+  const record = error as { code?: unknown; message?: unknown };
+  return {
+    code: typeof record.code === "string" ? record.code : "",
+    message:
+      typeof record.message === "string"
+        ? record.message
+        : error instanceof Error
+          ? error.message
+          : "",
+  };
+}
+
+export function isD2MwcPermissionDenied(error: unknown): boolean {
+  const { code, message } = errorText(error);
+  return code === "42501" || /permission denied/i.test(message) || /\b42501\b/.test(message);
+}
+
+/** Safe text for logs and test failures. Permission errors never include row contents. */
+export function d2MwcFailureText(error: unknown): string {
+  if (isD2MwcPermissionDenied(error)) return D2_MWC_ANON_DENIED_MESSAGE;
+  const { code } = errorText(error);
+  if (code) return `mwc_contractors read failed (${code})`;
+  if (error instanceof Error && error.message) return error.message;
+  return "mwc_contractors read failed";
 }
 
 /** Anon key only. A service-role value in env is ignored. */
@@ -204,9 +254,7 @@ export async function loadD2GoldenMwcRows(
       .range(from, from + 999)) as D2MwcPage;
 
     if (page.error) {
-      throw new Error(
-        `mwc_contractors read failed (${page.error.code ?? "unknown"})`,
-      );
+      throw new Error(d2MwcFailureText(page.error));
     }
     if (typeof page.count === "number" && expectedCount === null) {
       expectedCount = page.count;

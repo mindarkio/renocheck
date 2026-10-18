@@ -2,6 +2,8 @@
 
 Pair each file with the matching migration under `supabase/migrations/`. Run on the database only after explicit approval.
 
+20261018140000 嘅 down 係完全還原，會重新公開 phone 同 signatory，只限緊急用；任何 down 檔都唔可以 revoke service_role。
+
 | Rollback file | Up migration |
 |---------------|----------------|
 | `20261016120000_official_legal_events.down.sql` | `20261016120000_official_legal_events.sql` |

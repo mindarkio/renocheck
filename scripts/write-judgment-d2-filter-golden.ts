@@ -7,7 +7,13 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { judgmentCandidatesManifestSchema } from "../src/lib/judgment-candidates-schema";
 import { MwcContractorsMemoryIndex } from "../src/lib/mwc-contractors-memory-index";
-import { loadD2GoldenMwcRows } from "../src/lib/judgment-d2-golden-gate";
+import {
+  D2_MWC_ANON_DENIED_MESSAGE,
+  d2MwcFailureText,
+  decideD2MwcDatabase,
+  loadD2GoldenMwcRows,
+  selectD2GoldenSupabaseKey,
+} from "../src/lib/judgment-d2-golden-gate";
 import { runD2FilterPipeline } from "../src/lib/judgment-d2-filter-pipeline";
 
 const GOLDEN_PATH = resolve(
@@ -19,37 +25,21 @@ const CANDIDATES_PATH = resolve(
   "scripts/fixtures/judgment-candidates-d2-parity.json",
 );
 
-function loadEnvLocal() {
-  try {
-    const text = readFileSync(resolve(process.cwd(), ".env.local"), "utf8");
-    for (const line of text.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      let val = trimmed.slice(eq + 1).trim();
-      if (
-        (val.startsWith('"') && val.endsWith('"')) ||
-        (val.startsWith("'") && val.endsWith("'"))
-      ) {
-        val = val.slice(1, -1);
-      }
-      if (!process.env[key]) process.env[key] = val;
-    }
-  } catch {
-    // optional
-  }
-}
-
 async function main() {
-  loadEnvLocal();
+  const decision = decideD2MwcDatabase(process.env);
+  if (decision.action !== "run") {
+    console.error(decision.reason);
+    process.exit(1);
+  }
   const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    process.env.SUPABASE_URL?.trim();
+  const keyChoice = selectD2GoldenSupabaseKey(process.env);
+  if (!url || !keyChoice.ok) {
     console.error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      keyChoice.ok
+        ? "Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL"
+        : keyChoice.reason,
     );
     process.exit(1);
   }
@@ -75,12 +65,18 @@ async function main() {
     ) as { prefixes: Record<string, string> }
   ).prefixes;
 
-  const supabase = createClient(url, key, {
+  const supabase = createClient(url, keyChoice.key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const mwcIndex = new MwcContractorsMemoryIndex(
-    await loadD2GoldenMwcRows(supabase),
-  );
+  let mwcRows;
+  try {
+    mwcRows = await loadD2GoldenMwcRows(supabase);
+  } catch (error) {
+    const text = d2MwcFailureText(error);
+    console.error(text === D2_MWC_ANON_DENIED_MESSAGE ? D2_MWC_ANON_DENIED_MESSAGE : text);
+    process.exit(1);
+  }
+  const mwcIndex = new MwcContractorsMemoryIndex(mwcRows);
   const mwcSnapshotSha = mwcIndex.snapshotContentHash();
 
   const { entries, counts } = runD2FilterPipeline({
@@ -109,7 +105,7 @@ async function main() {
   console.info(JSON.stringify({ event: "d2_golden_written", summary: counts }));
 }
 
-main().catch((e) => {
-  console.error(e);
+main().catch((error) => {
+  console.error(d2MwcFailureText(error));
   process.exit(1);
 });

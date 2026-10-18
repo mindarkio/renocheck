@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { NextConfig } from "next";
 
+// 必須喺 repo 根目錄 build（process.cwd()）
 function readPackageVersion(): string {
   const raw = readFileSync(path.join(process.cwd(), "package.json"), "utf8");
   const parsed: unknown = JSON.parse(raw);

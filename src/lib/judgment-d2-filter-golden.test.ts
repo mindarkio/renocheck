@@ -7,6 +7,8 @@ import { MwcContractorsMemoryIndex } from "./mwc-contractors-memory-index";
 import { runD2FilterPipeline } from "./judgment-d2-filter-pipeline";
 import { normalizeCaseRefKey } from "./judgment-d2-filter-cache";
 import {
+  D2_MWC_ANON_DENIED_MESSAGE,
+  d2MwcFailureText,
   decideD2GoldenRun,
   loadD2GoldenMwcRows,
   selectD2GoldenSupabaseKey,
@@ -91,9 +93,18 @@ describe("D2 filter golden parity", () => {
       const supabase = createClient(url, keyChoice.key, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
-      const mwcIndex = new MwcContractorsMemoryIndex(
-        await loadD2GoldenMwcRows(supabase),
-      );
+      let mwcRows;
+      try {
+        mwcRows = await loadD2GoldenMwcRows(supabase);
+      } catch (error) {
+        const text = d2MwcFailureText(error);
+        expect.fail(
+          text === D2_MWC_ANON_DENIED_MESSAGE
+            ? D2_MWC_ANON_DENIED_MESSAGE
+            : text,
+        );
+      }
+      const mwcIndex = new MwcContractorsMemoryIndex(mwcRows);
       const mwcSnapshotSha = mwcIndex.snapshotContentHash();
 
       const { entries, counts } = runD2FilterPipeline({

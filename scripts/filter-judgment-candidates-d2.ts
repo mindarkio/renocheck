@@ -18,7 +18,13 @@ import {
   saveD2FilterStepCache,
 } from "../src/lib/judgment-d2-filter-cache";
 import { runD2FilterPipeline } from "../src/lib/judgment-d2-filter-pipeline";
-import { loadD2GoldenMwcRows } from "../src/lib/judgment-d2-golden-gate";
+import {
+  D2_MWC_ANON_DENIED_MESSAGE,
+  d2MwcFailureText,
+  decideD2MwcDatabase,
+  loadD2GoldenMwcRows,
+  selectD2GoldenSupabaseKey,
+} from "../src/lib/judgment-d2-golden-gate";
 import { MwcContractorsMemoryIndex } from "../src/lib/mwc-contractors-memory-index";
 
 const IN_PATH = resolve(
@@ -42,29 +48,6 @@ const COURT_CONFIG = resolve(
   "scripts/config/court-from-case-ref.json",
 );
 
-function loadEnvLocal() {
-  try {
-    const text = readFileSync(resolve(process.cwd(), ".env.local"), "utf8");
-    for (const line of text.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      let val = trimmed.slice(eq + 1).trim();
-      if (
-        (val.startsWith('"') && val.endsWith('"')) ||
-        (val.startsWith("'") && val.endsWith("'"))
-      ) {
-        val = val.slice(1, -1);
-      }
-      if (!process.env[key]) process.env[key] = val;
-    }
-  } catch {
-    // optional
-  }
-}
-
 function argValue(prefix: string): string | undefined {
   const a = process.argv.find((x) => x.startsWith(`${prefix}=`));
   if (!a) return undefined;
@@ -79,7 +62,11 @@ function argValue(prefix: string): string | undefined {
 }
 
 async function main() {
-  loadEnvLocal();
+  const decision = decideD2MwcDatabase(process.env);
+  if (decision.action !== "run") {
+    console.error(decision.reason);
+    process.exit(1);
+  }
   const dryRun = process.argv.includes("--dry-run");
   const profile = process.argv.includes("--profile");
   const noCache = process.argv.includes("--no-cache");
@@ -89,11 +76,14 @@ async function main() {
 
   const tRead = performance.now();
   const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    process.env.SUPABASE_URL?.trim();
+  const keyChoice = selectD2GoldenSupabaseKey(process.env);
+  if (!url || !keyChoice.ok) {
     console.error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      keyChoice.ok
+        ? "Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL"
+        : keyChoice.reason,
     );
     process.exit(1);
   }
@@ -112,14 +102,20 @@ async function main() {
   ).prefixes;
   timings.read_files_ms = performance.now() - tRead;
 
-  const supabase = createClient(url, key, {
+  const supabase = createClient(url, keyChoice.key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
   const tMwc = performance.now();
-  const mwcIndex = new MwcContractorsMemoryIndex(
-    await loadD2GoldenMwcRows(supabase),
-  );
+  let mwcRows;
+  try {
+    mwcRows = await loadD2GoldenMwcRows(supabase);
+  } catch (error) {
+    const text = d2MwcFailureText(error);
+    console.error(text === D2_MWC_ANON_DENIED_MESSAGE ? D2_MWC_ANON_DENIED_MESSAGE : text);
+    process.exit(1);
+  }
+  const mwcIndex = new MwcContractorsMemoryIndex(mwcRows);
   const mwcSnapshotSha = mwcIndex.snapshotContentHash();
   timings.load_mwc_index_ms = performance.now() - tMwc;
   timings.mwc_rows = mwcIndex.size;
@@ -248,7 +244,10 @@ async function main() {
 
 main().catch((err) => {
   console.error(
-    JSON.stringify({ event: "d2_filter_candidates_failed", error: String(err) }),
+    JSON.stringify({
+      event: "d2_filter_candidates_failed",
+      error: d2MwcFailureText(err),
+    }),
   );
   process.exit(1);
 });
