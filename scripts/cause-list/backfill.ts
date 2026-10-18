@@ -362,7 +362,9 @@ async function main(): Promise<number> {
 
   if (!reportOnly) {
     await politeWait();
-    const judiciaryRules = await loadJudiciaryRobotsPrefixes(CAUSE_LIST_USER_AGENT, log);
+    const judiciaryRules = await loadJudiciaryRobotsPrefixes(CAUSE_LIST_USER_AGENT, log, {
+      allowFallback: true,
+    });
     const livePath = new URL(buildDclLiveUrl("01112024", "SMT")).pathname;
     if (isPathDisallowedByRobots(livePath, judiciaryRules)) {
       throw new Error(`robots.txt disallows fetch for ${DCL_LIVE_ORIGIN}${livePath}`);

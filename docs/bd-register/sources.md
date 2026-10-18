@@ -31,6 +31,7 @@
 5. **`FLAG` 欄**（見官方 data dictionary）：其他字元存為 `flag`；值 **`@` = 已申請續期**（過咗 `EXPIRY_DATE` 仍視為有效直至處理完成），解析為 `renewalPending: true`（唔寫入 `flag`）。真名冊約 **148** 行為 `@`。
 6. **HTTP 下載**：`pnpm bd-register:fetch` 使用 `Accept: text/csv`、120s timeout、binary 寫檔；收到非 CSV（例如 403 XML）**唔**寫入 `.cache/`。部分海外出口曾見 **403 AccessDenied**；須在**香港網絡**驗證 PSI URL 可用性（本 repo 未鎖定「已確認可用」日期，以營運 fetch 成功為準）。
 7. **`robots.txt`**：`checkRobotsAllowsFetch` 若 `robots.txt` 本身返非 2xx（例如 403），行為同 cause-list：**視為允許**繼續 fetch，避免因 robots 端點封鎖而誤判。
+8. Judiciary robots：主域 e-services.judiciary.hk/robots.txt 5xx／網絡錯誤時，只限 Wayback backfill 改看 www.e-services.judiciary.hk（最多 3 次同 host redirect）；live 抓取一律以主域為準（RFC 9309 §2.3.1.4）。批准：Aaron 2026-10-18。主域恢復後即以主域為準。
 
 ## 本地副本（gitignored）
 
