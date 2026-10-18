@@ -33,4 +33,10 @@ describe("buildNameSearchPrefixes (B1/M4)", () => {
   it("truncate at opening paren", () => {
     expect(truncatePrefixSource("九龍巴士（一九三三）")).toBe("九龍巴士");
   });
+
+  it("fullwidth Latin normalizes to ZZQ TESTING prefix (L-d)", () => {
+    expect(
+      buildNameSearchPrefixes("ＺＺＱ　ＴＥＳＴＩＮＧ　ＬＩＭＩＴＥＤ"),
+    ).toEqual(["ZZQ TESTING"]);
+  });
 });

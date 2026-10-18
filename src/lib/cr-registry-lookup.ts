@@ -79,6 +79,20 @@ function matchedFromPick(
   return { matched: true, ...mapped };
 }
 
+async function fetchPrefixCached(
+  prefix: string,
+  cache: Map<string, CrLocalSearchResult>,
+  deadlineMs: number,
+): Promise<CrLocalSearchResult> {
+  const cached = cache.get(prefix);
+  if (cached) return cached;
+  const res = await searchCrLocalByNameBeginsWith(prefix, {
+    signal: fetchSignal(deadlineMs),
+  });
+  cache.set(prefix, res);
+  return res;
+}
+
 async function resolveNamePrefixes(
   label: string,
   searchLabelUsed: string,
@@ -94,10 +108,10 @@ async function resolveNamePrefixes(
     return { kind: "snapshot", snapshot: inconclusiveCrSnapshot(retrievedAt) };
   }
 
+  const prefixCache = new Map<string, CrLocalSearchResult>();
+
   for (const prefix of primary) {
-    const res = await searchCrLocalByNameBeginsWith(prefix, {
-      signal: fetchSignal(deadlineMs),
-    });
+    const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs);
     if (res.kind === "error") {
       return toDegraded(res.message);
     }
@@ -113,18 +127,28 @@ async function resolveNamePrefixes(
     }
   }
 
-  const results: CrLocalSearchResult[] = [];
   for (const prefix of allAttempts) {
-    const res = await searchCrLocalByNameBeginsWith(prefix, {
-      signal: fetchSignal(deadlineMs),
-    });
+    const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs);
     if (res.kind === "error") {
       return toDegraded(res.message);
     }
-    results.push(res);
+    if (res.kind === "rows") {
+      const pick = pickMatchedRows(res.rows, searchLabelUsed);
+      if (pick === "ambiguous") {
+        return { kind: "snapshot", snapshot: ambiguousCrSnapshot(retrievedAt) };
+      }
+      if (pick) {
+        return {
+          kind: "snapshot",
+          snapshot: matchedFromPick(pick, retrievedAt),
+        };
+      }
+    }
   }
+
   const allNoResult =
-    results.length > 0 && results.every((r) => r.kind === "no_result");
+    allAttempts.length > 0 &&
+    allAttempts.every((p) => prefixCache.get(p)?.kind === "no_result");
   if (allNoResult) {
     return { kind: "snapshot", snapshot: notFoundCrSnapshot(retrievedAt) };
   }
@@ -194,10 +218,6 @@ async function runLiveLookup(
       const row = res.rows[0]!;
       const tier = tierForRow(row, searchLabelUsed);
       if (!tier) {
-        const hasName = /\p{L}/u.test(searchLabelUsed.trim());
-        if (hasName) {
-          return persist(inconclusiveCrSnapshot(retrievedAt));
-        }
         return persist(inconclusiveCrSnapshot(retrievedAt));
       }
       if (res.rows.length > 1) {
@@ -244,40 +264,55 @@ export async function lookupCompaniesRegistryForSearch(
     };
   }
 
-  const live = await runLiveLookup(input, searchLabelUsed);
-  if (live.kind === "degraded") {
+  try {
+    const live = await runLiveLookup(input, searchLabelUsed);
+    if (live.kind === "degraded") {
+      console.warn(
+        JSON.stringify({
+          event: "cr_lookup_failed",
+          reason: live.reason,
+        }),
+      );
+      return {
+        lookupStatus: live.reason === "timeout" ? "timeout" : "error",
+        retrievedAt: new Date().toISOString(),
+        hints: [],
+        icrisHomeUrl: CR_ESERVICES_URL,
+      };
+    }
+    if (live.kind === "no_query") {
+      return {
+        lookupStatus: "ok",
+        matched: false,
+        retrievedAt: new Date().toISOString(),
+        hints: [],
+        icrisHomeUrl: CR_ESERVICES_URL,
+      };
+    }
+
+    const snap = live.snapshot;
+    console.info(
+      JSON.stringify({
+        event: "cr_lookup",
+        matched: snap.matched,
+        match_ambiguous: Boolean(snap.matchAmbiguous),
+        hint_count: snap.hints.length,
+      }),
+    );
+
+    return snapshotToOfficial("ok", snap);
+  } catch {
     console.warn(
       JSON.stringify({
         event: "cr_lookup_failed",
-        reason: live.reason,
+        reason: "exception",
       }),
     );
     return {
-      lookupStatus: live.reason === "timeout" ? "timeout" : "error",
+      lookupStatus: "error",
       retrievedAt: new Date().toISOString(),
       hints: [],
       icrisHomeUrl: CR_ESERVICES_URL,
     };
   }
-  if (live.kind === "no_query") {
-    return {
-      lookupStatus: "ok",
-      matched: false,
-      retrievedAt: new Date().toISOString(),
-      hints: [],
-      icrisHomeUrl: CR_ESERVICES_URL,
-    };
-  }
-
-  const snap = live.snapshot;
-  console.info(
-    JSON.stringify({
-      event: "cr_lookup",
-      matched: snap.matched,
-      match_ambiguous: Boolean(snap.matchAmbiguous),
-      hint_count: snap.hints.length,
-    }),
-  );
-
-  return snapshotToOfficial("ok", snap);
 }

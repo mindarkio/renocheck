@@ -17,6 +17,23 @@ function row(
   };
 }
 
+describe("tierForRow (N1)", () => {
+  it("mixed label matches English row only → B", () => {
+    const tier = tierForRow(
+      {
+        Brn: "C1",
+        English_Company_Name: "ZZQ TESTING LIMITED",
+        Chinese_Company_Name: "NULL",
+        Company_Type: "Co",
+        Date_of_Incorporation: "01-01-2020",
+        Address_of_Registered_Office: "HK",
+      },
+      "合成測試有限公司 ZZQ TESTING LIMITED",
+    );
+    expect(tier).toBe("B");
+  });
+});
+
 describe("pickMatchedRows (M3)", () => {
   const label = "SUN HUNG KAI & CO LIMITED";
 

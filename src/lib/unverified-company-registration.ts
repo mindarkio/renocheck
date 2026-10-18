@@ -66,7 +66,7 @@ export function shouldShowMwcMissWithCrFoundNote(
   return !report.official.mwcMatched;
 }
 
-/** CR inconclusive + MWC miss → PR #13 fallback note */
+/** CR inconclusive / degraded / skipped + MWC miss → PR #13 fallback note */
 export function shouldShowMwcMissFallbackNote(report: RiskReport): boolean {
   if (report.official.mwcMatched) return false;
   if (isReportLegalLookupDegraded(report)) return false;
@@ -74,10 +74,17 @@ export function shouldShowMwcMissFallbackNote(report: RiskReport): boolean {
   if (shouldShowUnverifiedCompanyRegistrationAlert(report)) return false;
   if (shouldShowMwcMissWithCrFoundNote(report)) return false;
   if (shouldShowNonLimitedContractorNotice(report)) return false;
+  const label = report.entity.searchLabelUsed.trim();
+  if (report.entity.matchType === "br" && !/\p{L}/u.test(label)) return false;
+
   const cr = report.official.companiesRegistry;
-  if (!cr || cr.lookupStatus !== "ok") return false;
-  if (cr.hints.includes("not_found_in_active_list")) return false;
-  return cr.matchAmbiguous === true || cr.matched === false;
+  if (!cr) return true;
+  if (cr.lookupStatus !== "ok") return true;
+  if (cr.matchAmbiguous) return true;
+  if (cr.matched === false && !cr.hints.includes("not_found_in_active_list")) {
+    return true;
+  }
+  return false;
 }
 
 /** @deprecated use shouldShowUnverifiedCompanyRegistrationAlert */

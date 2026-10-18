@@ -16,17 +16,18 @@ export function scheduleCrApiRequest<T>(
 ): Promise<ScheduleCrResult<T>> {
   const maxWaitMs = options?.maxWaitMs ?? DEFAULT_MAX_WAIT_MS;
   const depthAtEnqueue = chainDepth;
+  const wait = Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastRequestAt));
+  const estimatedWait = depthAtEnqueue * MIN_INTERVAL_MS + wait;
+  if (estimatedWait >= maxWaitMs) {
+    return Promise.resolve({ ok: false, reason: "queue_full" });
+  }
+
   chainDepth += 1;
   const next = chain.then(async () => {
     chainDepth -= 1;
-    const now = Date.now();
-    const wait = Math.max(0, MIN_INTERVAL_MS - (now - lastRequestAt));
-    const estimatedWait = wait + depthAtEnqueue * MIN_INTERVAL_MS;
-    if (estimatedWait > maxWaitMs) {
-      return { ok: false as const, reason: "queue_full" };
-    }
-    if (wait > 0) {
-      await new Promise((r) => setTimeout(r, wait));
+    const waitNow = Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastRequestAt));
+    if (waitNow > 0) {
+      await new Promise((r) => setTimeout(r, waitNow));
     }
     lastRequestAt = Date.now();
     const value = await run();

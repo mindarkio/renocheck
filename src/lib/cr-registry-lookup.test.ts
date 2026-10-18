@@ -81,7 +81,16 @@ describe("lookupCompaniesRegistryForSearch", () => {
     searchCrLocalByBrnEqual.mockResolvedValue({ kind: "no_result" });
     searchCrLocalByNameBeginsWith.mockResolvedValue({
       kind: "rows",
-      rows: [row("合成測試有限公司", "C9999999")],
+      rows: [
+        {
+          Brn: "C9999999",
+          English_Company_Name: "NULL",
+          Chinese_Company_Name: "合成測試有限公司",
+          Company_Type: "Co",
+          Date_of_Incorporation: "01-01-2020",
+          Address_of_Registered_Office: "HK",
+        },
+      ],
     });
     const official = await lookupCompaniesRegistryForSearch(
       {
@@ -124,6 +133,144 @@ describe("lookupCompaniesRegistryForSearch", () => {
       null,
     );
     expect(official.lookupStatus).toBe("skipped");
+  });
+
+  it("mixed label: English-only row → tier B (N1)", async () => {
+    searchCrLocalByNameBeginsWith.mockImplementation(async (prefix) => {
+      if (prefix === "ZZQ TESTING" || prefix === "ZZQ DECORATION") {
+        return {
+          kind: "rows",
+          rows: [row("ZZQ TESTING LIMITED")],
+        };
+      }
+      return { kind: "no_result" };
+    });
+    const label = "合成測試有限公司 ZZQ TESTING LIMITED";
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    expect(official.matched).toBe(true);
+    expect(official.matchTier).toBe("B");
+  });
+
+  it("合成測試有限公司 all 400 → 2 fetches (N4 cache)", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({ kind: "no_result" });
+    await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("合成測試有限公司"),
+      "合成測試有限公司",
+      null,
+    );
+    expect(searchCrLocalByNameBeginsWith).toHaveBeenCalledTimes(2);
+  });
+
+  it("mixed label all 400 → 4 fetches (N4)", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({ kind: "no_result" });
+    await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("ABC裝修有限公司 ABC DECORATION LIMITED"),
+      "ABC裝修有限公司 ABC DECORATION LIMITED",
+      null,
+    );
+    expect(searchCrLocalByNameBeginsWith).toHaveBeenCalledTimes(4);
+  });
+
+  it("truncated prefix C rows + full prefix B row → tier B (N4)", async () => {
+    const cRows: CrApiLocalRow[] = [];
+    for (let i = 0; i < 100; i++) {
+      cRows.push(row(`DECORATION WORKS (HK ${i}) LIMITED`, `C${String(i).padStart(7, "0")}`));
+    }
+    searchCrLocalByNameBeginsWith.mockImplementation(async (prefix) => {
+      if (prefix === "DECORATION WORKS") {
+        return { kind: "rows", rows: cRows };
+      }
+      if (prefix === "DECORATION WORKS LIMITED") {
+        return {
+          kind: "rows",
+          rows: [row("DECORATION WORKS LIMITED")],
+        };
+      }
+      return { kind: "no_result" };
+    });
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("DECORATION WORKS LIMITED"),
+      "DECORATION WORKS LIMITED",
+      null,
+    );
+    expect(official.matched).toBe(true);
+    expect(official.matchTier).toBe("B");
+  });
+
+  it("null incorporation date → ok matched without incorporationDate (N3)", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({
+      kind: "rows",
+      rows: [
+        {
+          Brn: "C1234567",
+          English_Company_Name: "NULL",
+          Chinese_Company_Name: "合成測試有限公司",
+          Company_Type: "Co",
+          Date_of_Incorporation: null as unknown as string,
+          Address_of_Registered_Office: "HK",
+        },
+      ],
+    });
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("合成測試有限公司"),
+      "合成測試有限公司",
+      null,
+    );
+    expect(official.lookupStatus).toBe("ok");
+    expect(official.matched).toBe(true);
+    expect(official.incorporationDate).toBeUndefined();
+  });
+
+  it("client throw → lookupStatus error, no reject (N3)", async () => {
+    searchCrLocalByNameBeginsWith.mockRejectedValue(new Error("boom"));
+    await expect(
+      lookupCompaniesRegistryForSearch(
+        companyNameOnlySearchInput("合成測試有限公司"),
+        "合成測試有限公司",
+        null,
+      ),
+    ).resolves.toEqual({
+      lookupStatus: "error",
+      retrievedAt: expect.any(String),
+      hints: [],
+      icrisHomeUrl: CR_ESERVICES_URL,
+    });
+  });
+
+  it("two labels → distinct brNo, multiple fetches (L-T)", async () => {
+    searchCrLocalByNameBeginsWith.mockImplementation(async (prefix) => {
+      if (prefix === "ZZQ DECORATION" || prefix === "ZZQ DECORATION LIMITED") {
+        return {
+          kind: "rows",
+          rows: [row("ZZQ DECORATION LIMITED", "C1111111")],
+        };
+      }
+      if (prefix === "ZZQ DECORATIONS" || prefix === "ZZQ DECORATIONS & CO LIMITED") {
+        return {
+          kind: "rows",
+          rows: [row("ZZQ DECORATIONS & CO LIMITED", "C2222222")],
+        };
+      }
+      return { kind: "no_result" };
+    });
+    const a = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("ZZQ DECORATION LIMITED"),
+      "ZZQ DECORATION LIMITED",
+      null,
+    );
+    clearCrRegistryCacheForTests();
+    const b = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("ZZQ DECORATIONS & CO LIMITED"),
+      "ZZQ DECORATIONS & CO LIMITED",
+      null,
+    );
+    expect(a.brNo).toBe("C1111111");
+    expect(b.brNo).toBe("C2222222");
+    expect(searchCrLocalByNameBeginsWith.mock.calls.length).toBeGreaterThan(1);
   });
 });
 
@@ -182,7 +329,7 @@ describe("C.2c gating with lookup output", () => {
     expect(shouldShowMwcMissFallbackNote(report)).toBe(true);
   });
 
-  it("no companiesRegistry on report → no alert/note helpers", () => {
+  it("no companiesRegistry on report → fallback only", () => {
     const report = riskReportFromCr({
       lookupStatus: "ok",
       matched: false,
@@ -198,6 +345,6 @@ describe("C.2c gating with lookup output", () => {
       shouldShowUnverifiedCompanyRegistrationAlert(withoutCr),
     ).toBe(false);
     expect(shouldShowMwcMissWithCrFoundNote(withoutCr)).toBe(false);
-    expect(shouldShowMwcMissFallbackNote(withoutCr)).toBe(false);
+    expect(shouldShowMwcMissFallbackNote(withoutCr)).toBe(true);
   });
 });

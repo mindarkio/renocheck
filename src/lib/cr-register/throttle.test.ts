@@ -7,6 +7,17 @@ describe("scheduleCrApiRequest (M5a)", () => {
     resetCrApiThrottleForTests();
   });
 
+  it("third enqueue returns queue_full within 50ms (L-a)", async () => {
+    resetCrApiThrottleForTests();
+    const run = () => new Promise<string>((r) => setTimeout(() => r("ok"), 100));
+    scheduleCrApiRequest(run);
+    scheduleCrApiRequest(run);
+    const t0 = Date.now();
+    const r3 = await scheduleCrApiRequest(run);
+    expect(Date.now() - t0).toBeLessThan(50);
+    expect(r3).toEqual({ ok: false, reason: "queue_full" });
+  });
+
   it("third concurrent call returns queue_full when wait exceeds maxWaitMs", async () => {
     vi.useFakeTimers();
     resetCrApiThrottleForTests();

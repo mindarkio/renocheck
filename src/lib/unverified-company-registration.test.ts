@@ -225,4 +225,43 @@ describe("MWC miss fallback note (L7)", () => {
       ),
     ).toBe(false);
   });
+
+  it("shows when CR skipped (phone) + MWC miss (L-c)", () => {
+    expect(
+      shouldShowMwcMissFallbackNote(
+        baseReport({
+          entity: {
+            displayName: "91234567",
+            matchType: "phone",
+            queryEcho: "91234567",
+            searchLabelUsed: "91234567",
+            nameAlignment: "user_only",
+          },
+          official: {
+            mwcMatched: false,
+            companiesRegistry: {
+              lookupStatus: "skipped",
+              retrievedAt: "2026-10-18T12:00:00.000Z",
+              hints: [],
+              icrisHomeUrl: CR_ESERVICES_URL,
+            },
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("shows when CR timeout + MWC miss (L-c)", () => {
+    expect(
+      shouldShowMwcMissFallbackNote(
+        baseReport({
+          official: {
+            mwcMatched: false,
+            legalLookupStatus: "ok",
+            companiesRegistry: crBase({ lookupStatus: "timeout" }),
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
 });

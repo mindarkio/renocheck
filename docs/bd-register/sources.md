@@ -78,7 +78,7 @@
 | **Throttle（產品）** | 每個 serverless instance ≤1 req/s（非全域；`throttle.ts` 串行化）。接受理由：DATA.GOV.HK 無全域配額文件，instance 級節流避免單一冷啟動打爆上游。 |
 | **條款** | [DATA.GOV.HK 使用條款及細則](https://data.gov.hk/tc/terms-and-conditions) — **容許商業用途**（須標示來源） |
 
-### `Brn` 欄位（唔等同稅務局 8 位商業登記號）
+### `Brn` 欄位（同稅務局 BR 是否一致未核實）
 
 `Brn` 主要係 **8 位數字**，少數係 **`C` + 7 位**；8 位值同稅務局商業登記號頭 8 位係咪一致 **未核實**。產品暫時只對 `^C\d{7}$` 用 `Brn equal`。日後若用 8 位做 `equal`，只可以做正面 match；HTTP 400 **唔可以**觸發 C.2c alert。純稅務局 8 位 BR 搜尋 **唔** 呼叫 `Brn equal`，改以公司名稱 `begins_with`（如有）或唔發出會產生 `not_found` 嘅查詢。
 

@@ -1,5 +1,6 @@
 /** API `Date_of_Incorporation` is `DD-MM-YYYY`. */
-export function parseCrIncorporationDateToIso(raw: string): string | undefined {
+export function parseCrIncorporationDateToIso(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
   const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(raw.trim());
   if (!m) return undefined;
   const [, dd, mm, yyyy] = m;

@@ -2,6 +2,8 @@ import {
   normalizeChineseCompanyName,
   normalizeEnglishCompanyName,
 } from "../cause-list/normalize";
+import { splitMixedLabelParts } from "./prefix";
+import { crStringField } from "./row-fields";
 import type { CrApiLocalRow } from "./types";
 
 export {
@@ -12,13 +14,9 @@ export {
 const TIER_RANK: Record<"A" | "B" | "C", number> = { A: 0, B: 1, C: 2 };
 
 function rowDisplayNames(row: CrApiLocalRow): { zh: string; en: string } {
-  const zh =
-    row.Chinese_Company_Name &&
-    row.Chinese_Company_Name !== "NULL" &&
-    row.Chinese_Company_Name.trim()
-      ? row.Chinese_Company_Name.trim()
-      : "";
-  const en = row.English_Company_Name?.trim() ?? "";
+  const zhRaw = crStringField(row.Chinese_Company_Name);
+  const zh = zhRaw && zhRaw !== "NULL" ? zhRaw : "";
+  const en = crStringField(row.English_Company_Name);
   return { zh, en };
 }
 
@@ -27,18 +25,20 @@ export function tierForRow(
   searchLabel: string,
 ): "A" | "B" | "C" | null {
   const label = searchLabel.trim();
+  const parts = splitMixedLabelParts(label);
+  const labelHasLatin = /[A-Za-z]/.test(label);
   const { zh, en } = rowDisplayNames(row);
-  const labelZh = normalizeChineseCompanyName(label);
-  const labelEn = normalizeEnglishCompanyName(label);
 
-  if (zh) {
+  if (zh && (parts.zh !== undefined || !labelHasLatin)) {
+    const labelZh = normalizeChineseCompanyName(parts.zh ?? label);
     const rowZh = normalizeChineseCompanyName(zh);
     if (rowZh.normStrict === labelZh.normStrict) return "B";
     if (rowZh.normCore === labelZh.normCore && labelZh.normCore.length >= 4) {
       return "C";
     }
   }
-  if (en) {
+  if (en && parts.en !== undefined) {
+    const labelEn = normalizeEnglishCompanyName(parts.en);
     const rowEn = normalizeEnglishCompanyName(en);
     if (rowEn.normStrict === labelEn.normStrict) return "B";
     if (rowEn.normCore === labelEn.normCore && labelEn.normCore.length >= 4) {

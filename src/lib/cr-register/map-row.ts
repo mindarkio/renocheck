@@ -1,4 +1,5 @@
 import { CR_ESERVICES_URL } from "../report-trust-copy-zh";
+import { crStringField } from "./row-fields";
 import type { CrApiLocalRow } from "./types";
 import {
   isIncorporationUnderOneYearAt,
@@ -31,18 +32,17 @@ export function mapCrApiRowToSnapshot(
   ) {
     hints.push("incorporation_under_one_year");
   }
-  const nameZhRaw =
-    row.Chinese_Company_Name &&
-    row.Chinese_Company_Name !== "NULL" &&
-    row.Chinese_Company_Name.trim()
-      ? row.Chinese_Company_Name.trim()
-      : undefined;
-  const nameEnRaw = row.English_Company_Name?.trim() || undefined;
+  const nameZhRaw = crStringField(row.Chinese_Company_Name);
+  const nameZh =
+    nameZhRaw && nameZhRaw !== "NULL" ? nameZhRaw : undefined;
+  const nameEnRaw = crStringField(row.English_Company_Name) || undefined;
+  const brNo = crStringField(row.Brn);
+  const companyType = crStringField(row.Company_Type);
   return {
     matchTier: opts.matchTier,
-    brNo: row.Brn?.trim().slice(0, 32) || undefined,
-    companyType: row.Company_Type?.trim().slice(0, 120) || undefined,
-    nameZh: nameZhRaw?.slice(0, 200),
+    brNo: brNo ? brNo.slice(0, 32) : undefined,
+    companyType: companyType ? companyType.slice(0, 120) : undefined,
+    nameZh: nameZh?.slice(0, 200),
     nameEn: nameEnRaw?.slice(0, 200),
     incorporationDate,
     retrievedAt: opts.retrievedAt,

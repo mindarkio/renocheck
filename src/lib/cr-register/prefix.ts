@@ -66,14 +66,16 @@ function primaryPrefixFromSegment(segment: string): string | null {
 
 /** Split mixed label into CJK-bearing block and Latin block (M4). */
 export function splitMixedLabelParts(label: string): { zh?: string; en?: string } {
-  const trimmed = label.trim();
-  if (!trimmed) return {};
-  const hasCjk = /\p{Script=Han}/u.test(trimmed);
-  const hasLatin = /[A-Za-z]/.test(trimmed);
+  const normalized = normalizePrefixSource(label);
+  if (!normalized) return {};
+  const hasCjk = /\p{Script=Han}/u.test(normalized);
+  const hasLatin = /[A-Za-z]/.test(normalized);
+  if (!hasCjk && !hasLatin) return {};
+
   if (hasCjk && hasLatin) {
     let zhSeg = "";
     let enSeg = "";
-    for (const token of trimmed.split(/\s+/)) {
+    for (const token of normalized.split(/\s+/)) {
       if (/\p{Script=Han}/u.test(token)) {
         zhSeg = zhSeg ? `${zhSeg} ${token}` : token;
       } else if (/[A-Za-z]/.test(token)) {
@@ -85,8 +87,8 @@ export function splitMixedLabelParts(label: string): { zh?: string; en?: string 
       en: enSeg || undefined,
     };
   }
-  if (hasCjk) return { zh: trimmed };
-  if (hasLatin) return { en: trimmed };
+  if (hasCjk) return { zh: normalized };
+  if (hasLatin) return { en: normalized };
   return {};
 }
 

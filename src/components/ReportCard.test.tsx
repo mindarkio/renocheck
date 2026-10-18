@@ -17,6 +17,7 @@ import {
   CR_DATA_ATTRIBUTION_ZH,
   CR_ESERVICES_URL,
   CR_LOOKUP_DEGRADED_ZH,
+  MWC_MISS_NOTE_CR_SIMILAR_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
 } from "@/lib/report-trust-copy-zh";
@@ -223,6 +224,41 @@ describe("ReportCard report trust (PR-BC)", () => {
     );
     expect(screen.getByText(CR_LOOKUP_DEGRADED_ZH)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("CR timeout：degraded + fallback note（L-c）", () => {
+    render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            legalLookupStatus: "ok",
+            companiesRegistry: crRegistry({ lookupStatus: "timeout" }),
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText(CR_LOOKUP_DEGRADED_ZH)).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText(MWC_MISS_NOTE_HEADING_ZH)).toBeTruthy();
+  });
+
+  it("tier C match shows MWC_MISS_NOTE_CR_SIMILAR_ZH (L-T)", () => {
+    render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({
+              matched: true,
+              matchTier: "C",
+              hints: [],
+            }),
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText(MWC_MISS_NOTE_CR_SIMILAR_ZH)).toBeTruthy();
   });
 
   it("CR ambiguous：0 alert", () => {

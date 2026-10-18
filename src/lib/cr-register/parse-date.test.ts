@@ -8,6 +8,10 @@ describe("parseCrIncorporationDateToIso", () => {
   it("parses DD-MM-YYYY", () => {
     expect(parseCrIncorporationDateToIso("15-10-2024")).toBe("2024-10-15");
   });
+
+  it("returns undefined for non-string", () => {
+    expect(parseCrIncorporationDateToIso(null)).toBeUndefined();
+  });
 });
 
 describe("isIncorporationUnderOneYearAt", () => {

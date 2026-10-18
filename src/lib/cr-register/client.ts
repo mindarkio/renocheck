@@ -48,6 +48,9 @@ async function fetchLocalSearch(
   key3: string,
   options?: CrFetchOptions,
 ): Promise<CrLocalSearchResult> {
+  if (options?.signal?.aborted) {
+    return { kind: "error", message: "timeout" };
+  }
   if (isCrCircuitOpen()) {
     return { kind: "error", message: "circuit_open" };
   }
@@ -55,6 +58,9 @@ async function fetchLocalSearch(
   const scheduled = await scheduleCrApiRequest(async () => {
     const url = buildSearchUrl(key1, key2, key3);
     try {
+      if (options?.signal?.aborted) {
+        return { kind: "error" as const, message: "timeout" };
+      }
       const res = await fetch(url, {
         signal: options?.signal,
         headers: { Accept: "application/json" },
@@ -109,10 +115,10 @@ async function fetchLocalSearch(
       return { kind: "rows" as const, rows: body as CrApiLocalRow[] };
     } catch (e) {
       const msg = e instanceof Error ? e.name : "fetch_failed";
-      recordCrApiFailure(0);
       if (msg === "TimeoutError" || msg === "AbortError") {
         return { kind: "error" as const, message: "timeout" };
       }
+      recordCrApiFailure(0);
       return { kind: "error" as const, message: "fetch_failed" };
     }
   });
