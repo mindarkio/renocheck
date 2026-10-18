@@ -64,6 +64,9 @@ function primaryPrefixFromSegment(segment: string): string | null {
   return prefixVariantsFromSegment(segment)[0] ?? null;
 }
 
+const MIXED_LABEL_SEGMENT_RE =
+  /[\p{Script=Han}]+|[A-Za-z][A-Za-z0-9 &.,'()-]*/gu;
+
 /** Split mixed label into CJK-bearing block and Latin block (M4). */
 export function splitMixedLabelParts(label: string): { zh?: string; en?: string } {
   const normalized = normalizePrefixSource(label);
@@ -73,13 +76,22 @@ export function splitMixedLabelParts(label: string): { zh?: string; en?: string 
   if (!hasCjk && !hasLatin) return {};
 
   if (hasCjk && hasLatin) {
+    const segments = [
+      ...normalized.matchAll(MIXED_LABEL_SEGMENT_RE),
+    ].map((m) => m[0]!);
     let zhSeg = "";
     let enSeg = "";
-    for (const token of normalized.split(/\s+/)) {
-      if (/\p{Script=Han}/u.test(token)) {
-        zhSeg = zhSeg ? `${zhSeg} ${token}` : token;
-      } else if (/[A-Za-z]/.test(token)) {
-        enSeg = enSeg ? `${enSeg} ${token}` : token;
+    let pendingLatin = "";
+    for (const seg of segments) {
+      if (/\p{Script=Han}/u.test(seg)) {
+        zhSeg = (pendingLatin + seg).trim();
+        pendingLatin = "";
+      } else if (/[A-Za-z]/.test(seg)) {
+        if (zhSeg) {
+          enSeg = enSeg ? `${enSeg} ${seg}` : seg;
+        } else {
+          pendingLatin += seg;
+        }
       }
     }
     return {

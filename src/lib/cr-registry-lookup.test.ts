@@ -14,7 +14,10 @@ vi.mock("./cr-register/client", () => ({
 
 import { clearCrRegistryCacheForTests } from "./cr-register/memory-cache";
 import { resetCrApiThrottleForTests } from "./cr-register/throttle";
-import { resetCrCircuitBreakerForTests } from "./cr-register/circuit-breaker";
+import {
+  isCrCircuitOpen,
+  resetCrCircuitBreakerForTests,
+} from "./cr-register/circuit-breaker";
 import type { CrApiLocalRow } from "./cr-register/types";
 import { lookupCompaniesRegistryForSearch } from "./cr-registry-lookup";
 import { companyNameOnlySearchInput } from "./normalize-search-input";
@@ -173,6 +176,48 @@ describe("lookupCompaniesRegistryForSearch", () => {
       null,
     );
     expect(searchCrLocalByNameBeginsWith).toHaveBeenCalledTimes(4);
+  });
+
+  it("long mixed label all 400 → at most 4 fetches (c-L4)", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({ kind: "no_result" });
+    const label = "合成工程有限公司（香港） ZZQ ENGINEERING LIMITED (HK)";
+    await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    expect(searchCrLocalByNameBeginsWith.mock.calls.length).toBeLessThanOrEqual(
+      4,
+    );
+  });
+
+  it("lookup budget exceeded → lookupStatus timeout (c-L5)", async () => {
+    vi.useFakeTimers();
+    searchCrLocalByNameBeginsWith.mockImplementation(
+      (_prefix, options?: { signal?: AbortSignal }) =>
+        new Promise((resolve) => {
+          const signal = options?.signal;
+          const onAbort = () =>
+            resolve({ kind: "error", message: "timeout" });
+          if (!signal) {
+            resolve({ kind: "no_result" });
+            return;
+          }
+          if (signal.aborted) onAbort();
+          else signal.addEventListener("abort", onAbort, { once: true });
+        }),
+    );
+    const label = "合成測試有限公司";
+    const pending = lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    await vi.advanceTimersByTimeAsync(6001);
+    const official = await pending;
+    expect(official.lookupStatus).toBe("timeout");
+    expect(isCrCircuitOpen()).toBe(false);
+    vi.useRealTimers();
   });
 
   it("truncated prefix C rows + full prefix B row → tier B (N4)", async () => {

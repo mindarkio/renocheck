@@ -24,6 +24,12 @@ describe("buildNameSearchPrefixes (B1/M4)", () => {
     ).toEqual(["ABC裝修", "ABC DECORATION"]);
   });
 
+  it("glued mixed label splits Han/Latin runs (c-L6)", () => {
+    expect(
+      buildNameSearchPrefixes("ABC裝修有限公司ABC DECORATION LIMITED"),
+    ).toEqual(["ABC裝修", "ABC DECORATION"]);
+  });
+
   it("allNameSearchPrefixAttempts includes truncated and full when both valid", () => {
     const all = allNameSearchPrefixAttempts("FOO BAR & CO LIMITED");
     expect(all[0]).toBe("FOO BAR");

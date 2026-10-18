@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetCrCircuitBreakerForTests } from "./circuit-breaker";
+import {
+  isCrCircuitOpen,
+  resetCrCircuitBreakerForTests,
+} from "./circuit-breaker";
 import { resetCrApiThrottleForTests } from "./throttle";
 import { searchCrLocalByNameBeginsWith } from "./client";
+
+/** Fake-timer-friendly stand-in for AbortSignal.timeout in tests. */
+function abortSignalAfterMs(ms: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
 
 function mockFetchResponse(init: {
   ok: boolean;
@@ -148,21 +158,69 @@ describe("searchCrLocalByNameBeginsWith", () => {
     vi.useRealTimers();
   });
 
-  it("three consecutive upstream timeouts open circuit (c-L3)", async () => {
+  it("three slow upstream timeouts open circuit (f-L1)", async () => {
     vi.useFakeTimers();
-    const fetchMock = vi.fn().mockImplementation(() => {
-      const err = new Error("The operation was aborted");
-      err.name = "AbortError";
-      return Promise.reject(err);
-    });
+    const fetchMock = vi.fn().mockImplementation(
+      (_url: string, init?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal;
+          const fail = () => {
+            const err = new Error("The operation was aborted");
+            err.name = "AbortError";
+            reject(err);
+          };
+          if (!signal) {
+            fail();
+            return;
+          }
+          if (signal.aborted) fail();
+          else signal.addEventListener("abort", fail, { once: true });
+        }),
+    );
     vi.stubGlobal("fetch", fetchMock);
     for (let i = 0; i < 3; i++) {
-      await searchCrLocalByNameBeginsWith(`t${i}`);
-      vi.advanceTimersByTime(1100);
+      const pending = searchCrLocalByNameBeginsWith(`t${i}`, {
+        signal: abortSignalAfterMs(3500),
+      });
+      await vi.advanceTimersByTimeAsync(3600);
+      await pending;
+      await vi.advanceTimersByTimeAsync(1100);
     }
     const blocked = await searchCrLocalByNameBeginsWith("blocked");
     expect(blocked).toEqual({ kind: "error", message: "circuit_open" });
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    vi.useRealTimers();
+  });
+
+  it("fast budget timeouts do not open circuit (f-L1)", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockImplementation(
+      (_url: string, init?: { signal?: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal;
+          const fail = () => {
+            const err = new Error("The operation was aborted");
+            err.name = "AbortError";
+            reject(err);
+          };
+          if (!signal) {
+            fail();
+            return;
+          }
+          if (signal.aborted) fail();
+          else signal.addEventListener("abort", fail, { once: true });
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    for (let i = 0; i < 3; i++) {
+      const pending = searchCrLocalByNameBeginsWith(`f${i}`, {
+        signal: abortSignalAfterMs(500),
+      });
+      await vi.advanceTimersByTimeAsync(600);
+      await pending;
+      await vi.advanceTimersByTimeAsync(1100);
+    }
+    expect(isCrCircuitOpen()).toBe(false);
     vi.useRealTimers();
   });
 

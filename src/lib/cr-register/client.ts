@@ -10,6 +10,7 @@ const LOCAL_SEARCH_URL =
   "https://data.cr.gov.hk/cr/api/api/v1/api_builder/json/local/search";
 
 const MAX_BODY_BYTES = 2_000_000;
+const CR_UPSTREAM_SLOW_MS = 3000;
 
 export type CrLocalSearchResult =
   | { kind: "rows"; rows: CrApiLocalRow[] }
@@ -18,6 +19,8 @@ export type CrLocalSearchResult =
 
 export type CrFetchOptions = {
   signal?: AbortSignal;
+  /** Lookup wall-clock deadline (ms since epoch) for throttle queue budget. */
+  deadlineMs?: number;
 };
 
 function buildSearchUrl(
@@ -55,8 +58,10 @@ async function fetchLocalSearch(
     return { kind: "error", message: "circuit_open" };
   }
 
-  const scheduled = await scheduleCrApiRequest(async () => {
+  const scheduled = await scheduleCrApiRequest(
+    async () => {
     const url = buildSearchUrl(key1, key2, key3);
+    const startedAt = Date.now();
     try {
       if (options?.signal?.aborted) {
         return { kind: "error" as const, message: "timeout" };
@@ -116,13 +121,17 @@ async function fetchLocalSearch(
     } catch (e) {
       const msg = e instanceof Error ? e.name : "fetch_failed";
       if (msg === "TimeoutError" || msg === "AbortError") {
-        recordCrApiFailure(0);
+        if (Date.now() - startedAt >= CR_UPSTREAM_SLOW_MS) {
+          recordCrApiFailure(0);
+        }
         return { kind: "error" as const, message: "timeout" };
       }
       recordCrApiFailure(0);
       return { kind: "error" as const, message: "fetch_failed" };
     }
-  });
+  },
+    { deadlineMs: options?.deadlineMs },
+  );
 
   if (!scheduled.ok) {
     return { kind: "error", message: scheduled.reason };

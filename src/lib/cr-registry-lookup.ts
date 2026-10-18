@@ -53,10 +53,24 @@ function snapshotToOfficial(
   };
 }
 
-function fetchSignal(deadlineMs: number): AbortSignal | undefined {
+function budgetAbortSignal(): AbortSignal {
+  return AbortSignal.abort(new DOMException("budget", "TimeoutError"));
+}
+
+function deadlineAbortSignal(leftMs: number): AbortSignal {
+  const controller = new AbortController();
+  setTimeout(() => {
+    controller.abort(new DOMException("budget", "TimeoutError"));
+  }, leftMs);
+  return controller.signal;
+}
+
+function fetchSignal(deadlineMs: number): AbortSignal {
   const left = deadlineMs - Date.now();
-  if (left <= 0) return AbortSignal.timeout(1);
-  return AbortSignal.timeout(left);
+  if (left <= 50) {
+    return budgetAbortSignal();
+  }
+  return deadlineAbortSignal(left);
 }
 
 function toDegraded(
@@ -88,6 +102,7 @@ async function fetchPrefixCached(
   if (cached) return cached;
   const res = await searchCrLocalByNameBeginsWith(prefix, {
     signal: fetchSignal(deadlineMs),
+    deadlineMs,
   });
   cache.set(prefix, res);
   return res;
@@ -127,7 +142,7 @@ async function resolveNamePrefixes(
     }
   }
 
-  for (const prefix of allAttempts) {
+  for (const prefix of allAttempts.slice(0, 4)) {
     const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs);
     if (res.kind === "error") {
       return toDegraded(res.message);
@@ -194,6 +209,7 @@ async function runLiveLookup(
   if (brnEqual) {
     const res = await searchCrLocalByBrnEqual(brnEqual, {
       signal: fetchSignal(deadlineMs),
+      deadlineMs,
     });
     if (res.kind === "error") {
       return toDegraded(res.message);

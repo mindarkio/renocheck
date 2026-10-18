@@ -12,13 +12,16 @@ export type ScheduleCrResult<T> =
 /** Per serverless instance ≤1 req/s (serialised). */
 export function scheduleCrApiRequest<T>(
   run: () => Promise<T>,
-  options?: { maxWaitMs?: number },
+  options?: { maxWaitMs?: number; deadlineMs?: number },
 ): Promise<ScheduleCrResult<T>> {
-  const maxWaitMs = options?.maxWaitMs ?? DEFAULT_MAX_WAIT_MS;
+  const queueWaitLimitMs =
+    options?.deadlineMs !== undefined
+      ? options.deadlineMs - Date.now() - 1000
+      : (options?.maxWaitMs ?? DEFAULT_MAX_WAIT_MS);
   const depthAtEnqueue = chainDepth;
   const wait = Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastRequestAt));
   const estimatedWait = depthAtEnqueue * MIN_INTERVAL_MS + wait;
-  if (estimatedWait >= maxWaitMs) {
+  if (estimatedWait >= queueWaitLimitMs) {
     return Promise.resolve({ ok: false, reason: "queue_full" });
   }
 
