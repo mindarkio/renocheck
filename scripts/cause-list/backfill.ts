@@ -56,6 +56,7 @@ import {
 import {
   fetchDclHtml,
   isPathDisallowedByRobots,
+  loadJudiciaryRobotsPrefixes,
   loadRobotsDisallowPrefixes,
 } from "../../src/lib/cause-list/fetch-dcl";
 import type { CauseListCourtCode } from "../../src/lib/cause-list/types";
@@ -361,10 +362,9 @@ async function main(): Promise<number> {
 
   if (!reportOnly) {
     await politeWait();
-    const judiciaryRules = await loadRobotsDisallowPrefixes(
-      DCL_LIVE_ORIGIN,
-      CAUSE_LIST_USER_AGENT,
-    );
+    const judiciaryRules = await loadJudiciaryRobotsPrefixes(CAUSE_LIST_USER_AGENT, log, {
+      allowFallback: true,
+    });
     const livePath = new URL(buildDclLiveUrl("01112024", "SMT")).pathname;
     if (isPathDisallowedByRobots(livePath, judiciaryRules)) {
       throw new Error(`robots.txt disallows fetch for ${DCL_LIVE_ORIGIN}${livePath}`);

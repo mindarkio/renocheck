@@ -47,6 +47,7 @@ async function main() {
     liveUrl,
     CAUSE_LIST_USER_AGENT,
     wayback ? requestUrl : undefined,
+    (e) => console.info(JSON.stringify(e)),
   );
 
   const html = await fetchDclHtml(requestUrl, { userAgent: CAUSE_LIST_USER_AGENT });
