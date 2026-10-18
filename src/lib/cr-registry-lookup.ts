@@ -67,6 +67,8 @@ function deadlineAbortSignal(leftMs: number): AbortSignal {
 }
 
 function fetchSignal(deadlineMs: number): AbortSignal {
+  // left<=50 is defense-in-depth: throttle's deadline reserve rejects first;
+  // covered by client.test budget TimeoutError test.
   const left = deadlineMs - Date.now();
   if (left <= 50) {
     return budgetAbortSignal();

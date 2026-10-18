@@ -71,6 +71,34 @@ describe("lookupCompaniesRegistryForSearch", () => {
     );
   });
 
+  it("A/C工程有限公司 → matched, not not_found (R-B1)", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({
+      kind: "rows",
+      rows: [
+        {
+          Brn: "C1111111",
+          English_Company_Name: "NULL",
+          Chinese_Company_Name: "A/C工程有限公司",
+          Company_Type: "Private company limited by shares",
+          Date_of_Incorporation: "01-01-2020",
+          Address_of_Registered_Office: "HK",
+        },
+      ],
+    });
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("A/C工程有限公司"),
+      "A/C工程有限公司",
+      null,
+    );
+    expect(official.lookupStatus).toBe("ok");
+    expect(official.matched).toBe(true);
+    expect(official.hints).not.toContain("not_found_in_active_list");
+    expect(searchCrLocalByNameBeginsWith).toHaveBeenCalledWith(
+      "A/C工程",
+      expect.anything(),
+    );
+  });
+
   it("all prefix attempts 400 → not_found", async () => {
     searchCrLocalByNameBeginsWith.mockResolvedValue({ kind: "no_result" });
     const official = await lookupCompaniesRegistryForSearch(

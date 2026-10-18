@@ -54,7 +54,7 @@ describe("lookupCompaniesRegistryForSearch throttle deadline (c-L2)", () => {
     expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
-  it("returns timeout without fetch when budget has ~30ms left (L4)", async () => {
+  it("returns timeout when queued past the lookup budget (L4)", async () => {
     vi.useFakeTimers({ now: 1_700_000_000_000 });
     resetCrApiThrottleForTests();
     const fetchMock = vi.fn();

@@ -59,17 +59,31 @@ describe("splitMixedLabelParts / prefixes (B1)", () => {
       "ＺＺＱ　ＴＥＳＴＩＮＧ　ＬＩＭＩＴＥＤ 合成測試有限公司",
       ["合成測試", "ZZQ TESTING"],
     ],
-    ["ZZQ TESTING LIMITED合成測試有限公司", ["合成測試", "ZZQ TESTING"]],
+    ["ZZQ TESTING LIMITED合成測試有限公司", ["合成測試"]],
     ["合成 測試有限公司 ZZQ TESTING LIMITED", ["合成 測試", "ZZQ TESTING"]],
     [
       "ABC裝修有限公司ABC DECORATION LIMITED",
       ["ABC裝修", "ABC DECORATION"],
     ],
     ["合成測試有限公司/ZZQ TESTING LIMITED", ["合成測試", "ZZQ TESTING"]],
+    ["A/C工程有限公司", ["A/C工程"]],
+    ["A/C工程有限公司 A/C ENGINEERING LIMITED", ["A/C工程", "A/C ENGINEERING"]],
+    ["1/F裝修有限公司", ["1/F裝修"]],
+    ["DECO裝修有限公司", ["DECO裝修"]],
+    ["ECO環保工程有限公司", ["ECO環保工程"]],
+    ["TACO工程有限公司", ["TACO工程"]],
+    ["HOME DECO裝修有限公司", ["DECO裝修", "HOME"]],
   ];
 
   it.each(prefixCases)("%s", (label, expected) => {
     expect(buildNameSearchPrefixes(label)).toEqual(expected);
+  });
+
+  it("splits English LTD glued before Chinese company name", () => {
+    expect(splitMixedLabelParts("ABC LTD合成有限公司")).toEqual({
+      zh: "合成有限公司",
+      en: "ABC LTD",
+    });
   });
 
   it("paren normalization on zh segment", () => {

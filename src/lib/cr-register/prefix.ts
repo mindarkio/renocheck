@@ -67,7 +67,7 @@ function primaryPrefixFromSegment(segment: string): string | null {
 const HAN_RE = /\p{Script=Han}/u;
 /** Latin company-suffix glued before Han, e.g. "LIMITED合成". */
 const GLUED_EN_HEAD_RE =
-  /^([A-Za-z0-9&.,'()-]*(?:LIMITED|LTD\.?|CO\.?))(?=\p{Script=Han})/iu;
+  /^([A-Za-z0-9&.,'()-]*(?<![A-Za-z])(?:LIMITED|LTD\.?|CO\.?))(?=\p{Script=Han})/iu;
 /** Linear split of "…有限公司ABC" into zh "…有限公司" + en "ABC" (no regex backtracking). */
 function splitGluedLatinTail(tok: string): { zh: string; en: string } | null {
   const chars = [...tok];
@@ -97,26 +97,58 @@ export function splitMixedLabelParts(label: string): { zh?: string; en?: string 
   if (!hasCjk && !hasLatin) return {};
 
   if (hasCjk && hasLatin) {
-    const tokens = normalized
-      .split(" ")
-      .filter(Boolean)
-      .flatMap((tok) => (tok.includes("/") ? tok.split("/") : [tok]));
+    const tokens = normalized.split(" ").filter(Boolean);
     const zhParts: string[] = [];
     const enParts: string[] = [];
     const isLatinTok = (t?: string) =>
       t !== undefined && !HAN_RE.test(t) && /[A-Za-z]/.test(t);
+    const latinBeforeGluedHanLtd = (from: number): boolean => {
+      for (let j = from; j < tokens.length; j++) {
+        const t = tokens[j]!;
+        if (
+          HAN_RE.test(t) &&
+          /^(?:LIMITED|LTD\.?)\p{Script=Han}/iu.test(t)
+        ) {
+          return true;
+        }
+        if (HAN_RE.test(t)) return false;
+      }
+      return false;
+    };
+
     tokens.forEach((tok, i) => {
       if (!HAN_RE.test(tok)) {
-        if (/[A-Za-z]/.test(tok)) enParts.push(tok);
+        if (/[A-Za-z]/.test(tok) && !latinBeforeGluedHanLtd(i)) {
+          enParts.push(tok);
+        }
         return;
       }
       let zhTok = tok;
       const head = zhTok.match(GLUED_EN_HEAD_RE);
-      if (head && (isLatinTok(tokens[i - 1]) || i === 0)) {
-        enParts.push(head[1]!);
+      const peelHead =
+        head &&
+        (isLatinTok(tokens[i - 1]) ||
+          (i === 0 && tokens.length === 1));
+      if (peelHead) {
+        const bareSuffix = /^(?:LIMITED|LTD\.?|CO\.?)$/i.test(head[1]!.trim());
+        if (bareSuffix) {
+          if (
+            isLatinTok(tokens[i - 1]) &&
+            !isLatinTok(tokens[i - 2])
+          ) {
+            enParts.push(
+              `${tokens[i - 1]!.trim()} ${head[1]!.trim()}`,
+            );
+          }
+        } else {
+          enParts.push(head[1]!);
+        }
         zhTok = zhTok.slice(head[1]!.length);
       }
-      if (isLatinTok(tokens[i + 1])) {
+      if (
+        isLatinTok(tokens[i + 1]) ||
+        /(?:有限公司|公司)[)\]]*\/[A-Za-z]/u.test(zhTok)
+      ) {
         const split = splitGluedLatinTail(zhTok);
         if (split) {
           zhTok = split.zh;

@@ -64,4 +64,18 @@ describe("scheduleCrApiRequest (M5a)", () => {
     await p1;
     vi.useRealTimers();
   });
+
+  it("deadline-saturated enqueue returns timeout; maxWaitMs returns queue_full (R-L1)", async () => {
+    vi.useFakeTimers();
+    resetCrApiThrottleForTests();
+    const run = () => new Promise<string>(() => undefined);
+    scheduleCrApiRequest(run);
+    const deadlineReject = await scheduleCrApiRequest(run, {
+      deadlineMs: Date.now() + 1500,
+    });
+    expect(deadlineReject).toEqual({ ok: false, reason: "timeout" });
+    const queueReject = await scheduleCrApiRequest(run, { maxWaitMs: 500 });
+    expect(queueReject).toEqual({ ok: false, reason: "queue_full" });
+    vi.useRealTimers();
+  });
 });
