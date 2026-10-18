@@ -1,8 +1,13 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   D2_GOLDEN_MWC_COLUMNS,
+  D2_MWC_ANON_DENIED_MESSAGE,
+  d2MwcFailureText,
   decideD2GoldenRun,
+  decideD2MwcDatabase,
   d2GoldenMwcSelectList,
   loadD2GoldenMwcRows,
   selectD2GoldenSupabaseKey,
@@ -34,7 +39,8 @@ describe("decideD2GoldenRun", () => {
     expect(decision.reason).toContain("is listed in SUPABASE_PROD_PROJECT_REFS");
     expect(decision.reason).not.toContain("built-in production project ref");
     expect(decision.reason).toContain("Refusing to read production");
-    expect(decision.reason).toContain("D2_GOLDEN_ALLOW_PROD_READONLY=1");
+    expect(decision.reason).toContain(D2_MWC_ANON_DENIED_MESSAGE);
+    expect(decision.reason).not.toContain("D2_GOLDEN_ALLOW_PROD_READONLY");
   });
 
   it("fails closed for the default production ref when the env list is unset", () => {
@@ -92,22 +98,24 @@ describe("decideD2GoldenRun", () => {
     ).toEqual({ action: "run" });
   });
 
-  it("runs when RUN_D2_GOLDEN=1, the ref is prod, and the read-only allow flag is set", () => {
-    expect(
+  it("refuses a prod ref even when the old read-only allow flag is set", () => {
+    for (const decision of [
       decideD2GoldenRun({
         RUN_D2_GOLDEN: "1",
         NEXT_PUBLIC_SUPABASE_URL: DEFAULT_PROD_URL,
         D2_GOLDEN_ALLOW_PROD_READONLY: "1",
       }),
-    ).toEqual({ action: "run" });
-    expect(
-      decideD2GoldenRun({
-        RUN_D2_GOLDEN: "1",
+      decideD2MwcDatabase({
         NEXT_PUBLIC_SUPABASE_URL: PROD_URL,
         SUPABASE_PROD_PROJECT_REFS: "prodprojectref",
         D2_GOLDEN_ALLOW_PROD_READONLY: "1",
       }),
-    ).toEqual({ action: "run" });
+    ]) {
+      expect(decision.action).toBe("fail");
+      if (decision.action !== "fail") return;
+      expect(decision.reason).toContain("Refusing to read production");
+      expect(decision.reason).toContain(D2_MWC_ANON_DENIED_MESSAGE);
+    }
   });
 
   it("runs when RUN_D2_GOLDEN=1 and the URL ref is not in the prod list", () => {
@@ -118,6 +126,58 @@ describe("decideD2GoldenRun", () => {
         SUPABASE_PROD_PROJECT_REFS: "prodprojectref",
       }),
     ).toEqual({ action: "run" });
+  });
+});
+
+describe("decideD2MwcDatabase", () => {
+  it("fails for the production project URL", () => {
+    expect(
+      decideD2MwcDatabase({
+        NEXT_PUBLIC_SUPABASE_URL: "https://lvrasvtilgzwtfsfjbzd.supabase.co",
+      }).action,
+    ).toBe("fail");
+  });
+
+  it("fails for an unrecognised host", () => {
+    expect(
+      decideD2MwcDatabase({
+        NEXT_PUBLIC_SUPABASE_URL: "https://example.com",
+      }).action,
+    ).toBe("fail");
+  });
+
+  it("runs for local Supabase", () => {
+    expect(
+      decideD2MwcDatabase({
+        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+      }).action,
+    ).toBe("run");
+  });
+
+  it("filter script does not read .env.local and calls the prod gate", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "scripts/filter-judgment-candidates-d2.ts"),
+      "utf8",
+    );
+    expect(source).not.toContain(".env.local");
+    expect(source).not.toContain("loadEnvFile");
+    expect(source).not.toContain("dotenv");
+    // `process.env` is the explicit shell export, not a dotenv file load.
+    expect(source.replaceAll("process.env", "")).not.toContain(".env");
+    expect(source).toContain("decideD2MwcDatabase(");
+  });
+
+  it("write-golden script does not read .env.local and calls the prod gate", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "scripts/write-judgment-d2-filter-golden.ts"),
+      "utf8",
+    );
+    expect(source).not.toContain(".env.local");
+    expect(source).not.toContain("loadEnvFile");
+    expect(source).not.toContain("dotenv");
+    // `process.env` is the explicit shell export, not a dotenv file load.
+    expect(source.replaceAll("process.env", "")).not.toContain(".env");
+    expect(source).toContain("decideD2MwcDatabase(");
   });
 });
 
@@ -165,6 +225,28 @@ function nameRows(count: number, start = 0): NameRow[] {
     company_name: `Co ${start + i}`,
     registration_no: `MWC ${start + i}`,
   }));
+}
+
+function errorClient(error: { code?: string; message?: string }) {
+  const client = {
+    from(table: string) {
+      if (table !== "mwc_contractors") throw new Error(`unexpected table ${table}`);
+      return {
+        select() {
+          return {
+            order() {
+              return {
+                range() {
+                  return Promise.resolve({ data: null, error, count: null });
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  };
+  return client as unknown as Pick<SupabaseClient, "from">;
 }
 
 function fakeMwcClient(pages: NameRow[][], count: number) {
@@ -225,6 +307,29 @@ describe("loadD2GoldenMwcRows", () => {
     const { client } = fakeMwcClient([nameRows(500, 0), nameRows(500, 500), []], 1000);
     const rows = await loadD2GoldenMwcRows(client);
     expect(rows).toHaveLength(1000);
+  });
+
+  it("replaces 42501 and permission denied without row text", async () => {
+    let thrown: unknown;
+    try {
+      await loadD2GoldenMwcRows(
+        errorClient({
+          code: "42501",
+          message: "permission denied for table mwc_contractors Co Secret Name",
+        }),
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).toBe(D2_MWC_ANON_DENIED_MESSAGE);
+    expect((thrown as Error).message).not.toContain("Co Secret Name");
+
+    const textual = d2MwcFailureText({
+      message: "permission denied for relation mwc_contractors phone 91234567",
+    });
+    expect(textual).toBe(D2_MWC_ANON_DENIED_MESSAGE);
+    expect(textual).not.toContain("91234567");
   });
 
   it("rejects an empty read", async () => {
