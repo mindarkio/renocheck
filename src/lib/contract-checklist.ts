@@ -1,8 +1,6 @@
+import { DEFAULT_CONTRACT_CHECKLIST_ZH } from "./report-trust-copy-zh";
+
 /** Signing checklist shown on every report (open access). */
 export function defaultContractChecklist(): string[] {
-  return [
-    "工程範圍、物料品牌與單價是否寫清？",
-    "付款期數是否與工程進度掛鈎？",
-    "保養期、延誤責任與終止合約條款是否明確？",
-  ];
+  return [...DEFAULT_CONTRACT_CHECKLIST_ZH];
 }

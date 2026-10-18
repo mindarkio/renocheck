@@ -13,8 +13,33 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { defaultContractChecklist } from "@/lib/contract-checklist";
 import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
+import { buildOfficialVerifyLinks } from "@/lib/official-verify-links";
+import { shouldShowNonLimitedContractorNotice } from "@/lib/non-limited-contractor-notice";
+import {
+  BD_MINOR_WORKS_OFFICIAL_URL,
+  CONTRACT_CHECKLIST_HEADING_WITH_ACTIONABLE_ZH,
+  CONTRACT_CHECKLIST_HEADING_ZH,
+  DAILY_CAUSE_LIST_LINK_LABEL_ZH,
+  DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH,
+  DAILY_CAUSE_LIST_SELF_SERVICE_HEADING_ZH,
+  JUDICIARY_DAILY_CAUSE_LIST_URL,
+  NEXT_STEPS_HEADING_ZH,
+  NEXT_STEPS_INTRO_ZH,
+  NEXT_STEPS_ITEMS_ZH,
+  NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH,
+  NON_LIMITED_CAUSE_LIST_SCOPE_ZH,
+  NON_LIMITED_CONTRACTOR_NOTICE_ZH,
+  REPORT_SCOPE_LIMITS_BULLETS_ZH,
+  REPORT_SCOPE_LIMITS_CLOSING_ZH,
+  REPORT_SCOPE_LIMITS_HEADING_ZH,
+  UNVERIFIED_COMPANY_REGISTRATION_BODY_PARAGRAPHS_ZH,
+  UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH,
+  UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
+} from "@/lib/report-trust-copy-zh";
+import { shouldShowUnverifiedCompanyRegistrationMode } from "@/lib/unverified-company-registration";
 import {
   judgmentCategoryLabelZh,
   LEGAL_EVENTS_AI_VERIFIED_ZH,
@@ -270,8 +295,12 @@ function ReportBlock({
 
 export function ReportCard({ report }: { report: RiskReport }) {
   const highlights = report.signals.highlights ?? [];
-  const checklist = report.signals.contractChecklist ?? [];
+  const contractQuestions = defaultContractChecklist();
   const actionable = report.signals.actionableClauses ?? [];
+  const showUnverifiedRegistration =
+    shouldShowUnverifiedCompanyRegistrationMode(report);
+  const showNonLimitedNotice = shouldShowNonLimitedContractorNotice(report);
+  const officialVerifyLinks = buildOfficialVerifyLinks(report);
   const saturation = report.evaluation.dataSaturation;
   const saturationNote = dataSaturationCaution(saturation);
   const showSaturationBanner =
@@ -308,6 +337,39 @@ export function ReportCard({ report }: { report: RiskReport }) {
 
   return (
     <div className="space-y-4 text-left">
+    {showUnverifiedRegistration ? (
+      <div
+        className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm sm:px-5 sm:py-5"
+        role="alert"
+        aria-labelledby="unverified-registration-heading"
+      >
+        <h2
+          id="unverified-registration-heading"
+          className="text-base font-semibold leading-snug sm:text-lg"
+        >
+          {UNVERIFIED_COMPANY_REGISTRATION_HEADING_ZH}
+        </h2>
+        <div className="mt-3 space-y-2 text-sm leading-[1.65] sm:text-[15px]">
+          {UNVERIFIED_COMPANY_REGISTRATION_BODY_PARAGRAPHS_ZH.map((p) => (
+            <p key={p}>{p}</p>
+          ))}
+          <p>
+            <a
+              href={BD_MINOR_WORKS_OFFICIAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-amber-950 underline underline-offset-2"
+            >
+              {NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH}
+              <ExternalLink className="ms-1 inline size-3.5 opacity-80" aria-hidden />
+            </a>
+          </p>
+          <p className="text-amber-900/90">
+            {UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH}
+          </p>
+        </div>
+      </div>
+    ) : null}
     <article className={`${reportShellClass} overflow-hidden`}>
       <header
         className="bg-primary px-5 py-5 text-primary-foreground sm:px-6 sm:py-6"
@@ -508,7 +570,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                       rel="noopener noreferrer"
                       className="underline-offset-2 hover:underline"
                     >
-                      司法機構每日排期表
+                      {DAILY_CAUSE_LIST_LINK_LABEL_ZH}
                     </a>
                     <span className="mt-0.5 block text-primary-foreground/60">
                       {links.dailyCauseListNote}
@@ -517,6 +579,23 @@ export function ReportCard({ report }: { report: RiskReport }) {
                 </>
               );
             })()}
+            {officialVerifyLinks.map((item) => (
+              <li key={item.id}>
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline-offset-2 hover:underline"
+                >
+                  {item.labelZh}
+                </a>
+                {item.noteZh ? (
+                  <span className="mt-0.5 block text-primary-foreground/60">
+                    {item.noteZh}
+                  </span>
+                ) : null}
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -527,6 +606,31 @@ export function ReportCard({ report }: { report: RiskReport }) {
           </time>
         </p>
       </header>
+
+      {showNonLimitedNotice ? (
+        <ReportBlock
+          id="non-limited-notice-heading"
+          icon={Info}
+          title="登記形態說明"
+          className="bg-muted/20"
+        >
+          <div className={`space-y-3 ${reportBodyClass}`} role="note">
+            <p>{NON_LIMITED_CONTRACTOR_NOTICE_ZH}</p>
+            <p className={reportMetaClass}>{NON_LIMITED_CAUSE_LIST_SCOPE_ZH}</p>
+            <p>
+              <a
+                href={JUDICIARY_DAILY_CAUSE_LIST_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline"
+              >
+                {DAILY_CAUSE_LIST_LINK_LABEL_ZH}
+                <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+              </a>
+            </p>
+          </div>
+        </ReportBlock>
+      ) : null}
 
       {showLegalEvents ? (
         <ReportBlock
@@ -843,23 +947,98 @@ export function ReportCard({ report }: { report: RiskReport }) {
       </div>
     )}
 
-    {checklist.length > 0 && (
-      <section
-        className={`${reportShellClass} ${reportBlockClass}`}
-        aria-labelledby="checklist-heading"
+    <section
+      className={`${reportShellClass} ${reportBlockClass}`}
+      aria-labelledby="checklist-heading"
+    >
+      <SectionHeading id="checklist-heading" icon={ListChecks}>
+        {actionable.length > 0
+          ? CONTRACT_CHECKLIST_HEADING_WITH_ACTIONABLE_ZH
+          : CONTRACT_CHECKLIST_HEADING_ZH}
+      </SectionHeading>
+      <ul
+        className={`mt-4 list-disc space-y-2 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
       >
-        <SectionHeading id="checklist-heading" icon={ListChecks}>
-          {actionable.length > 0 ? "通用簽約提問" : "簽約前可參考提問"}
-        </SectionHeading>
-        <ul
-          className={`mt-4 list-disc space-y-2 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
-        >
-          {checklist.map((item) => (
-            <li key={item} className="pl-1">{item}</li>
+        {contractQuestions.map((item) => (
+          <li key={item} className="pl-1">{item}</li>
+        ))}
+      </ul>
+    </section>
+
+    <section
+      className={`${reportShellClass} ${reportBlockClass}`}
+      aria-labelledby="next-steps-heading"
+    >
+      <SectionHeading id="next-steps-heading" icon={ListChecks}>
+        {NEXT_STEPS_HEADING_ZH}
+      </SectionHeading>
+      <p className={`mt-3 ${reportMetaClass}`}>{NEXT_STEPS_INTRO_ZH}</p>
+      <ol
+        className={`mt-4 list-decimal space-y-2 pl-5 marker:text-primary/50 ${reportBodyClass} text-muted-foreground`}
+      >
+        {NEXT_STEPS_ITEMS_ZH.map((item, index) => (
+          <li key={item} className="pl-1">
+            {index === 3 ? (
+              <>
+                {item}
+                {"（"}
+                <a
+                  href={BD_MINOR_WORKS_OFFICIAL_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  {NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH}
+                </a>
+                ）
+              </>
+            ) : (
+              item
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section
+      className={`${reportShellClass} ${reportBlockClass}`}
+      aria-labelledby="report-limits-heading"
+    >
+      <SectionHeading id="report-limits-heading" icon={CircleHelp}>
+        {REPORT_SCOPE_LIMITS_HEADING_ZH}
+      </SectionHeading>
+      <ul
+        className={`mt-4 list-disc space-y-2 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
+      >
+        {REPORT_SCOPE_LIMITS_BULLETS_ZH.map((item) => (
+          <li key={item} className="pl-1">{item}</li>
+        ))}
+      </ul>
+      <div className="mt-5 rounded-lg border border-border/60 bg-muted/25 px-4 py-4">
+        <h4 className="text-sm font-semibold text-foreground">
+          {DAILY_CAUSE_LIST_SELF_SERVICE_HEADING_ZH}
+        </h4>
+        <ul className={`mt-2 list-disc space-y-1.5 pl-5 ${reportMetaClass}`}>
+          {DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH.map((line) => (
+            <li key={line}>{line}</li>
           ))}
         </ul>
-      </section>
-    )}
+        <p className="mt-3">
+          <a
+            href={JUDICIARY_DAILY_CAUSE_LIST_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline"
+          >
+            {DAILY_CAUSE_LIST_LINK_LABEL_ZH}
+            <ExternalLink className="size-3.5 shrink-0" aria-hidden />
+          </a>
+        </p>
+      </div>
+      <p className={`mt-4 ${reportMetaClass}`}>
+        {REPORT_SCOPE_LIMITS_CLOSING_ZH}
+      </p>
+    </section>
 
     <aside
       className="px-1 py-2 sm:px-0"
