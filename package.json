@@ -12,6 +12,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:d2": "RUN_D2_GOLDEN=1 vitest run src/lib/judgment-d2-filter-golden.test.ts",
     "supabase": "supabase",
     "db:link": "supabase link --project-ref lvrasvtilgzwtfsfjbzd",
     "db:push": "supabase db push",

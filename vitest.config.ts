@@ -4,6 +4,7 @@ import path from "node:path";
 export default defineConfig({
   test: {
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    setupFiles: ["src/test/strip-service-role-env.ts"],
   },
   resolve: {
     alias: {

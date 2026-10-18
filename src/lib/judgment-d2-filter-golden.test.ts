@@ -1,11 +1,19 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { judgmentCandidatesManifestSchema } from "./judgment-candidates-schema";
 import { MwcContractorsMemoryIndex } from "./mwc-contractors-memory-index";
 import { runD2FilterPipeline } from "./judgment-d2-filter-pipeline";
 import { normalizeCaseRefKey } from "./judgment-d2-filter-cache";
+import type { MwcRow } from "./mwc-lookup";
+import {
+  decideD2GoldenRun,
+  d2GoldenMwcSelectList,
+  selectD2GoldenSupabaseKey,
+  type D2GoldenEnv,
+} from "./judgment-d2-golden-gate";
+import { readStashedServiceRoleEnv } from "../test/strip-service-role-env";
 
 const GOLDEN_PATH = resolve(
   process.cwd(),
@@ -35,39 +43,76 @@ type GoldenFile = {
   entries: GoldenEntry[];
 };
 
-function loadEnvLocal() {
-  try {
-    const text = readFileSync(resolve(process.cwd(), ".env.local"), "utf8");
-    for (const line of text.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      let val = trimmed.slice(eq + 1).trim();
-      if (
-        (val.startsWith('"') && val.endsWith('"')) ||
-        (val.startsWith("'") && val.endsWith("'"))
-      ) {
-        val = val.slice(1, -1);
-      }
-      if (!process.env[key]) process.env[key] = val;
-    }
-  } catch {
-    // optional
+type D2MwcNameRow = {
+  company_name: string | null;
+  registration_no: string | null;
+};
+
+function envForD2Golden(): D2GoldenEnv {
+  const env: D2GoldenEnv = { ...process.env };
+  const stashed = readStashedServiceRoleEnv();
+  for (const [name, value] of Object.entries(stashed)) {
+    if (value) env[name] = value;
   }
+  return env;
 }
 
+/** Page company_name + registration_no only. Do not log row contents. */
+async function loadMwcIndexForD2Golden(
+  supabase: SupabaseClient,
+): Promise<MwcContractorsMemoryIndex> {
+  const pageSize = 1000;
+  let from = 0;
+  const rows: MwcRow[] = [];
+  const columns = d2GoldenMwcSelectList();
+  while (true) {
+    const { data, error } = await supabase
+      .from("mwc_contractors")
+      .select(columns)
+      .range(from, from + pageSize - 1);
+    if (error) {
+      throw new Error(`mwc_contractors read failed (${error.code ?? "unknown"})`);
+    }
+    const batch = (data ?? []) as unknown as D2MwcNameRow[];
+    for (const row of batch) {
+      if (!row.company_name) continue;
+      rows.push({
+        company_name: row.company_name,
+        registration_no: row.registration_no ?? "",
+        phone: null,
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      });
+    }
+    if (batch.length < pageSize) break;
+    from += pageSize;
+  }
+  return new MwcContractorsMemoryIndex(rows);
+}
+
+const decision = decideD2GoldenRun(process.env);
+
 describe("D2 filter golden parity", () => {
+  if (decision.action === "skip") {
+    it.skip(decision.reason, () => {});
+    return;
+  }
+
   it(
     "keep/drop/review lists match committed golden",
     async () => {
-      loadEnvLocal();
+      const env = envForD2Golden();
       const url =
-        process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (!url || !key) {
-        expect.fail("Supabase env required for D2 parity test");
+        env.NEXT_PUBLIC_SUPABASE_URL?.trim() || env.SUPABASE_URL?.trim();
+      const keyChoice = selectD2GoldenSupabaseKey(env);
+      if (!url) {
+        expect.fail(
+          "RUN_D2_GOLDEN=1 but NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL is missing.",
+        );
+      }
+      if (!keyChoice.ok) {
+        expect.fail(keyChoice.reason);
       }
       if (!existsSync(CANDIDATES_PATH) || !existsSync(GOLDEN_PATH)) {
         expect.fail("missing parity fixtures");
@@ -87,10 +132,10 @@ describe("D2 filter golden parity", () => {
         }
       ).prefixes;
 
-      const supabase = createClient(url, key, {
+      const supabase = createClient(url, keyChoice.key, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
-      const mwcIndex = await MwcContractorsMemoryIndex.loadAll(supabase);
+      const mwcIndex = await loadMwcIndexForD2Golden(supabase);
       const mwcSnapshotSha = mwcIndex.snapshotContentHash();
 
       const { entries, counts } = runD2FilterPipeline({
@@ -110,11 +155,11 @@ describe("D2 filter golden parity", () => {
         entries.map((e) => [normalizeCaseRefKey(e.caseRef), e]),
       );
       for (const g of golden.entries) {
-        const key = normalizeCaseRefKey(g.caseRef);
-        const e = byRef.get(key);
-        expect(e, `missing ${g.caseRef}`).toBeDefined();
-        expect(e!.disposition).toBe(g.disposition);
-        expect(e!.reasons).toEqual(g.reasons);
+        const caseKey = normalizeCaseRefKey(g.caseRef);
+        const entry = byRef.get(caseKey);
+        expect(entry, `missing ${g.caseRef}`).toBeDefined();
+        expect(entry!.disposition).toBe(g.disposition);
+        expect(entry!.reasons).toEqual(g.reasons);
       }
       expect(entries.length).toBe(golden.entries.length);
     },
