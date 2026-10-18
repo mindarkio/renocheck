@@ -16,12 +16,16 @@ export type MwcLookupResult = {
   ambiguous: boolean;
 };
 
+function throwIfMwcLookupFailed(error: { message: string } | null): void {
+  if (error) throw new Error("mwc_lookup_failed", { cause: error });
+}
+
 export async function lookupMwcWithMeta(
   supabase: SupabaseClient,
   input: NormalizedSearchInput,
 ): Promise<MwcLookupResult> {
   if (input.phone) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("mwc_contractors")
       .select(
         "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at",
@@ -29,11 +33,12 @@ export async function lookupMwcWithMeta(
       .eq("phone", input.phone)
       .limit(1)
       .maybeSingle();
+    throwIfMwcLookupFailed(error);
     if (data) return { row: data, ambiguous: false };
   }
 
   if (input.br) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("mwc_contractors")
       .select(
         "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at",
@@ -41,19 +46,21 @@ export async function lookupMwcWithMeta(
       .ilike("registration_no", `%${input.br}%`)
       .limit(1)
       .maybeSingle();
+    throwIfMwcLookupFailed(error);
     if (data) return { row: data, ambiguous: false };
   }
 
   if (input.companyName) {
     let ambiguous = false;
     for (const term of mwcCompanyNameLookupTerms(input.companyName)) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("mwc_contractors")
         .select(
-        "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at",
-      )
+          "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at",
+        )
         .ilike("company_name", `%${term}%`)
         .limit(2);
+      throwIfMwcLookupFailed(error);
       if (!data?.length) continue;
       if (data.length >= 2) ambiguous = true;
       return { row: data[0], ambiguous };

@@ -52,7 +52,17 @@ export async function POST(req: Request) {
     const code =
       e instanceof SearchPipelineError ? e.code : "search_failed";
     console.error(
-      JSON.stringify({ event: "search_error", code, message: String(e) }),
+      JSON.stringify({
+        event: "search_error",
+        code,
+        message: String(e),
+        cause:
+          e instanceof Error && e.cause
+            ? String(
+                (e.cause as { message?: string }).message ?? e.cause,
+              )
+            : undefined,
+      }),
     );
     const status = e instanceof SearchPipelineError ? 503 : 502;
     return NextResponse.json({ error: code }, { status });

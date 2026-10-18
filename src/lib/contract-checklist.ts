@@ -1,4 +1,4 @@
-/** Signing checklist shown on every report (open access). */
+/** Signing checklist in LLM pipeline output (legacy field; UI uses DEFAULT_CONTRACT_CHECKLIST_ZH). */
 export function defaultContractChecklist(): string[] {
   return [
     "工程範圍、物料品牌與單價是否寫清？",

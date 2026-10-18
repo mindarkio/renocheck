@@ -28,7 +28,7 @@
 2. **個人資料**：屋宇署搜尋頁註明名冊內個人資料**不得用於其他目的**（*All personal data found therein should not be used for any other purposes*），僅限《建築物條例》相關用途。Renocheck 離線解析：**不將獨資／個人承建商姓名寫入 log、錯誤訊息或比對輸出**；`MWC(W)` 與非 limited 公司行只保留註冊編號（見 `parse.ts`）。
 3. **非 BR／非工程紀錄**：此 CSV 為屋宇署註冊，**不是**公司註冊處 BR 或 BRAVO 工程紀錄（見 `docs/sourcedata/README.md`）。
 4. **來源標示（再使用）**：報告或對外說明引用名冊摘錄時，須標示：**資料來源：屋宇署，經 DATA.GOV.HK 提供**／**Source: Buildings Department, via DATA.GOV.HK**（並註明擷取日期，見 `.cache/bd-register/registers_full_list.meta.json` 的 `retrieved_at`）。
-5. **`FLAG` 欄**（見官方 data dictionary）：其他字元存為 `flag`；值 **`@` = 已申請續期**（過咗 `EXPIRY_DATE` 仍視為有效直至處理完成），解析為 `renewalPending: true`（唔寫入 `flag`）。真名冊約 **148** 行為 `@`。
+5. **`FLAG` 欄**（見官方 data dictionary）：其他字元存為 `flag`；值 **`@` = 已申請續期**（過咗 `EXPIRY_DATE` 仍視為有效直至處理完成），解析為 `renewalPending: true`（唔寫入 `flag`）。全量 CSV 行數隨 fetch 變動；離線統計（21,076 行）曾見 **`@` = 161**、空白 = 20,915、**無** `%` 等其他值（以當次 `.cache` 為準，見 `registers_full_list.meta.json` 的 `retrieved_at`）。
 6. **HTTP 下載**：`pnpm bd-register:fetch` 使用 `Accept: text/csv`、120s timeout、binary 寫檔；收到非 CSV（例如 403 XML）**唔**寫入 `.cache/`。部分海外出口曾見 **403 AccessDenied**；須在**香港網絡**驗證 PSI URL 可用性（本 repo 未鎖定「已確認可用」日期，以營運 fetch 成功為準）。
 7. **`robots.txt`**：BD 嘅 checkRobotsAllowsFetch 遇到 robots.txt 非 2xx（例如 403）仍然視為允許；Judiciary cause-list 規則唔同，見第 8 點。
 8. Judiciary robots：主域 e-services.judiciary.hk/robots.txt 5xx／網絡錯誤時，只限 Wayback backfill 改看 www.e-services.judiciary.hk（最多 3 次 redirect，只准 https、預設 port、e-services.judiciary.hk／www.e-services.judiciary.hk 兩個 host）；live 抓取一律以主域為準（RFC 9309 §2.3.1.4）。批准：Aaron 2026-10-18。主域恢復後即以主域為準。
@@ -44,3 +44,20 @@
 上述路徑均套用 **7 日 TTL**（`assertCacheFileFresh`）。勿 commit 完整 CSV；本地用完可刪 `.cache/bd-register/`。
 
 單元測試：`src/lib/bd-register/fixtures/registers.fixture.csv`（合成資料；header 與官方 23 欄一致）。
+
+## 報告官方連結（PR-BC；人手核實）
+
+以下 URL 用於 `src/lib/report-trust-copy-zh.ts`（UI 常數，唔寫入 `RiskReport`）。核實方式：`curl -sL -o /dev/null -w "%{http_code}"` 期望 **2xx**（2026-10-18，RenoCheck smoke）。
+
+| 用途 | URL | `verified_at` |
+|------|-----|---------------|
+| 公司註冊處電子服務（查冊入口） | `https://www.e-services.cr.gov.hk/` | 2026-10-18 |
+| 政府一站通 BR 查詢 | `https://www.gov.hk/tc/residents/taxes/etax/services/brn_enquiry.htm` | 2026-10-18 |
+| 破產管理署：強制性清盤紀錄查冊 | `https://www.oro.gov.hk/cht/our_services/electronic_services/compulsory.html` | 2026-10-18 |
+| 屋宇署註冊承建商搜尋 | `https://www.bd.gov.hk/tc/resources/online-tools/registers-search/registrationsearch.html` | 2026-10-18 |
+| 屋宇署小型工程（誰可進行） | `https://www.bd.gov.hk/tc/building-works/minor-works/minor-works-items/who-can-carry-out-minor-works/index.html` | 2026-10-18 |
+| 屋宇署指定豁免工程 | `https://www.bd.gov.hk/tc/building-works/minor-works/designated-exempted-works/index.html` | 2026-10-18 |
+| 屋宇署 BRAVO 樓宇紀錄 | `https://www.bd.gov.hk/tc/resources/online-tools/BRAVO-online-building-records/index.html` | 2026-10-18 |
+| 司法機構審訊案件表（e-services） | `https://e-services.judiciary.hk/dcl/index.jsp?lang=tc` | 2026-10-18 |
+
+**備註：** `https://www.judiciary.hk/zh/court_services_facilities/daily_cause_list.html` 於 2026-10-18 smoke 返 **404**；產品改用 **e-services** 入口（見上表）。`lang=tc` 為語言參數，**唔**預填公司名。

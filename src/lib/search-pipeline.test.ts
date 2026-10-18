@@ -101,6 +101,7 @@ vi.mock("./legal-events-config", () => ({
 }));
 
 import { lookupLegalJudgments } from "./lookup-legal-judgments";
+import { lookupMwcWithMeta } from "./mwc-lookup";
 import { synthesizeRiskReport } from "./llm-risk-report";
 import { runSearchPipeline } from "./search-pipeline";
 
@@ -174,6 +175,21 @@ describe("runSearchPipeline cache + legal degraded", () => {
         skipIfHealthyCacheExists: false,
       },
     );
+  });
+
+  it("does not cache when MWC lookup fails", async () => {
+    vi.mocked(lookupMwcWithMeta).mockRejectedValueOnce(
+      new Error("mwc_lookup_failed"),
+    );
+
+    await expect(
+      runSearchPipeline({
+        matchType: "company_name",
+        companyName: "合成測試有限公司",
+      }),
+    ).rejects.toThrow("mwc_lookup_failed");
+
+    expect(setCachedReport).not.toHaveBeenCalled();
   });
 
   it("resolves when cache upsert fails", async () => {
