@@ -19,6 +19,7 @@ import {
   resetCrCircuitBreakerForTests,
 } from "./cr-register/circuit-breaker";
 import type { CrApiLocalRow } from "./cr-register/types";
+import { allNameSearchPrefixAttempts } from "./cr-register/prefix";
 import { lookupCompaniesRegistryForSearch } from "./cr-registry-lookup";
 import { companyNameOnlySearchInput } from "./normalize-search-input";
 import {
@@ -181,7 +182,8 @@ describe("lookupCompaniesRegistryForSearch", () => {
   it("long mixed label all 400 → at most 4 fetches (c-L4)", async () => {
     searchCrLocalByNameBeginsWith.mockResolvedValue({ kind: "no_result" });
     const label = "合成工程有限公司（香港） ZZQ ENGINEERING LIMITED (HK)";
-    await lookupCompaniesRegistryForSearch(
+    expect(allNameSearchPrefixAttempts(label).length).toBeGreaterThan(4);
+    const official = await lookupCompaniesRegistryForSearch(
       companyNameOnlySearchInput(label),
       label,
       null,
@@ -189,6 +191,7 @@ describe("lookupCompaniesRegistryForSearch", () => {
     expect(searchCrLocalByNameBeginsWith.mock.calls.length).toBeLessThanOrEqual(
       4,
     );
+    expect(official.hints).toContain("not_found_in_active_list");
   });
 
   it("lookup budget exceeded → lookupStatus timeout (c-L5)", async () => {

@@ -224,6 +224,17 @@ describe("searchCrLocalByNameBeginsWith", () => {
     vi.useRealTimers();
   });
 
+  it("budget TimeoutError signal → timeout without fetch or breaker (L4)", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await searchCrLocalByNameBeginsWith("合成測試", {
+      signal: AbortSignal.abort(new DOMException("budget", "TimeoutError")),
+    });
+    expect(res).toEqual({ kind: "error", message: "timeout" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(isCrCircuitOpen()).toBe(false);
+  });
+
   it("aborted signal → timeout without counting as failure (L-a)", async () => {
     const controller = new AbortController();
     controller.abort();

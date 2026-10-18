@@ -59,9 +59,10 @@ function budgetAbortSignal(): AbortSignal {
 
 function deadlineAbortSignal(leftMs: number): AbortSignal {
   const controller = new AbortController();
-  setTimeout(() => {
+  const timer = setTimeout(() => {
     controller.abort(new DOMException("budget", "TimeoutError"));
   }, leftMs);
+  (timer as { unref?: () => void }).unref?.();
   return controller.signal;
 }
 
@@ -161,9 +162,13 @@ async function resolveNamePrefixes(
     }
   }
 
+  // Untried variants (beyond the cap) are literal extensions of the shorter
+  // prefixes already tried, so begins_with cannot return rows for them.
+  const tried = [...prefixCache.values()];
   const allNoResult =
-    allAttempts.length > 0 &&
-    allAttempts.every((p) => prefixCache.get(p)?.kind === "no_result");
+    tried.length > 0 &&
+    primary.every((p) => prefixCache.get(p)?.kind === "no_result") &&
+    tried.every((r) => r.kind === "no_result");
   if (allNoResult) {
     return { kind: "snapshot", snapshot: notFoundCrSnapshot(retrievedAt) };
   }

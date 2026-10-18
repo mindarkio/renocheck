@@ -64,8 +64,29 @@ function primaryPrefixFromSegment(segment: string): string | null {
   return prefixVariantsFromSegment(segment)[0] ?? null;
 }
 
-const MIXED_LABEL_SEGMENT_RE =
-  /[\p{Script=Han}]+|[A-Za-z][A-Za-z0-9 &.,'()-]*/gu;
+const HAN_RE = /\p{Script=Han}/u;
+/** Latin company-suffix glued before Han, e.g. "LIMITED合成". */
+const GLUED_EN_HEAD_RE =
+  /^([A-Za-z0-9&.,'()-]*(?:LIMITED|LTD\.?|CO\.?))(?=\p{Script=Han})/iu;
+/** Linear split of "…有限公司ABC" into zh "…有限公司" + en "ABC" (no regex backtracking). */
+function splitGluedLatinTail(tok: string): { zh: string; en: string } | null {
+  const chars = [...tok];
+  let last = -1;
+  for (let k = chars.length - 1; k >= 0; k--) {
+    if (HAN_RE.test(chars[k]!)) {
+      last = k;
+      break;
+    }
+  }
+  if (last < 0) return null;
+  let cut = last + 1;
+  while (cut < chars.length && (chars[cut] === ")" || chars[cut] === "]")) cut++;
+  const zh = chars.slice(0, cut).join("");
+  const tail = chars.slice(cut).join("");
+  if (!/[A-Za-z]/.test(tail)) return null;
+  if (!/(有限公司|公司|有限)[)\]]*$/u.test(zh)) return null;
+  return { zh, en: tail.replace(/^[^A-Za-z0-9]+/, "") };
+}
 
 /** Split mixed label into CJK-bearing block and Latin block (M4). */
 export function splitMixedLabelParts(label: string): { zh?: string; en?: string } {
@@ -76,27 +97,37 @@ export function splitMixedLabelParts(label: string): { zh?: string; en?: string 
   if (!hasCjk && !hasLatin) return {};
 
   if (hasCjk && hasLatin) {
-    const segments = [
-      ...normalized.matchAll(MIXED_LABEL_SEGMENT_RE),
-    ].map((m) => m[0]!);
-    let zhSeg = "";
-    let enSeg = "";
-    let pendingLatin = "";
-    for (const seg of segments) {
-      if (/\p{Script=Han}/u.test(seg)) {
-        zhSeg = (pendingLatin + seg).trim();
-        pendingLatin = "";
-      } else if (/[A-Za-z]/.test(seg)) {
-        if (zhSeg) {
-          enSeg = enSeg ? `${enSeg} ${seg}` : seg;
-        } else {
-          pendingLatin += seg;
+    const tokens = normalized
+      .split(" ")
+      .filter(Boolean)
+      .flatMap((tok) => (tok.includes("/") ? tok.split("/") : [tok]));
+    const zhParts: string[] = [];
+    const enParts: string[] = [];
+    const isLatinTok = (t?: string) =>
+      t !== undefined && !HAN_RE.test(t) && /[A-Za-z]/.test(t);
+    tokens.forEach((tok, i) => {
+      if (!HAN_RE.test(tok)) {
+        if (/[A-Za-z]/.test(tok)) enParts.push(tok);
+        return;
+      }
+      let zhTok = tok;
+      const head = zhTok.match(GLUED_EN_HEAD_RE);
+      if (head && (isLatinTok(tokens[i - 1]) || i === 0)) {
+        enParts.push(head[1]!);
+        zhTok = zhTok.slice(head[1]!.length);
+      }
+      if (isLatinTok(tokens[i + 1])) {
+        const split = splitGluedLatinTail(zhTok);
+        if (split) {
+          zhTok = split.zh;
+          if (split.en) enParts.push(split.en);
         }
       }
-    }
+      zhParts.push(zhTok);
+    });
     return {
-      zh: zhSeg || undefined,
-      en: enSeg || undefined,
+      zh: zhParts.join(" ") || undefined,
+      en: enParts.join(" ") || undefined,
     };
   }
   if (hasCjk) return { zh: normalized };

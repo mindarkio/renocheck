@@ -130,11 +130,12 @@ async function fetchLocalSearch(
       return { kind: "error" as const, message: "fetch_failed" };
     }
   },
-    { deadlineMs: options?.deadlineMs },
+    { deadlineMs: options?.deadlineMs, signal: options?.signal },
   );
 
   if (!scheduled.ok) {
-    return { kind: "error", message: scheduled.reason };
+    const reason = scheduled.reason === "queue_full" ? "queue_full" : "timeout";
+    return { kind: "error", message: reason };
   }
   return scheduled.value;
 }

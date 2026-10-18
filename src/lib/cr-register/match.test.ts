@@ -18,6 +18,36 @@ function row(
 }
 
 describe("tierForRow (N1)", () => {
+  it("English-first label vs bilingual row → B (B1)", () => {
+    const tier = tierForRow(
+      {
+        Brn: "C2",
+        English_Company_Name: "ZZQ TESTING LIMITED",
+        Chinese_Company_Name: "合成測試有限公司",
+        Company_Type: "Co",
+        Date_of_Incorporation: "01-01-2020",
+        Address_of_Registered_Office: "HK",
+      },
+      "ZZQ TESTING LIMITED 合成測試有限公司",
+    );
+    expect(tier).toBe("B");
+  });
+
+  it("3D prefix label vs Chinese row → B (B1)", () => {
+    const tier = tierForRow(
+      {
+        Brn: "C3",
+        English_Company_Name: "NULL",
+        Chinese_Company_Name: "3D裝修有限公司",
+        Company_Type: "Co",
+        Date_of_Incorporation: "01-01-2020",
+        Address_of_Registered_Office: "HK",
+      },
+      "3D裝修有限公司",
+    );
+    expect(tier).toBe("B");
+  });
+
   it("mixed label matches English row only → B", () => {
     const tier = tierForRow(
       {
