@@ -160,6 +160,10 @@ describe("decideD2MwcDatabase", () => {
       "utf8",
     );
     expect(source).not.toContain(".env.local");
+    expect(source).not.toContain("loadEnvFile");
+    expect(source).not.toContain("dotenv");
+    // `process.env` is the explicit shell export, not a dotenv file load.
+    expect(source.replaceAll("process.env", "")).not.toContain(".env");
     expect(source).toContain("decideD2MwcDatabase(");
   });
 
@@ -169,6 +173,10 @@ describe("decideD2MwcDatabase", () => {
       "utf8",
     );
     expect(source).not.toContain(".env.local");
+    expect(source).not.toContain("loadEnvFile");
+    expect(source).not.toContain("dotenv");
+    // `process.env` is the explicit shell export, not a dotenv file load.
+    expect(source.replaceAll("process.env", "")).not.toContain(".env");
     expect(source).toContain("decideD2MwcDatabase(");
   });
 });
