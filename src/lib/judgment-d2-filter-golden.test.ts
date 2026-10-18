@@ -1,19 +1,16 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { judgmentCandidatesManifestSchema } from "./judgment-candidates-schema";
 import { MwcContractorsMemoryIndex } from "./mwc-contractors-memory-index";
 import { runD2FilterPipeline } from "./judgment-d2-filter-pipeline";
 import { normalizeCaseRefKey } from "./judgment-d2-filter-cache";
-import type { MwcRow } from "./mwc-lookup";
 import {
   decideD2GoldenRun,
-  d2GoldenMwcSelectList,
+  loadD2GoldenMwcRows,
   selectD2GoldenSupabaseKey,
-  type D2GoldenEnv,
 } from "./judgment-d2-golden-gate";
-import { readStashedServiceRoleEnv } from "../test/strip-service-role-env";
 
 const GOLDEN_PATH = resolve(
   process.cwd(),
@@ -43,54 +40,6 @@ type GoldenFile = {
   entries: GoldenEntry[];
 };
 
-type D2MwcNameRow = {
-  company_name: string | null;
-  registration_no: string | null;
-};
-
-function envForD2Golden(): D2GoldenEnv {
-  const env: D2GoldenEnv = { ...process.env };
-  const stashed = readStashedServiceRoleEnv();
-  for (const [name, value] of Object.entries(stashed)) {
-    if (value) env[name] = value;
-  }
-  return env;
-}
-
-/** Page company_name + registration_no only. Do not log row contents. */
-async function loadMwcIndexForD2Golden(
-  supabase: SupabaseClient,
-): Promise<MwcContractorsMemoryIndex> {
-  const pageSize = 1000;
-  let from = 0;
-  const rows: MwcRow[] = [];
-  const columns = d2GoldenMwcSelectList();
-  while (true) {
-    const { data, error } = await supabase
-      .from("mwc_contractors")
-      .select(columns)
-      .range(from, from + pageSize - 1);
-    if (error) {
-      throw new Error(`mwc_contractors read failed (${error.code ?? "unknown"})`);
-    }
-    const batch = (data ?? []) as unknown as D2MwcNameRow[];
-    for (const row of batch) {
-      if (!row.company_name) continue;
-      rows.push({
-        company_name: row.company_name,
-        registration_no: row.registration_no ?? "",
-        phone: null,
-        expiry_date: null,
-        primary_signatory_name: null,
-        source_updated_at: null,
-      });
-    }
-    if (batch.length < pageSize) break;
-    from += pageSize;
-  }
-  return new MwcContractorsMemoryIndex(rows);
-}
-
 const decision = decideD2GoldenRun(process.env);
 
 describe("D2 filter golden parity", () => {
@@ -99,13 +48,20 @@ describe("D2 filter golden parity", () => {
     return;
   }
 
+  if (decision.action === "fail") {
+    it(decision.reason, () => {
+      expect.fail(decision.reason);
+    });
+    return;
+  }
+
   it(
     "keep/drop/review lists match committed golden",
     async () => {
-      const env = envForD2Golden();
       const url =
-        env.NEXT_PUBLIC_SUPABASE_URL?.trim() || env.SUPABASE_URL?.trim();
-      const keyChoice = selectD2GoldenSupabaseKey(env);
+        process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+        process.env.SUPABASE_URL?.trim();
+      const keyChoice = selectD2GoldenSupabaseKey(process.env);
       if (!url) {
         expect.fail(
           "RUN_D2_GOLDEN=1 but NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL is missing.",
@@ -135,7 +91,9 @@ describe("D2 filter golden parity", () => {
       const supabase = createClient(url, keyChoice.key, {
         auth: { persistSession: false, autoRefreshToken: false },
       });
-      const mwcIndex = await loadMwcIndexForD2Golden(supabase);
+      const mwcIndex = new MwcContractorsMemoryIndex(
+        await loadD2GoldenMwcRows(supabase),
+      );
       const mwcSnapshotSha = mwcIndex.snapshotContentHash();
 
       const { entries, counts } = runD2FilterPipeline({

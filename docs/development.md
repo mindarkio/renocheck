@@ -31,9 +31,9 @@ Supabase CLI 連結遠端 project：見 **[supabase.md](supabase.md)**（`pnpm d
 | `pnpm build` | 正式建置 |
 | `pnpm start` | 跑正式建置 |
 | `pnpm lint` | ESLint |
-| `pnpm test` | Vitest（`src/**/*.test.ts`）。唔會打 Supabase；D2 golden 預設 skip |
+| `pnpm test` | 預設唔會打 Supabase（admin client 已 mock，service-role key 會被清走） |
 | `pnpm test:watch` | 監聽模式 |
-| `pnpm test:d2` | D2 filter golden parity。腳本設 `RUN_D2_GOLDEN=1`。用 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 讀 `mwc_contractors` 的 `company_name`、`registration_no`。URL 的 project ref 若在 `SUPABASE_PROD_PROJECT_REFS`（逗號分隔）會 skip，除非同時設 `D2_GOLDEN_ALLOW_PROD_READONLY=1`。Vitest setup 會從 `process.env` 移除 `SUPABASE_SERVICE_ROLE_KEY`；只有 `D2_GOLDEN_ALLOW_SERVICE_ROLE=1` 而且冇 anon key 時，呢個測試先會用 service role |
+| `pnpm test:d2` | D2 filter golden parity。唔會讀 .env.local，要明確 export 非 prod 嘅 URL 同 anon key；prod 預設拒絕；唔好 source .env.local |
 | `pnpm import:judgments` | 匯入 `official_legal_events`（見 [supabase.md](supabase.md)） |
 | `pnpm legal:lookup-smoke` | 僅 DB 判詞 lookup（唔食 Serp／LLM） |
 | `pnpm judgment:poc-smoke` | J3 PoC：10 條 local seed lookup + 可選 `--api-base=http://localhost:3000` 三場景 full search |

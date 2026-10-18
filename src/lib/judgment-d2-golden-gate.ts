@@ -1,35 +1,50 @@
 /**
- * Opt-in gate for the D2 filter golden parity test.
- * Pure: callers pass an env snapshot; this module does not read or write process.env.
+ * Opt-in gate and narrow MWC read for the D2 filter golden parity test.
+ * `decideD2GoldenRun` is pure. The loader talks only to the client it is given.
  */
 
-/** Env names that bypass RLS. Vitest setup removes these from process.env. */
-export const SERVICE_ROLE_ENV_NAMES = ["SUPABASE_SERVICE_ROLE_KEY"] as const;
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { MwcRow } from "./mwc-lookup";
 
-export type ServiceRoleEnvName = (typeof SERVICE_ROLE_ENV_NAMES)[number];
-
-/** Read-only key preferred over service role for the D2 golden read. */
+/** Read-only key. Service role is never accepted. */
 export const D2_GOLDEN_ANON_KEY_ENV_NAMES = ["NEXT_PUBLIC_SUPABASE_ANON_KEY"] as const;
 
 /** Columns the golden read may select. No personal-name or phone columns. */
 export const D2_GOLDEN_MWC_COLUMNS = ["company_name", "registration_no"] as const;
 
+/** Hosted production project. Always refused unless the read-only allow flag is set. */
+export const DEFAULT_SUPABASE_PROD_PROJECT_REFS = ["lvrasvtilgzwtfsfjbzd"] as const;
+
+export const D2_GOLDEN_MIN_MWC_ROWS = 1000;
+
 export const D2_GOLDEN_RUN_ENV = "RUN_D2_GOLDEN";
 export const D2_GOLDEN_PROD_REFS_ENV = "SUPABASE_PROD_PROJECT_REFS";
 export const D2_GOLDEN_ALLOW_PROD_READONLY_ENV = "D2_GOLDEN_ALLOW_PROD_READONLY";
-export const D2_GOLDEN_ALLOW_SERVICE_ROLE_ENV = "D2_GOLDEN_ALLOW_SERVICE_ROLE";
 
 export type D2GoldenEnv = Record<string, string | undefined>;
 
 export type D2GoldenDecision =
   | { action: "run" }
-  | { action: "skip"; reason: string };
+  | { action: "skip"; reason: string }
+  | { action: "fail"; reason: string };
 
 export type D2GoldenKeyChoice =
-  | { ok: true; key: string; source: "anon" | "service_role" }
+  | { ok: true; key: string; source: "anon" }
   | { ok: false; reason: string };
 
 const SUPABASE_PROJECT_HOST = /^(?:db\.)?([a-z0-9]+)\.supabase\.co$/i;
+const LOCAL_SUPABASE_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+type D2MwcNameRow = {
+  company_name: string | null;
+  registration_no: string | null;
+};
+
+type D2MwcPage = {
+  data: D2MwcNameRow[] | null;
+  error: { code?: string | null } | null;
+  count: number | null;
+};
 
 export function supabaseProjectRefFromUrl(url: string | undefined): string | null {
   const trimmed = url?.trim();
@@ -57,6 +72,21 @@ export function parseSupabaseProdProjectRefs(raw: string | undefined): string[] 
   return refs;
 }
 
+export function d2GoldenProdProjectRefs(env: D2GoldenEnv): string[] {
+  const seen = new Set<string>();
+  const refs: string[] = [];
+  for (const ref of [
+    ...DEFAULT_SUPABASE_PROD_PROJECT_REFS,
+    ...parseSupabaseProdProjectRefs(env[D2_GOLDEN_PROD_REFS_ENV]),
+  ]) {
+    const normalized = ref.trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    refs.push(normalized);
+  }
+  return refs;
+}
+
 function flagOn(env: D2GoldenEnv, name: string): boolean {
   return env[name]?.trim() === "1";
 }
@@ -70,8 +100,8 @@ export function d2GoldenMwcSelectList(): string {
 }
 
 /**
- * `run` only when RUN_D2_GOLDEN=1 and the URL project ref is not a configured
- * production ref (unless D2_GOLDEN_ALLOW_PROD_READONLY=1).
+ * Skip unless opted in. Fail closed when the URL is missing, not a known host,
+ * or a production project ref without the read-only allow flag.
  */
 export function decideD2GoldenRun(env: D2GoldenEnv): D2GoldenDecision {
   if (!flagOn(env, D2_GOLDEN_RUN_ENV)) {
@@ -82,15 +112,41 @@ export function decideD2GoldenRun(env: D2GoldenEnv): D2GoldenDecision {
     };
   }
 
-  const ref = supabaseProjectRefFromUrl(supabaseUrl(env));
-  const prodRefs = parseSupabaseProdProjectRefs(env[D2_GOLDEN_PROD_REFS_ENV]);
+  const rawUrl = supabaseUrl(env);
+  if (!rawUrl) {
+    return {
+      action: "fail",
+      reason:
+        "RUN_D2_GOLDEN=1 but NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL is missing.",
+    };
+  }
+
+  let hostname: string;
+  try {
+    hostname = new URL(rawUrl).hostname.toLowerCase();
+  } catch {
+    return { action: "fail", reason: "Invalid Supabase URL." };
+  }
+
+  if (LOCAL_SUPABASE_HOSTS.has(hostname)) {
+    return { action: "run" };
+  }
+
+  const ref = supabaseProjectRefFromUrl(rawUrl);
+  if (!ref) {
+    return {
+      action: "fail",
+      reason:
+        "Unrecognised Supabase host; use a *.supabase.co URL or localhost.",
+    };
+  }
+
   if (
-    ref &&
-    prodRefs.includes(ref) &&
+    d2GoldenProdProjectRefs(env).includes(ref) &&
     !flagOn(env, D2_GOLDEN_ALLOW_PROD_READONLY_ENV)
   ) {
     return {
-      action: "skip",
+      action: "fail",
       reason: `Supabase project ref "${ref}" is listed in SUPABASE_PROD_PROJECT_REFS. Refusing to read production. Set D2_GOLDEN_ALLOW_PROD_READONLY=1 to allow a read-only run.`,
     };
   }
@@ -98,59 +154,72 @@ export function decideD2GoldenRun(env: D2GoldenEnv): D2GoldenDecision {
   return { action: "run" };
 }
 
-/**
- * Prefer the anon key. Service-role material is returned only when
- * D2_GOLDEN_ALLOW_SERVICE_ROLE=1 and no anon key is set.
- */
+/** Anon key only. A service-role value in env is ignored. */
 export function selectD2GoldenSupabaseKey(env: D2GoldenEnv): D2GoldenKeyChoice {
   for (const name of D2_GOLDEN_ANON_KEY_ENV_NAMES) {
     const key = env[name]?.trim();
     if (key) return { ok: true, key, source: "anon" };
   }
-
-  if (!flagOn(env, D2_GOLDEN_ALLOW_SERVICE_ROLE_ENV)) {
-    return {
-      ok: false,
-      reason:
-        "D2 golden prefers NEXT_PUBLIC_SUPABASE_ANON_KEY. SUPABASE_SERVICE_ROLE_KEY is not used unless D2_GOLDEN_ALLOW_SERVICE_ROLE=1.",
-    };
-  }
-
-  for (const name of SERVICE_ROLE_ENV_NAMES) {
-    const key = env[name]?.trim();
-    if (key) return { ok: true, key, source: "service_role" };
-  }
-
   return {
     ok: false,
     reason:
-      "D2_GOLDEN_ALLOW_SERVICE_ROLE=1 but SUPABASE_SERVICE_ROLE_KEY is not available to the opt-in path.",
+      "D2 golden needs NEXT_PUBLIC_SUPABASE_ANON_KEY (service role is never used).",
+  };
+}
+
+function toMwcRow(row: D2MwcNameRow): MwcRow {
+  return {
+    company_name: row.company_name ?? "",
+    registration_no: row.registration_no ?? "",
+    phone: null,
+    expiry_date: null,
+    primary_signatory_name: null,
+    source_updated_at: null,
   };
 }
 
 /**
- * Copy env without service-role names. The retained key is returned only when
- * `allowServiceRole` is true; otherwise it is dropped.
+ * Page `company_name, registration_no` ordered by id. Stops on an empty page.
+ * Does not log row contents.
  */
-export function partitionServiceRoleEnv(
-  env: D2GoldenEnv,
-  allowServiceRole: boolean,
-): {
-  stripped: D2GoldenEnv;
-  serviceRole: Partial<Record<ServiceRoleEnvName, string>>;
-} {
-  const stripped: D2GoldenEnv = { ...env };
-  const serviceRole: Partial<Record<ServiceRoleEnvName, string>> = {};
-  for (const name of SERVICE_ROLE_ENV_NAMES) {
-    const value = env[name]?.trim();
-    if (allowServiceRole && value) serviceRole[name] = value;
-    delete stripped[name];
-  }
-  return { stripped, serviceRole };
-}
+export async function loadD2GoldenMwcRows(
+  client: Pick<SupabaseClient, "from">,
+): Promise<MwcRow[]> {
+  let from = 0;
+  const rows: MwcRow[] = [];
+  let expectedCount: number | null = null;
+  const columns = d2GoldenMwcSelectList();
 
-export function serviceRoleExplicitlyAllowed(env: D2GoldenEnv): boolean {
-  return (
-    flagOn(env, D2_GOLDEN_RUN_ENV) && flagOn(env, D2_GOLDEN_ALLOW_SERVICE_ROLE_ENV)
-  );
+  while (true) {
+    const page = (await client
+      .from("mwc_contractors")
+      .select(columns, { count: "exact" })
+      .order("id", { ascending: true })
+      .range(from, from + 999)) as D2MwcPage;
+
+    if (page.error) {
+      throw new Error(
+        `mwc_contractors read failed (${page.error.code ?? "unknown"})`,
+      );
+    }
+    if (typeof page.count === "number" && expectedCount === null) {
+      expectedCount = page.count;
+    }
+    const batch = page.data ?? [];
+    if (batch.length === 0) break;
+    for (const row of batch) rows.push(toMwcRow(row));
+    from += batch.length;
+  }
+
+  if (expectedCount === null || rows.length !== expectedCount) {
+    throw new Error(
+      `mwc_contractors row count mismatch (got ${rows.length}, expected ${expectedCount ?? "null"})`,
+    );
+  }
+  if (expectedCount < D2_GOLDEN_MIN_MWC_ROWS) {
+    throw new Error(
+      `mwc_contractors returned too few rows (${expectedCount}); RLS or wrong project?`,
+    );
+  }
+  return rows;
 }
