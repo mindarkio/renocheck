@@ -53,10 +53,27 @@ function snapshotToOfficial(
   };
 }
 
-function fetchSignal(deadlineMs: number): AbortSignal | undefined {
+function budgetAbortSignal(): AbortSignal {
+  return AbortSignal.abort(new DOMException("budget", "TimeoutError"));
+}
+
+function deadlineAbortSignal(leftMs: number): AbortSignal {
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    controller.abort(new DOMException("budget", "TimeoutError"));
+  }, leftMs);
+  (timer as { unref?: () => void }).unref?.();
+  return controller.signal;
+}
+
+function fetchSignal(deadlineMs: number): AbortSignal {
+  // left<=50 is defense-in-depth: throttle's deadline reserve rejects first;
+  // covered by client.test budget TimeoutError test.
   const left = deadlineMs - Date.now();
-  if (left <= 0) return AbortSignal.timeout(1);
-  return AbortSignal.timeout(left);
+  if (left <= 50) {
+    return budgetAbortSignal();
+  }
+  return deadlineAbortSignal(left);
 }
 
 function toDegraded(
@@ -88,6 +105,7 @@ async function fetchPrefixCached(
   if (cached) return cached;
   const res = await searchCrLocalByNameBeginsWith(prefix, {
     signal: fetchSignal(deadlineMs),
+    deadlineMs,
   });
   cache.set(prefix, res);
   return res;
@@ -127,7 +145,7 @@ async function resolveNamePrefixes(
     }
   }
 
-  for (const prefix of allAttempts) {
+  for (const prefix of allAttempts.slice(0, 4)) {
     const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs);
     if (res.kind === "error") {
       return toDegraded(res.message);
@@ -146,9 +164,13 @@ async function resolveNamePrefixes(
     }
   }
 
+  // Untried variants (beyond the cap) are literal extensions of the shorter
+  // prefixes already tried, so begins_with cannot return rows for them.
+  const tried = [...prefixCache.values()];
   const allNoResult =
-    allAttempts.length > 0 &&
-    allAttempts.every((p) => prefixCache.get(p)?.kind === "no_result");
+    tried.length > 0 &&
+    primary.every((p) => prefixCache.get(p)?.kind === "no_result") &&
+    tried.every((r) => r.kind === "no_result");
   if (allNoResult) {
     return { kind: "snapshot", snapshot: notFoundCrSnapshot(retrievedAt) };
   }
@@ -194,6 +216,7 @@ async function runLiveLookup(
   if (brnEqual) {
     const res = await searchCrLocalByBrnEqual(brnEqual, {
       signal: fetchSignal(deadlineMs),
+      deadlineMs,
     });
     if (res.kind === "error") {
       return toDegraded(res.message);

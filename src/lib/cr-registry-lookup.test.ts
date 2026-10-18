@@ -14,8 +14,12 @@ vi.mock("./cr-register/client", () => ({
 
 import { clearCrRegistryCacheForTests } from "./cr-register/memory-cache";
 import { resetCrApiThrottleForTests } from "./cr-register/throttle";
-import { resetCrCircuitBreakerForTests } from "./cr-register/circuit-breaker";
+import {
+  isCrCircuitOpen,
+  resetCrCircuitBreakerForTests,
+} from "./cr-register/circuit-breaker";
 import type { CrApiLocalRow } from "./cr-register/types";
+import { allNameSearchPrefixAttempts } from "./cr-register/prefix";
 import { lookupCompaniesRegistryForSearch } from "./cr-registry-lookup";
 import { companyNameOnlySearchInput } from "./normalize-search-input";
 import {
@@ -63,6 +67,34 @@ describe("lookupCompaniesRegistryForSearch", () => {
     expect(official.hints).not.toContain("not_found_in_active_list");
     expect(searchCrLocalByNameBeginsWith).toHaveBeenCalledWith(
       "SUN HUNG KAI",
+      expect.anything(),
+    );
+  });
+
+  it("A/C工程有限公司 → matched, not not_found (R-B1)", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({
+      kind: "rows",
+      rows: [
+        {
+          Brn: "C1111111",
+          English_Company_Name: "NULL",
+          Chinese_Company_Name: "A/C工程有限公司",
+          Company_Type: "Private company limited by shares",
+          Date_of_Incorporation: "01-01-2020",
+          Address_of_Registered_Office: "HK",
+        },
+      ],
+    });
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("A/C工程有限公司"),
+      "A/C工程有限公司",
+      null,
+    );
+    expect(official.lookupStatus).toBe("ok");
+    expect(official.matched).toBe(true);
+    expect(official.hints).not.toContain("not_found_in_active_list");
+    expect(searchCrLocalByNameBeginsWith).toHaveBeenCalledWith(
+      "A/C工程",
       expect.anything(),
     );
   });
@@ -173,6 +205,50 @@ describe("lookupCompaniesRegistryForSearch", () => {
       null,
     );
     expect(searchCrLocalByNameBeginsWith).toHaveBeenCalledTimes(4);
+  });
+
+  it("long mixed label all 400 → at most 4 fetches (c-L4)", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({ kind: "no_result" });
+    const label = "合成工程有限公司（香港） ZZQ ENGINEERING LIMITED (HK)";
+    expect(allNameSearchPrefixAttempts(label).length).toBeGreaterThan(4);
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    expect(searchCrLocalByNameBeginsWith.mock.calls.length).toBeLessThanOrEqual(
+      4,
+    );
+    expect(official.hints).toContain("not_found_in_active_list");
+  });
+
+  it("lookup budget exceeded → lookupStatus timeout (c-L5)", async () => {
+    vi.useFakeTimers();
+    searchCrLocalByNameBeginsWith.mockImplementation(
+      (_prefix, options?: { signal?: AbortSignal }) =>
+        new Promise((resolve) => {
+          const signal = options?.signal;
+          const onAbort = () =>
+            resolve({ kind: "error", message: "timeout" });
+          if (!signal) {
+            resolve({ kind: "no_result" });
+            return;
+          }
+          if (signal.aborted) onAbort();
+          else signal.addEventListener("abort", onAbort, { once: true });
+        }),
+    );
+    const label = "合成測試有限公司";
+    const pending = lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    await vi.advanceTimersByTimeAsync(6001);
+    const official = await pending;
+    expect(official.lookupStatus).toBe("timeout");
+    expect(isCrCircuitOpen()).toBe(false);
+    vi.useRealTimers();
   });
 
   it("truncated prefix C rows + full prefix B row → tier B (N4)", async () => {

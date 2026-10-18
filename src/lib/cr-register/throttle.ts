@@ -7,37 +7,73 @@ let chainDepth = 0;
 
 export type ScheduleCrResult<T> =
   | { ok: true; value: T }
-  | { ok: false; reason: "queue_full" };
+  | { ok: false; reason: "queue_full" | "timeout" };
 
 /** Per serverless instance ≤1 req/s (serialised). */
 export function scheduleCrApiRequest<T>(
   run: () => Promise<T>,
-  options?: { maxWaitMs?: number },
+  options?: { maxWaitMs?: number; deadlineMs?: number; signal?: AbortSignal },
 ): Promise<ScheduleCrResult<T>> {
-  const maxWaitMs = options?.maxWaitMs ?? DEFAULT_MAX_WAIT_MS;
+  const queueWaitLimitMs =
+    options?.deadlineMs !== undefined
+      ? options.deadlineMs - Date.now() - 1000
+      : (options?.maxWaitMs ?? DEFAULT_MAX_WAIT_MS);
   const depthAtEnqueue = chainDepth;
   const wait = Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastRequestAt));
   const estimatedWait = depthAtEnqueue * MIN_INTERVAL_MS + wait;
-  if (estimatedWait >= maxWaitMs) {
-    return Promise.resolve({ ok: false, reason: "queue_full" });
+  if (estimatedWait >= queueWaitLimitMs) {
+    return Promise.resolve({
+      ok: false,
+      reason:
+        options?.deadlineMs !== undefined ? "timeout" : "queue_full",
+    });
   }
 
   chainDepth += 1;
-  const next = chain.then(async () => {
+  const signal = options?.signal;
+  let cancelled = false;
+  const turn: Promise<ScheduleCrResult<T>> = chain.then(async () => {
     chainDepth -= 1;
+    if (cancelled || signal?.aborted) {
+      return { ok: false as const, reason: "timeout" as const };
+    }
     const waitNow = Math.max(0, MIN_INTERVAL_MS - (Date.now() - lastRequestAt));
     if (waitNow > 0) {
       await new Promise((r) => setTimeout(r, waitNow));
+    }
+    if (cancelled || signal?.aborted) {
+      return { ok: false as const, reason: "timeout" as const };
     }
     lastRequestAt = Date.now();
     const value = await run();
     return { ok: true as const, value };
   });
-  chain = next.then(
+  chain = turn.then(
     () => undefined,
     () => undefined,
   );
-  return next as Promise<ScheduleCrResult<T>>;
+  if (!signal) return turn;
+  return new Promise<ScheduleCrResult<T>>((resolve, reject) => {
+    const onAbort = () => {
+      cancelled = true;
+      resolve({ ok: false, reason: "timeout" });
+    };
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    turn.then(
+      (r) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(r);
+      },
+      (e) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(e);
+      },
+    );
+  });
 }
 
 export function resetCrApiThrottleForTests(): void {

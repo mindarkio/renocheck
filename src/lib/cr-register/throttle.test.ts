@@ -38,4 +38,44 @@ describe("scheduleCrApiRequest (M5a)", () => {
     expect(r3.ok).toBe(false);
     if (!r3.ok) expect(r3.reason).toBe("queue_full");
   });
+
+  it("aborts queued job when lookup signal fires before run (M1)", async () => {
+    vi.useFakeTimers();
+    resetCrApiThrottleForTests();
+    const job1Run = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          setTimeout(() => resolve("slow"), 5000);
+        }),
+    );
+    const job2Run = vi.fn(() => Promise.resolve("fast"));
+    const controller = new AbortController();
+
+    const p1 = scheduleCrApiRequest(job1Run);
+    const p2 = scheduleCrApiRequest(job2Run, { signal: controller.signal });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    controller.abort();
+    const r2 = await p2;
+    expect(r2).toEqual({ ok: false, reason: "timeout" });
+    expect(job2Run).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await p1;
+    vi.useRealTimers();
+  });
+
+  it("deadline-saturated enqueue returns timeout; maxWaitMs returns queue_full (R-L1)", async () => {
+    vi.useFakeTimers();
+    resetCrApiThrottleForTests();
+    const run = () => new Promise<string>(() => undefined);
+    scheduleCrApiRequest(run);
+    const deadlineReject = await scheduleCrApiRequest(run, {
+      deadlineMs: Date.now() + 1500,
+    });
+    expect(deadlineReject).toEqual({ ok: false, reason: "timeout" });
+    const queueReject = await scheduleCrApiRequest(run, { maxWaitMs: 500 });
+    expect(queueReject).toEqual({ ok: false, reason: "queue_full" });
+    vi.useRealTimers();
+  });
 });
