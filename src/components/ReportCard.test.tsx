@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, afterEach } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ReportCard } from "./ReportCard";
 import { REPORT_VERSION } from "@/lib/constants";
 import { buildEvaluationStub } from "@/lib/evaluation-stub";
@@ -367,6 +367,9 @@ describe("ReportCard report trust (PR-BC)", () => {
         form.querySelector(`input[type="hidden"][name="${name}"]`),
       ).toBeTruthy();
     }
+    const date = form.querySelector<HTMLInputElement>('input[name="date"]')!;
+    fireEvent.submit(form);
+    expect(date.value).toMatch(/^\d{8}$/);
   });
 
   it("legal degraded：唔顯示 C.2c alert", () => {

@@ -1154,7 +1154,8 @@ export function ReportCard({ report }: { report: RiskReport }) {
         <div className="mt-3">
           <DailyCauseListSearchForm
             partyName={report.entity.searchLabelUsed}
-            className="inline-flex items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+            className="inline-flex cursor-pointer items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+            noteClassName="text-muted-foreground"
           />
         </div>
       </div>

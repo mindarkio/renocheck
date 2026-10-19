@@ -5,6 +5,8 @@ import { runSearchPipeline } from "@/lib/search-pipeline";
 import { SearchPipelineError } from "@/lib/search-pipeline-error";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";

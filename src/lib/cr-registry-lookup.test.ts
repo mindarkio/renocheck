@@ -229,11 +229,19 @@ describe("lookupCompaniesRegistryForSearch", () => {
     vi.useFakeTimers();
     let calls = 0;
     searchCrLocalByNameBeginsWith.mockImplementation(
-      () =>
+      (_prefix, options?: { signal?: AbortSignal }) =>
         new Promise((resolve) => {
           const delayMs = calls === 0 ? 7000 : 0;
           calls += 1;
-          setTimeout(() => resolve({ kind: "no_result" }), delayMs);
+          const t = setTimeout(() => resolve({ kind: "no_result" }), delayMs);
+          options?.signal?.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(t);
+              resolve({ kind: "error", message: "timeout" });
+            },
+            { once: true },
+          );
         }),
     );
     const label = "合成測試有限公司";

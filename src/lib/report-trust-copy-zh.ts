@@ -136,7 +136,7 @@ export const DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH: readonly string[] = [
 export const DAILY_CAUSE_LIST_LINK_LABEL_ZH = "司法機構審訊案件表（官方）";
 
 export const DAILY_CAUSE_LIST_FORM_NOTE_ZH =
-  "撳掣會喺司法機構網站用公司名稱搜尋今日嘅審訊案件表；只涵蓋之後幾個開庭日嘅聆訊排期，唔包括判決或者案件結果。";
+  "撳掣會喺司法機構網站用公司名稱搜尋今日（香港時間）嘅審訊案件表；星期日、公眾假期或者今日未有案件表就會搵唔到，搵唔到亦唔代表冇案件。其他日子請喺司法機構網站揀日期再搜尋。唔包括判決或者案件結果。";
 
 export const DAILY_CAUSE_LIST_HERO_NOTE_ZH =
   "審訊案件表請喺司法機構網站自行查閱；小額錢債審裁處案件一般冇公開判詞。";

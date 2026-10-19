@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDailyCauseListPostFields,
   buildJudiciaryDeepLinks,
+  dailyCauseListPartyQuery,
   hktDateDdmmyyyy,
 } from "./judiciary-search-deep-links";
 
@@ -28,5 +29,20 @@ describe("judiciary-search-deep-links", () => {
       mode: "search",
       parties: "合成測試有限公司",
     });
+  });
+
+  it("dailyCauseListPartyQuery: digits → null; bilingual → one part", () => {
+    expect(dailyCauseListPartyQuery("91234567")).toBeNull();
+    expect(dailyCauseListPartyQuery(" 12345678 ")).toBeNull();
+    expect(dailyCauseListPartyQuery("合成測試有限公司")).toBe("合成測試有限公司");
+    const q = dailyCauseListPartyQuery("合成測試有限公司 ZZQ TESTING LIMITED");
+    expect(q).toBe("合成測試有限公司");
+    expect(dailyCauseListPartyQuery("ZZQ TESTING LIMITED")).toBe("ZZQ TESTING LIMITED");
+  });
+
+  it("buildDailyCauseListPostFields does not split a surrogate pair", () => {
+    const d = new Date("2026-10-19T15:59:00Z");
+    const label = "合".repeat(199) + "𠀋𠀋";
+    expect(buildDailyCauseListPostFields(label, d).parties).toBe("合".repeat(199) + "𠀋");
   });
 });

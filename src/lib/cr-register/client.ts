@@ -64,6 +64,7 @@ async function fetchLocalSearch(
     async () => {
     const url = buildSearchUrl(key1, key2, key3);
     const startedAt = Date.now();
+    let responded = false;
     try {
       if (options?.signal?.aborted) {
         return { kind: "error" as const, message: "timeout" };
@@ -72,6 +73,7 @@ async function fetchLocalSearch(
         signal: options?.signal,
         headers: { Accept: "application/json" },
       });
+      responded = true;
       if (options?.stats) {
         options.stats.fetchCount += 1;
         options.stats.lastHttpStatus = res.status;
@@ -125,7 +127,7 @@ async function fetchLocalSearch(
       recordCrApiSuccess();
       return { kind: "rows" as const, rows: body as CrApiLocalRow[] };
     } catch (e) {
-      if (options?.stats) {
+      if (options?.stats && !responded) {
         options.stats.fetchCount += 1;
       }
       const msg = e instanceof Error ? e.name : "fetch_failed";

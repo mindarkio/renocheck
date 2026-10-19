@@ -1,3 +1,4 @@
+import { splitMixedLabelParts } from "./cr-register/prefix";
 import { buildLrsPartiesSearchResultUrl } from "./lrs-search-url";
 import {
   DAILY_CAUSE_LIST_HERO_NOTE_ZH,
@@ -28,8 +29,16 @@ export function buildDailyCauseListPostFields(
     lang: "tc",
     date: hktDateDdmmyyyy(now),
     mode: "search",
-    parties: partyName.trim().slice(0, 200),
+    parties: Array.from(partyName.trim()).slice(0, 200).join(""),
   };
+}
+
+/** DCL parties query: null for digit-only labels (phone / BR); one language only for bilingual labels. */
+export function dailyCauseListPartyQuery(label: string): string | null {
+  const t = label.trim();
+  if (!/\p{L}/u.test(t)) return null;
+  const { zh, en } = splitMixedLabelParts(t);
+  return zh && en ? zh : t;
 }
 
 /** Prefilled external search links (一撲即查); user leaves site to verify. */

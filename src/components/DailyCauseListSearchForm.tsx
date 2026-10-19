@@ -1,26 +1,51 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import {
   JUDICIARY_DCL_SEARCH_ACTION,
-  buildDailyCauseListPostFields,
+  dailyCauseListPartyQuery,
   hktDateDdmmyyyy,
 } from "@/lib/judiciary-search-deep-links";
 import {
   DAILY_CAUSE_LIST_FORM_NOTE_ZH,
   DAILY_CAUSE_LIST_LINK_LABEL_ZH,
+  JUDICIARY_DAILY_CAUSE_LIST_URL,
 } from "@/lib/report-trust-copy-zh";
+
+const noopSubscribe = () => () => {};
+
+const DEFAULT_BUTTON_CLASS =
+  "inline-flex cursor-pointer items-center underline-offset-2 hover:underline";
 
 export function DailyCauseListSearchForm({
   partyName,
   className,
+  noteClassName,
 }: {
   partyName: string;
   className?: string;
+  noteClassName?: string;
 }) {
   const dateRef = useRef<HTMLInputElement>(null);
-  const parties = buildDailyCauseListPostFields(partyName, new Date()).parties;
+  // false during SSR / before hydration, so the button cannot post an empty date.
+  const ready = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const parties = dailyCauseListPartyQuery(partyName);
+
+  if (parties === null) {
+    return (
+      <a
+        href={JUDICIARY_DAILY_CAUSE_LIST_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className ?? DEFAULT_BUTTON_CLASS}
+      >
+        {DAILY_CAUSE_LIST_LINK_LABEL_ZH}
+        <ExternalLink className="ms-1 inline size-3.5 opacity-80" aria-hidden />
+        <span className="sr-only">（新分頁開啟）</span>
+      </a>
+    );
+  }
 
   return (
     <div>
@@ -30,29 +55,35 @@ export function DailyCauseListSearchForm({
         target="_blank"
         rel="noopener noreferrer"
         className="inline"
-        onSubmit={() => {
-          if (dateRef.current) {
-            dateRef.current.value = hktDateDdmmyyyy(new Date());
+        onSubmit={(e) => {
+          if (!dateRef.current) {
+            e.preventDefault();
+            return;
           }
+          dateRef.current.value = hktDateDdmmyyyy(new Date());
         }}
       >
         <input type="hidden" name="lang" value="tc" />
         <input type="hidden" name="mode" value="search" />
         <input ref={dateRef} type="hidden" name="date" value="" />
-        <input type="hidden" name="parties" value={parties} />
+        <input
+          type="hidden"
+          name="parties"
+          value={Array.from(parties).slice(0, 200).join("")}
+        />
         <button
           type="submit"
-          className={
-            className ??
-            "inline-flex items-center underline-offset-2 hover:underline"
-          }
+          disabled={!ready}
+          className={className ?? DEFAULT_BUTTON_CLASS}
         >
           {DAILY_CAUSE_LIST_LINK_LABEL_ZH}
           <ExternalLink className="ms-1 inline size-3.5 opacity-80" aria-hidden />
           <span className="sr-only">（新分頁開啟）</span>
         </button>
       </form>
-      <span className="mt-0.5 block text-[11px] leading-[1.6] text-primary-foreground/60 sm:text-xs">
+      <span
+        className={`mt-0.5 block text-[11px] leading-[1.6] sm:text-xs ${noteClassName ?? "text-primary-foreground/60"}`}
+      >
         {DAILY_CAUSE_LIST_FORM_NOTE_ZH}
       </span>
     </div>
