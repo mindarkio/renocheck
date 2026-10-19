@@ -191,9 +191,16 @@ export function LegalEventsTable({
         </p>
       )}
 
-      <div className="hidden overflow-x-auto lg:block">
+      <div
+        className="hidden overflow-x-auto rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:block"
+        role="region"
+        aria-labelledby="legal-events-table-caption"
+        tabIndex={0}
+      >
         <table className="w-full border-collapse">
-          <caption className="sr-only">公開判詞紀錄</caption>
+          <caption id="legal-events-table-caption" className="sr-only">
+            公開判詞紀錄
+          </caption>
           <thead>
             <tr className="border-b border-border/60 text-left">
               {[

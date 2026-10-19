@@ -84,6 +84,12 @@ describe("LegalEventsTable", () => {
     expect(scroller?.className).toContain("overflow-x-auto");
     expect(scroller?.className).toContain("lg:block");
     expect(scroller?.className).not.toMatch(/\bmd:block\b/);
+    // keyboard users can scroll the overflow-x safety net (WCAG 2.1.1)
+    expect(scroller?.getAttribute("tabindex")).toBe("0");
+    expect(scroller?.getAttribute("role")).toBe("region");
+    const captionId = scroller?.getAttribute("aria-labelledby");
+    expect(captionId).toBeTruthy();
+    expect(table?.querySelector("caption")?.id).toBe(captionId);
 
     const cardList = screen.getAllByTestId("legal-event-card")[0]?.closest("ul");
     expect(cardList?.className).toContain("lg:hidden");
