@@ -75,6 +75,7 @@ import {
   brandReportSectionTitleClass,
   surfaceCardClass as reportShellClass,
 } from "@/lib/ui-surfaces";
+import { legalEventsPanelClass, reportReadingColumnClass } from "./report-column";
 import { RiskBandMeter } from "./RiskBandMeter";
 
 function confidenceLabelZh(confidence: RiskReport["confidence"]): string {
@@ -241,7 +242,8 @@ function sourceBadgeAppearance(sourceName: string, url: string): string {
 
 const reportBlockClass = "px-5 py-5 sm:px-6 sm:py-6";
 
-const reportBlockDividerClass = "border-t border-border/60";
+const reportBlockDividerClass =
+  "border-t border-border/60 first:border-t-0";
 
 const reportSectionTitleClass = brandReportSectionTitleClass;
 
@@ -367,9 +369,106 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const showLegalLookupDegraded = !showLegalEvents && legalLookupDegraded;
   const headerRiskBandZh = reportCardHeaderRiskBandZh(report);
   const headerBandLabel = reportCardHeaderBandLabel(report);
+  const showArticleTail =
+    (evidenceCount > 0 && highlights.length === 0) ||
+    actionable.length > 0 ||
+    showFooterNotes;
+
+  function afterLegalEventsBody(): ReactNode {
+    return (
+      <>
+      {evidenceCount > 0 && highlights.length === 0 && (
+        <ReportBlock
+          id="retrieval-evidence-heading"
+          icon={Link2}
+          title={`相關公開連結（${evidenceCount} 條）`}
+        >
+          <p className={`${reportMetaClass} -mt-1 mb-3`}>
+            本次未形成討論摘要，以下連結供自行閱讀核實。
+          </p>
+          <ul className="list-none space-y-0 p-0">
+            {report.signals.retrievalEvidence!.map((item) => (
+              <li key={item.url} className={reportListRowClass}>
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-start gap-2 font-medium text-primary underline-offset-2 hover:underline break-all"
+                >
+                  <ExternalLink
+                    className="mt-1 size-4 shrink-0"
+                    aria-hidden
+                  />
+                  <span className="text-sm leading-snug sm:text-[15px]">
+                    {item.title || item.url}
+                  </span>
+                </a>
+                {item.snippetExcerpt ? (
+                  <p className={`mt-2 ${reportMetaClass}`}>
+                    {item.snippetExcerpt}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </ReportBlock>
+      )}
+
+      {actionable.length > 0 && (
+        <ReportBlock
+          id="actionable-heading"
+          icon={ShieldCheck}
+          title="簽約防守建議（依本案公開資料）"
+        >
+          <ul className="list-none space-y-0 p-0">
+            {actionable.map((item, i) => (
+              <li
+                key={`${item.category}-${i}`}
+                className={reportListRowClass}
+              >
+                <p className="text-xs font-medium text-muted-foreground">
+                  {item.category}
+                </p>
+                <p className={`mt-1.5 ${reportBodyClass}`}>{item.clauseText}</p>
+                <p className={`mt-2 ${reportMetaClass}`}>{item.reason}</p>
+              </li>
+            ))}
+          </ul>
+        </ReportBlock>
+      )}
+
+      {showFooterNotes ? (
+        <footer
+          className={`${reportBlockClass} ${reportBlockDividerClass} space-y-4`}
+        >
+          {report.confidence === "medium" && highlights.length === 1 && (
+            <p className="flex items-start gap-2 text-muted-foreground">
+              <CircleHelp
+                className="mt-0.5 size-4 shrink-0 text-primary/70"
+                aria-hidden
+              />
+              <span className={reportBodyClass}>
+                目前僅找到少量公開來源摘要，請自行核實是否與本次查詢對象為同一商號。
+              </span>
+            </p>
+          )}
+
+          {reportCardShowRiskBandFooterNote(report) && (
+            <p
+              className={`rounded-lg px-3 py-2.5 ${reportBodyClass} text-muted-foreground ${riskBandSurfaceClass("未見負面摘要")}`}
+            >
+              「未見負面摘要」僅表示在本次檢索範圍內的公開討論摘要中，出現讚揚相關表述且未見糾紛相關表述；不包括未收錄來源，並不構成品質保證或聘用建議。
+            </p>
+          )}
+        </footer>
+      ) : null}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-4 text-left">
+    <div className={`${reportReadingColumnClass} space-y-4`}>
     {showCrRegistrationAlert ? (
       <div
         className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm sm:px-5 sm:py-5"
@@ -699,12 +798,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
         </ReportBlock>
       ) : null}
 
-      {showLegalEvents ? (
-        <LegalEventsTable
-          events={legalEvents}
-          registryAsOf={report.official.legalRegistryAsOf}
-        />
-      ) : showLegalLookupDegraded ? (
+      {!showLegalEvents && showLegalLookupDegraded ? (
         <ReportBlock
           id="legal-events-heading"
           icon={FileText}
@@ -716,92 +810,27 @@ export function ReportCard({ report }: { report: RiskReport }) {
         </ReportBlock>
       ) : null}
 
-      {evidenceCount > 0 && highlights.length === 0 && (
-        <ReportBlock
-          id="retrieval-evidence-heading"
-          icon={Link2}
-          title={`相關公開連結（${evidenceCount} 條）`}
-        >
-          <p className={`${reportMetaClass} -mt-1 mb-3`}>
-            本次未形成討論摘要，以下連結供自行閱讀核實。
-          </p>
-          <ul className="list-none space-y-0 p-0">
-            {report.signals.retrievalEvidence!.map((item) => (
-              <li key={item.url} className={reportListRowClass}>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-start gap-2 font-medium text-primary underline-offset-2 hover:underline break-all"
-                >
-                  <ExternalLink
-                    className="mt-1 size-4 shrink-0"
-                    aria-hidden
-                  />
-                  <span className="text-sm leading-snug sm:text-[15px]">
-                    {item.title || item.url}
-                  </span>
-                </a>
-                {item.snippetExcerpt ? (
-                  <p className={`mt-2 ${reportMetaClass}`}>
-                    {item.snippetExcerpt}
-                  </p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </ReportBlock>
-      )}
-
-      {actionable.length > 0 && (
-        <ReportBlock
-          id="actionable-heading"
-          icon={ShieldCheck}
-          title="簽約防守建議（依本案公開資料）"
-        >
-          <ul className="list-none space-y-0 p-0">
-            {actionable.map((item, i) => (
-              <li
-                key={`${item.category}-${i}`}
-                className={reportListRowClass}
-              >
-                <p className="text-xs font-medium text-muted-foreground">
-                  {item.category}
-                </p>
-                <p className={`mt-1.5 ${reportBodyClass}`}>{item.clauseText}</p>
-                <p className={`mt-2 ${reportMetaClass}`}>{item.reason}</p>
-              </li>
-            ))}
-          </ul>
-        </ReportBlock>
-      )}
-
-      {showFooterNotes ? (
-        <footer
-          className={`${reportBlockClass} ${reportBlockDividerClass} space-y-4`}
-        >
-          {report.confidence === "medium" && highlights.length === 1 && (
-            <p className="flex items-start gap-2 text-muted-foreground">
-              <CircleHelp
-                className="mt-0.5 size-4 shrink-0 text-primary/70"
-                aria-hidden
-              />
-              <span className={reportBodyClass}>
-                目前僅找到少量公開來源摘要，請自行核實是否與本次查詢對象為同一商號。
-              </span>
-            </p>
-          )}
-
-          {reportCardShowRiskBandFooterNote(report) && (
-            <p
-              className={`rounded-lg px-3 py-2.5 ${reportBodyClass} text-muted-foreground ${riskBandSurfaceClass("未見負面摘要")}`}
-            >
-              「未見負面摘要」僅表示在本次檢索範圍內的公開討論摘要中，出現讚揚相關表述且未見糾紛相關表述；不包括未收錄來源，並不構成品質保證或聘用建議。
-            </p>
-          )}
-        </footer>
-      ) : null}
+      {!showLegalEvents ? afterLegalEventsBody() : null}
     </article>
+    </div>
+
+    {showLegalEvents ? (
+      <div data-testid="legal-events-panel" className={legalEventsPanelClass}>
+        <div className={`${reportShellClass} overflow-hidden`}>
+          <LegalEventsTable
+            events={legalEvents}
+            registryAsOf={report.official.legalRegistryAsOf}
+          />
+        </div>
+      </div>
+    ) : null}
+
+    <div className={`${reportReadingColumnClass} space-y-4`}>
+    {showLegalEvents && showArticleTail ? (
+      <article className={`${reportShellClass} overflow-hidden`}>
+        {afterLegalEventsBody()}
+      </article>
+    ) : null}
 
     {highlights.length > 0 && (
       <div
@@ -992,6 +1021,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
         </span>
       </p>
     </aside>
+    </div>
     </div>
   );
 }

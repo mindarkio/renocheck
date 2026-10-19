@@ -16,10 +16,32 @@ import { judgmentDedupeKey } from "@/lib/lookup-legal-judgments";
 import { LEGAL_EVENT_SOURCE_LINK_LABEL_ZH } from "@/lib/report-trust-copy-zh";
 import { brandReportSectionTitleClass } from "@/lib/ui-surfaces";
 
-const reportBlockClass = "px-5 py-5 sm:px-6 sm:py-6 border-t border-border/60";
-const reportBodyClass = "text-sm leading-[1.7] text-foreground/90 sm:text-[15px]";
+const reportBlockClass = "px-5 py-5 sm:px-6 sm:py-6";
 const reportMetaClass =
   "text-xs leading-[1.65] text-muted-foreground sm:text-[13px]";
+
+const tableHeadClass =
+  "whitespace-nowrap px-2 py-2 text-left text-[13px] font-semibold text-muted-foreground first:pl-0 last:pr-0";
+const tableCellClass =
+  "px-2 py-3 text-[13px] leading-snug first:pl-0 last:pr-0 xl:text-sm";
+const tableNowrapCellClass = `whitespace-nowrap ${tableCellClass}`;
+
+/** Break long CJK labels only at ／ or before （, never character-by-character. */
+function withCjkSoftBreaks(text: string): ReactNode {
+  const parts = text
+    .split(/(?<=／)|(?=（)/u)
+    .filter((part) => part.length > 0);
+  return parts.map((part, index) => (
+    <span key={`${index}-${part}`} className="whitespace-nowrap">
+      {index > 0 ? <wbr /> : null}
+      {part}
+    </span>
+  ));
+}
+
+function courtHasCjk(court: string): boolean {
+  return /[\u3400-\u9fff]/u.test(court);
+}
 
 function ReportExternalLink({
   href,
@@ -169,8 +191,8 @@ export function LegalEventsTable({
         </p>
       )}
 
-      <div className="hidden overflow-x-auto md:block">
-        <table className="hidden w-full border-collapse md:table">
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="w-full border-collapse">
           <caption className="sr-only">公開判詞紀錄</caption>
           <thead>
             <tr className="border-b border-border/60 text-left">
@@ -184,11 +206,7 @@ export function LegalEventsTable({
                 "結果",
                 "判詞",
               ].map((label) => (
-                <th
-                  key={label}
-                  scope="col"
-                  className="px-2 py-2 text-[13px] font-semibold text-muted-foreground first:pl-0 last:pr-0"
-                >
+                <th key={label} scope="col" className={tableHeadClass}>
                   {label}
                 </th>
               ))}
@@ -206,28 +224,40 @@ export function LegalEventsTable({
                 className="border-b border-border/50"
               >
                 <tr className="align-top">
-                  <td className="px-2 py-3 text-sm first:pl-0">
+                  <td className={tableCellClass}>
                     <CaseRefCell ev={ev} />
                   </td>
-                  <td className="px-2 py-3 text-sm whitespace-nowrap">
+                  <td className={tableNowrapCellClass}>
                     {ev.neutralCitation ?? "—"}
                   </td>
-                  <td className="px-2 py-3 text-sm">{ev.court}</td>
-                  <td className="px-2 py-3 text-sm whitespace-nowrap">
+                  <td
+                    className={
+                      courtHasCjk(ev.court)
+                        ? tableNowrapCellClass
+                        : `${tableCellClass} min-w-[8.5rem]`
+                    }
+                  >
+                    {courtHasCjk(ev.court)
+                      ? withCjkSoftBreaks(ev.court)
+                      : ev.court}
+                  </td>
+                  <td className={tableNowrapCellClass}>
                     <time dateTime={ev.eventDate}>{ev.eventDate}</time>
                   </td>
-                  <td className="px-2 py-3 text-sm">
+                  <td className={tableNowrapCellClass}>
                     {partyRoleLabelZh(ev.partyRole)}
                   </td>
-                  <td className="px-2 py-3 text-sm">
-                    {judgmentCategoryLabelZh(ev.judgmentCategory)}
+                  <td className={tableCellClass}>
+                    {withCjkSoftBreaks(
+                      judgmentCategoryLabelZh(ev.judgmentCategory),
+                    )}
                   </td>
-                  <td className="px-2 py-3 text-sm">
+                  <td className={tableNowrapCellClass}>
                     {ev.outcomeHint
                       ? outcomeHintLabelZh(ev.outcomeHint)
                       : "—"}
                   </td>
-                  <td className="px-2 py-3 text-sm last:pr-0">
+                  <td className={tableNowrapCellClass}>
                     <ReportExternalLink
                       href={ev.sourceUrl}
                       className="font-medium text-primary underline-offset-2 hover:underline"
@@ -250,7 +280,7 @@ export function LegalEventsTable({
         </table>
       </div>
 
-      <ul className="list-none space-y-4 p-0 md:hidden">
+      <ul className="list-none space-y-4 p-0 lg:hidden">
         {events.map((ev) => {
           const factsOnly = hearingSummaryPendingForEvent(
             ev.hearingKeyPointsZh,

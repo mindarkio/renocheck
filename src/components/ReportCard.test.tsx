@@ -423,6 +423,12 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.textContent).toContain("勞資糾紛（裝修工程相關）");
     expect(container.textContent).toContain("裁定須負責");
     expect(container.textContent).toContain("公開判詞紀錄（1 宗）");
+    const panel = container.querySelector("[data-testid=legal-events-panel]");
+    expect(panel?.className).toContain("lg:max-w-none");
+    expect(panel?.className).toContain("max-w-[584px]");
+    const article = container.querySelector("article");
+    expect(article?.parentElement?.className).toContain("max-w-[584px]");
+    expect(article?.parentElement?.className).not.toContain("lg:max-w-none");
   });
 
   it("有 legalEvents：唔顯示 C.2c alert", () => {

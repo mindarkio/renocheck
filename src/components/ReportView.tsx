@@ -6,6 +6,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { RiskReport } from "@/lib/report-schema";
 import { ReportCard } from "./ReportCard";
+import {
+  reportPageColumnClass,
+  reportReadingColumnClass,
+} from "./report-column";
 
 function readSessionReport(fingerprint: string): RiskReport | null {
   try {
@@ -69,10 +73,10 @@ export function ReportView({ fingerprint }: { fingerprint: string }) {
 
   return (
     <main className="flex min-h-0 flex-1 flex-col px-4 pb-12 pt-5 sm:px-6 sm:pb-16 sm:pt-7">
-      <div className="mx-auto w-full max-w-[584px]">
+      <div className={reportPageColumnClass}>
         {error && (
           <div
-            className="rounded-xl border border-warning/35 bg-warning-foreground/50 px-4 py-3 text-sm leading-relaxed text-warning"
+            className={`${reportReadingColumnClass} rounded-xl border border-warning/35 bg-warning-foreground/50 px-4 py-3 text-sm leading-relaxed text-warning`}
             role="alert"
           >
             {error}
@@ -104,7 +108,7 @@ export function ReportView({ fingerprint }: { fingerprint: string }) {
         {report && <ReportCard report={report} />}
 
         {(report || error) && (
-          <div className="mt-8 sm:mt-10">
+          <div className={`${reportReadingColumnClass} mt-8 sm:mt-10`}>
             <Link
               href="/"
               className="flex w-full min-h-12 items-center justify-center gap-2.5 rounded-xl border border-primary bg-transparent px-5 py-3 text-[15px] font-semibold tracking-wide text-primary transition-[transform,background-color] duration-200 hover:bg-primary/5 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
