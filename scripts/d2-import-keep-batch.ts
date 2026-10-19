@@ -43,6 +43,7 @@ type KeepRow = {
   mwcMatch?: { companyName: string; registrationNo: string };
   reviewLookupAliases?: string[];
   sourceUrl: string;
+  reviewJudgmentCategory?: string;
 };
 
 function normRef(r: string): string {
@@ -78,6 +79,7 @@ function main() {
       caseRef: string;
       eventDate: string;
       partiesLine: string;
+      neutralCitation?: string;
     }>;
   };
   const byRef = new Map(
@@ -123,7 +125,8 @@ function main() {
       companyNameNormalized: defendant,
       ...(br ? { brNormalized: br } : {}),
       ...(aliases.length ? { lookupAliases: aliases } : {}),
-      judgmentCategory: "renovation_engineering_civil",
+      judgmentCategory:
+        k.reviewJudgmentCategory ?? "renovation_engineering_civil",
       partyRole: "defendant",
       outcomeHint: "unknown",
       procedureStage: "unknown",
@@ -131,6 +134,9 @@ function main() {
       reviewStatus: "auto",
       sourceUrl: toJuFrameUrl(k.sourceUrl),
       renovationRelevant: true,
+      ...(meta.neutralCitation
+        ? { topicTags: [`neutral_citation:${meta.neutralCitation}`] }
+        : {}),
     };
     existing.push(row);
     seedByRef.set(key, row);

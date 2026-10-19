@@ -8,7 +8,7 @@ import type { D2Disposition } from "./judgment-d2-gates";
 import { manualTriageRevisionHash } from "./judgment-d2-manual-triage";
 import { listD2RulesBundleFiles } from "./judgment-d2-rules-bundle";
 
-export const D2_FILTER_POLICY = "company_defendant_v3e";
+export const D2_FILTER_POLICY = "company_defendant_v3f";
 
 const LRS_PROFILES_PATH = "scripts/config/lrs-ingestion-profiles.json";
 

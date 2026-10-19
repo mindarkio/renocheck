@@ -57,6 +57,7 @@ import {
 } from "@/lib/unverified-company-registration";
 import {
   judgmentCategoryLabelZh,
+  outcomeHintLabelZh,
   LEGAL_EVENTS_AI_VERIFIED_ZH,
   LEGAL_EVENTS_AUTO_SUMMARY_ZH,
   LEGAL_EVENTS_FACTS_ONLY_ZH,
@@ -65,6 +66,7 @@ import {
   partyRoleLabelZh,
 } from "@/lib/legal-event-display";
 import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
+import { judgmentDedupeKey } from "@/lib/lookup-legal-judgments";
 import {
   isReportLegalLookupDegraded,
   reportCardHeaderBandLabel,
@@ -769,11 +771,11 @@ export function ReportCard({ report }: { report: RiskReport }) {
               );
               return (
                 <li
-                  key={`${ev.caseRef}-${ev.sourceUrl}`}
+                  key={judgmentDedupeKey(ev)}
                   className={reportListRowClass}
                 >
                   <p className="text-sm font-semibold text-foreground sm:text-[15px]">
-                    {ev.caseRef}
+                    {[ev.caseRef, ...(ev.relatedCaseRefs ?? [])].join("、")}
                   </p>
                   {ev.businessForm === "sole_proprietorship" &&
                   ev.defendantDisplayNameZh ? (
@@ -789,12 +791,16 @@ export function ReportCard({ report }: { report: RiskReport }) {
                     </p>
                   ) : null}
                   <p className={`mt-1.5 ${reportMetaClass}`}>
+                    {ev.neutralCitation ? `${ev.neutralCitation} · ` : ""}
                     {ev.court} ·{" "}
                     <time dateTime={ev.eventDate}>{ev.eventDate}</time>
                     {" · "}
                     {partyRoleLabelZh(ev.partyRole)}
                     {" · "}
                     {judgmentCategoryLabelZh(ev.judgmentCategory)}
+                    {ev.outcomeHint
+                      ? ` · ${outcomeHintLabelZh(ev.outcomeHint)}`
+                      : ""}
                   </p>
                   {!factsOnly ? (
                     <>

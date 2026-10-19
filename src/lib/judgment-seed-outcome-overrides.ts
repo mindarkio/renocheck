@@ -13,6 +13,10 @@ const OUTCOME_BY_CASE: Record<string, OutcomeHint> = {
   "HCSA28/2016": "defendant_liable",
   "HCSA62/2012": "defendant_liable",
   "DCCJ5926/2005": "defendant_liable",
+  "HCLA23/2024": "defendant_liable",
+  "HCLA24/2024": "defendant_liable",
+  "HCLA25/2024": "defendant_liable",
+  "HCLA26/2024": "defendant_liable",
 };
 
 export function seedOutcomeOverride(caseRef: string): OutcomeHint | undefined {

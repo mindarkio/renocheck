@@ -49,6 +49,12 @@ describe("calibrateEvaluation", () => {
     expect(out.summaryZh).toContain("未檢出與查證對象相關的糾紛或投訴");
   });
 
+  it("bind failure summary length ≤120", () => {
+    const summary =
+      "政府名冊有登記；在本站本次已檢索的公開網上來源中，未檢出與查證對象相關的糾紛或投訴討論摘要（不包括判詞紀錄）；結果只反映已檢索範圍，請自行核實。";
+    expect(summary.length).toBeLessThanOrEqual(120);
+  });
+
   it("no MWC, zero evidence → C / unindexed", () => {
     const out = calibrateEvaluation({
       slice: emptySlice(),

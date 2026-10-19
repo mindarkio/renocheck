@@ -57,6 +57,17 @@ export function manualKeepOverride(caseRef: string): ManualKeepOverride | null {
   return MANUAL_KEEP[key] ?? null;
 }
 
+const LABOUR_RENOVATION_VERIFIED = new Set(
+  ["HCLA23/2024", "HCLA24/2024", "HCLA25/2024", "HCLA26/2024"].map(
+    normalizeCaseRefKey,
+  ),
+);
+// [2025] HKCFI 633 — 2026-10-19 核對原文：裝修工程、總承判商／次承判商、《僱傭條例》第43C條
+
+export function isLabourRenovationVerified(caseRef: string): boolean {
+  return LABOUR_RENOVATION_VERIFIED.has(normalizeCaseRefKey(caseRef));
+}
+
 /** Bumps D2 step cache when MANUAL_DROP / MANUAL_KEEP change. */
 export function manualTriageRevisionHash(): string {
   const payload = JSON.stringify({

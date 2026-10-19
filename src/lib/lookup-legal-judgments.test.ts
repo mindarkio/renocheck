@@ -197,4 +197,81 @@ describe("lookupLegalJudgments", () => {
     });
     expect(result.events[0]?.hearingKeyPointQuotesZh).toEqual(["引文 A", ""]);
   });
+
+  it("dedupes employment_renovation rows by neutral citation", async () => {
+    const supabase = mockSupabase({
+      meta: [{ imported_at: "2026-10-16T08:00:00.000Z" }],
+      matchRows: [
+        {
+          id: "id-a",
+          case_ref: "HCLA901/2024",
+          company_name_normalized: "ZZQ工程服務有限公司",
+          lookup_aliases: [],
+          topic_tags: ["neutral_citation:[2025] HKCFI 9901"],
+        },
+        {
+          id: "id-b",
+          case_ref: "HCLA903/2024",
+          company_name_normalized: "ZZQ工程服務有限公司",
+          lookup_aliases: [],
+          topic_tags: ["neutral_citation:[2025] HKCFI 9901"],
+        },
+      ],
+      fullRows: [
+        {
+          ...baseRow,
+          id: "id-a",
+          case_ref: "HCLA901/2024",
+          event_date: "2025-02-10",
+          judgment_category: "employment_renovation",
+          company_name_normalized: "ZZQ工程服務有限公司",
+          topic_tags: ["neutral_citation:[2025] HKCFI 9901"],
+          source_url:
+            "https://legalref.judiciary.hk/lrs/common/ju/ju_frame.jsp?DIS=166216&TP=JU",
+        },
+        {
+          ...baseRow,
+          id: "id-b",
+          case_ref: "HCLA903/2024",
+          event_date: "2025-02-09",
+          judgment_category: "employment_renovation",
+          company_name_normalized: "ZZQ工程服務有限公司",
+          topic_tags: ["neutral_citation:[2025] HKCFI 9901"],
+          source_url:
+            "https://legalref.judiciary.hk/lrs/common/ju/ju_frame.jsp?DIS=166219&TP=JU",
+        },
+      ],
+    });
+
+    const result = await lookupLegalJudgments(supabase, {
+      searchLabelUsed: "ZZQ工程服務有限公司",
+    });
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]?.caseRef).toBe("HCLA901/2024");
+    expect(result.events[0]?.relatedCaseRefs).toEqual(["HCLA903/2024"]);
+    expect(result.events[0]?.neutralCitation).toBe("[2025] HKCFI 9901");
+  });
+
+  it("excludes employment_labour from events", async () => {
+    const supabase = mockSupabase({
+      meta: [{ imported_at: "2026-10-16T08:00:00.000Z" }],
+      brRows: [
+        {
+          ...baseRow,
+          case_ref: "HCLA999/2024",
+          judgment_category: "employment_labour",
+          company_name_normalized: "ZZQ工程服務有限公司",
+          br_normalized: "99998888",
+        },
+      ],
+      matchRows: [],
+      fullRows: [],
+    });
+
+    const result = await lookupLegalJudgments(supabase, {
+      searchLabelUsed: "ZZQ工程服務有限公司",
+      br: "99998888",
+    });
+    expect(result.events).toEqual([]);
+  });
 });

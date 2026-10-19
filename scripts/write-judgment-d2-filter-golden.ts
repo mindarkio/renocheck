@@ -91,7 +91,7 @@ async function main() {
   });
 
   const golden = {
-    policy: "company_defendant_v3e",
+    policy: "company_defendant_v3f",
     summary: counts,
     entryCount: entries.length,
     entries: entries.map((e) => ({

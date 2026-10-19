@@ -122,6 +122,12 @@ function rowToEvent(
   const parties = partyNamesArray(row);
   const soleDisplay = soleProprietorDefendantDisplayZh(parties);
 
+  const neutral = row.topic_tags
+    ?.find((t) => t.startsWith("neutral_citation:"))
+    ?.slice("neutral_citation:".length)
+    .trim()
+    .slice(0, 40);
+
   return {
     sourceType: "court_judgment",
     caseRef: row.case_ref,
@@ -162,7 +168,51 @@ function rowToEvent(
           defendantDisplayNameZh: soleDisplay,
         }
       : {}),
+    ...(neutral ? { neutralCitation: neutral } : {}),
   };
+}
+
+export function judgmentDedupeKey(ev: OfficialLegalEvent): string {
+  if (ev.neutralCitation) {
+    return `nc:${ev.neutralCitation.replace(/\s+/g, " ").toUpperCase()}`;
+  }
+  const dis = ev.sourceUrl.match(/DIS=(\d+)/i)?.[1];
+  if (dis) return `dis:${dis}`;
+  return `ref:${ev.caseRef}`;
+}
+
+export function dedupeByJudgment(
+  events: OfficialLegalEvent[],
+): OfficialLegalEvent[] {
+  const byKey = new Map<string, OfficialLegalEvent[]>();
+  for (const ev of events) {
+    const k = judgmentDedupeKey(ev);
+    const list = byKey.get(k) ?? [];
+    list.push(ev);
+    byKey.set(k, list);
+  }
+  const merged: OfficialLegalEvent[] = [];
+  for (const group of byKey.values()) {
+    const sorted = [...group].sort(
+      (a, b) =>
+        b.eventDate.localeCompare(a.eventDate) ||
+        a.caseRef.localeCompare(b.caseRef),
+    );
+    const primary = sorted[0]!;
+    const related = [
+      ...new Set(
+        sorted
+          .slice(1)
+          .map((e) => e.caseRef)
+          .filter((r) => r !== primary.caseRef),
+      ),
+    ].sort((a, b) => a.localeCompare(b, "zh-HK"));
+    merged.push({
+      ...primary,
+      ...(related.length ? { relatedCaseRefs: related } : {}),
+    });
+  }
+  return merged.sort((a, b) => b.eventDate.localeCompare(a.eventDate));
 }
 
 function shouldSkipLegalRow(row: LegalJudgmentRow): boolean {
@@ -180,6 +230,7 @@ function strongestCategory(events: OfficialLegalEvent[]): JudgmentCategory | und
     "winding_up_insolvency",
     "personal_injury_site",
     "small_works_regulatory",
+    "employment_renovation",
     "employment_labour",
     "other_civil",
     "landlord_tenant",
@@ -311,8 +362,9 @@ export async function lookupLegalJudgments(
     }
   }
 
+  const deduped = dedupeByJudgment(matched);
   return {
-    events: matched.slice(0, MAX_EVENTS),
+    events: deduped.slice(0, MAX_EVENTS),
     registryAsOf,
   };
 }

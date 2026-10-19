@@ -1,4 +1,4 @@
-import type { JudgmentCategory } from "./legal-event-schema";
+import type { JudgmentCategory, OutcomeHint } from "./legal-event-schema";
 
 const CATEGORY_ZH: Record<JudgmentCategory, string> = {
   renovation_engineering_civil: "裝修／工程合約民事",
@@ -9,6 +9,7 @@ const CATEGORY_ZH: Record<JudgmentCategory, string> = {
   small_works_regulatory: "小型工程／監管程序",
   criminal_regulatory: "刑事／監管",
   winding_up_insolvency: "清盤／破產",
+  employment_renovation: "勞資糾紛（裝修工程相關）",
   employment_labour: "勞資／僱傭",
   personal_injury_site: "工地人身傷害民事",
   landlord_tenant: "租賃",
@@ -20,6 +21,14 @@ const CATEGORY_ZH: Record<JudgmentCategory, string> = {
 
 export function judgmentCategoryLabelZh(cat: JudgmentCategory): string {
   return CATEGORY_ZH[cat] ?? cat;
+}
+
+export function outcomeHintLabelZh(h: OutcomeHint): string {
+  if (h === "defendant_liable") return "裁定須負責";
+  if (h === "partial") return "裁定部分須負責";
+  if (h === "defendant_not_liable") return "裁定毋須負責";
+  if (h === "procedural_only") return "程序性決定";
+  return "結果未分類";
 }
 
 export const LEGAL_LOOKUP_DEGRADED_ZH =

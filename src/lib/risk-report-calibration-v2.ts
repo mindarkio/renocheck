@@ -32,7 +32,7 @@ const BOUND_DISPUTE_SNIPPET_SUMMARY =
   "根據本次可檢索的公開來源，有多則與查詢對象相關的討論出現糾紛／投訴相關字眼；請逐條點開下方來源核實。";
 
 const RETRIEVAL_BIND_FAILURE_SUMMARY =
-  "政府名冊有登記；已檢視公開搜尋結果，本次未檢出與查證對象相關的糾紛或投訴歷史摘要，請自行核實。";
+  "政府名冊有登記；在本站本次已檢索的公開網上來源中，未檢出與查證對象相關的糾紛或投訴討論摘要（不包括判詞紀錄）；結果只反映已檢索範圍，請自行核實。";
 
 /** Raw organic count suggesting L1 bind failure (not「零討論」). */
 const SERP_BIND_FAILURE_THRESHOLD = 5;
