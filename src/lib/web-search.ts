@@ -268,7 +268,7 @@ function dedupeHits(hits: WebSearchHit[]): WebSearchHit[] {
 /** Dev/eval: fetches up to N pages; single-page failures do not abort other pages (P2-D). */
 export async function fetchSerpOrganicHits(
   query: string,
-  opts?: { pages?: number },
+  opts?: { pages?: number; deadlineMs?: number },
 ): Promise<WebSearchHit[]> {
   const provider = resolveWebSearchProvider();
   if (!provider) {
@@ -282,8 +282,20 @@ export async function fetchSerpOrganicHits(
   const batches: WebSearchHit[][] = [];
 
   for (const start of starts) {
+    if (opts?.deadlineMs !== undefined && Date.now() >= opts.deadlineMs) {
+      pagesFailed += 1;
+      console.warn(
+        JSON.stringify({ event: "serp_page_skipped_deadline", start }),
+      );
+      continue;
+    }
     try {
-      const pageHits = await fetchOrganicPage(provider, query, start);
+      const pageHits = await fetchOrganicPage(
+        provider,
+        query,
+        start,
+        opts?.deadlineMs,
+      );
       pagesOk += 1;
       batches.push(pageHits);
     } catch (e) {
@@ -327,16 +339,18 @@ async function fetchOrganicPage(
   provider: WebSearchProvider,
   query: string,
   start: number,
+  deadlineMs?: number,
 ): Promise<WebSearchHit[]> {
   if (provider === "serper") {
-    return fetchSerperPage(query, start);
+    return fetchSerperPage(query, start, deadlineMs);
   }
-  return fetchSerpApiPage(query, start);
+  return fetchSerpApiPage(query, start, deadlineMs);
 }
 
 async function fetchSerpApiPage(
   query: string,
   start: number,
+  deadlineMs?: number,
 ): Promise<WebSearchHit[]> {
   const apiKey = process.env.SERPAPI_KEY?.trim();
   if (!apiKey) {
@@ -358,7 +372,7 @@ async function fetchSerpApiPage(
   });
 
   const url = `https://serpapi.com/search.json?${params}`;
-  const res = await fetchSerpWithTimeout(url);
+  const res = await fetchSerpWithTimeout(url, undefined, deadlineMs);
 
   if (!res.ok) {
     const body = await res.text();
@@ -403,6 +417,7 @@ async function fetchSerpApiPage(
 async function fetchSerperPage(
   query: string,
   start: number,
+  deadlineMs?: number,
 ): Promise<WebSearchHit[]> {
   const apiKey = process.env.SERPER_API_KEY?.trim();
   if (!apiKey) {
@@ -424,7 +439,7 @@ async function fetchSerperPage(
       num: SERP_PER_PAGE,
       page,
     }),
-  });
+  }, deadlineMs);
 
   if (!res.ok) {
     const body = await res.text();
@@ -462,14 +477,23 @@ async function fetchSerperPage(
 async function fetchSerpWithTimeout(
   url: string,
   init?: RequestInit,
+  deadlineMs?: number,
 ): Promise<Response> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
+    const timeoutMs =
+      deadlineMs === undefined
+        ? SERP_FETCH_TIMEOUT_MS
+        : Math.min(SERP_FETCH_TIMEOUT_MS, deadlineMs - Date.now());
+    if (timeoutMs <= 0) {
+      lastError = lastError ?? new Error("serp_deadline");
+      break;
+    }
     const started = performance.now();
     try {
       const res = await fetch(url, {
         cache: "no-store",
-        signal: AbortSignal.timeout(SERP_FETCH_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
         ...init,
       });
       const ms = Math.round(performance.now() - started);
@@ -509,8 +533,9 @@ export async function fetchWebSearchHitsForEntity(
     phone?: string;
     br?: string;
   },
-  opts?: { mwcCompanyName?: string },
+  opts?: { mwcCompanyName?: string; deadlineMs?: number },
 ): Promise<EntityWebSearchResult> {
+  const deadlineMs = opts?.deadlineMs;
   const [q1, q2] = buildEntitySearchQueries(input, opts);
   const q1Pages = serpPageCount();
   const q2Pages = serpQ2PageCount();
@@ -521,7 +546,7 @@ export async function fetchWebSearchHitsForEntity(
   let q2Ms: number | undefined;
 
   try {
-    const q1Hits = await fetchSerpOrganicHits(q1, { pages: q1Pages });
+    const q1Hits = await fetchSerpOrganicHits(q1, { pages: q1Pages, deadlineMs });
     merged = dedupeHits(q1Hits);
     queriesCompleted = 1;
   } catch (e) {
@@ -537,7 +562,7 @@ export async function fetchWebSearchHitsForEntity(
 
   try {
     const q2Start = performance.now();
-    const q2Hits = await fetchSerpOrganicHits(q2, { pages: q2Pages });
+    const q2Hits = await fetchSerpOrganicHits(q2, { pages: q2Pages, deadlineMs });
     q2Ms = Math.round(performance.now() - q2Start);
     merged = dedupeHits([...merged, ...q2Hits]);
     queriesCompleted += 1;
@@ -558,7 +583,7 @@ export async function fetchWebSearchHitsForEntity(
     try {
       const q3Start = performance.now();
       const q3 = buildPhoneAnchorQuery(normalizedPhone);
-      const q3Hits = await fetchSerpOrganicHits(q3, { pages: q3Pages });
+      const q3Hits = await fetchSerpOrganicHits(q3, { pages: q3Pages, deadlineMs });
       q3Ms = Math.round(performance.now() - q3Start);
       merged = dedupeHits([...merged, ...q3Hits]);
       queriesCompleted += 1;

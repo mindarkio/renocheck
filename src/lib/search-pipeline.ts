@@ -60,6 +60,16 @@ export type SearchPipelineResult = {
   };
 };
 
+/**
+ * Whole-pipeline wall-clock budget (route.ts maxDuration = 60s). SERP must finish
+ * by deadline − LLM_RESERVE_MS so Gemini always gets ≥ LLM_RESERVE_MS; the LLM call
+ * is aborted at the deadline. Leaves ~10s for cache read/write + search_events + response.
+ * CR (CR_LOOKUP_BUDGET_MS 25s) starts in parallel before SERP, so it ends before
+ * deadline − LLM_RESERVE_MS as well.
+ */
+export const PIPELINE_BUDGET_MS = 50_000;
+export const LLM_RESERVE_MS = 20_000;
+
 export type SearchPipelineOptions = {
   /** Dev only: bypass search_cache read */
   skipCache?: boolean;
@@ -71,6 +81,8 @@ export async function runSearchPipeline(
 ): Promise<SearchPipelineResult> {
   const fingerprint = buildSearchFingerprint(input);
   const serpConfigured = isSerpConfigured();
+  const pipelineDeadlineMs = Date.now() + PIPELINE_BUDGET_MS;
+  const serpDeadlineMs = pipelineDeadlineMs - LLM_RESERVE_MS;
 
   if (!isSupabaseAdminConfigured()) {
     throw new SearchPipelineError("supabase_unavailable");
@@ -134,7 +146,10 @@ export async function runSearchPipeline(
   );
 
   const serpStart = performance.now();
-  const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, mwcOpts);
+  const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, {
+    ...mwcOpts,
+    deadlineMs: serpDeadlineMs,
+  });
 
   const tokens = entityMatchTokens(input, {
     mwcCompanyName: mwc?.company_name,
@@ -152,7 +167,10 @@ export async function runSearchPipeline(
   if (previewBound === 0 && brandPhrase) {
     try {
       const retryQ = buildBrandHostForumQuery(brandPhrase);
-      const retryHits = await fetchSerpOrganicHits(retryQ, { pages: 1 });
+      const retryHits = await fetchSerpOrganicHits(retryQ, {
+        pages: 1,
+        deadlineMs: serpDeadlineMs,
+      });
       rawHits = mergeWebSearchHits(rawHits, retryHits);
       console.info(
         JSON.stringify({
@@ -218,6 +236,9 @@ export async function runSearchPipeline(
       searchLabelUsed,
       nameAlignment,
     },
+    abortSignal: AbortSignal.timeout(
+      Math.max(1_000, pipelineDeadlineMs - Date.now()),
+    ),
   });
   const llmMs = Math.round(performance.now() - llmStart);
 
