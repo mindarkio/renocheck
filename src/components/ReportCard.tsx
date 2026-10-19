@@ -16,7 +16,11 @@ import type { ReactNode } from "react";
 import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
 import { DailyCauseListSearchForm } from "@/components/DailyCauseListSearchForm";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
-import { buildOfficialVerifyLinks } from "@/lib/official-verify-links";
+import { CopyCompanyNameButton } from "@/components/CopyCompanyNameButton";
+import {
+  buildOfficialVerifyLinks,
+  officialVerifyCopyName,
+} from "@/lib/official-verify-links";
 import { shouldShowNonLimitedContractorNotice } from "@/lib/non-limited-contractor-notice";
 import {
   BD_EXEMPTED_WORKS_URL,
@@ -48,6 +52,7 @@ import {
   UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
   crHintIncorporationUnderOneYearZh,
+  crBrNoCompareNoteZh,
   mwcMissNoteBodyParagraphsZh,
 } from "@/lib/report-trust-copy-zh";
 import {
@@ -354,6 +359,11 @@ export function ReportCard({ report }: { report: RiskReport }) {
   );
   const showNonLimitedNotice = shouldShowNonLimitedContractorNotice(report);
   const officialVerifyLinks = buildOfficialVerifyLinks(report);
+  const officialVerifyCopyText = officialVerifyCopyName(report);
+  const showCrBrNoCompare =
+    companiesRegistry?.lookupStatus === "ok" &&
+    companiesRegistry.matched === true &&
+    Boolean(companiesRegistry.brNo?.trim());
   const saturation = report.evaluation.dataSaturation;
   const saturationNote = dataSaturationCaution(saturation);
   const showSaturationBanner =
@@ -1115,6 +1125,17 @@ export function ReportCard({ report }: { report: RiskReport }) {
       <SectionHeading id="official-verify-heading" icon={Link2}>
         {OFFICIAL_VERIFY_SECTION_HEADING_ZH}
       </SectionHeading>
+      {officialVerifyCopyText ? (
+        <p className={`mt-3 ${reportBodyClass}`}>
+          <CopyCompanyNameButton text={officialVerifyCopyText} />
+        </p>
+      ) : null}
+      {showCrBrNoCompare && companiesRegistry?.brNo ? (
+        <div className={`mt-3 space-y-1 ${reportMetaClass} text-muted-foreground`}>
+          <p>{crBrNoCompareNoteZh(companiesRegistry.brNo)}</p>
+          <p>{CR_DATA_ATTRIBUTION_ZH}</p>
+        </div>
+      ) : null}
       <ul
         className={`mt-4 list-none space-y-3 p-0 ${reportBodyClass} text-muted-foreground`}
       >

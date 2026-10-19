@@ -10,8 +10,9 @@ export const ICRIS_HOME_URL = CR_ESERVICES_URL;
 export const ORO_INFO_HOME_URL =
   "https://www.oro.gov.hk/cht/our_services/electronic_services/compulsory.html";
 
-export const GOV_HK_BR_ENQUIRY_URL =
-  "https://www.gov.hk/tc/residents/taxes/etax/services/brn_enquiry.htm";
+export const IRD_BR_ENQUIRY_URL =
+  "https://btp.etax.ird.gov.hk/fe/pw/brn?language=ZH_HK";
+export const GOV_HK_BR_ENQUIRY_URL = IRD_BR_ENQUIRY_URL;
 
 export const BD_MWC_REGISTER_SEARCH_URL =
   "https://www.bd.gov.hk/tc/resources/online-tools/registers-search/registrationsearch.html";
@@ -21,9 +22,6 @@ export const BD_MINOR_WORKS_OFFICIAL_URL =
 
 export const BD_EXEMPTED_WORKS_URL =
   "https://www.bd.gov.hk/tc/building-works/minor-works/designated-exempted-works/index.html";
-
-export const BD_BRAVO_BUILDING_RECORDS_URL =
-  "https://www.bd.gov.hk/tc/resources/online-tools/BRAVO-online-building-records/index.html";
 
 export const JUDICIARY_DAILY_CAUSE_LIST_URL =
   "https://e-services.judiciary.hk/dcl/index.jsp?lang=tc";
@@ -234,21 +232,30 @@ export const LEGAL_EVENT_SOURCE_LINK_LABEL_ZH = "司法機構判詞（官方）"
 
 export const OFFICIAL_VERIFY_SECTION_HEADING_ZH = "官方查證連結";
 
+export const COPY_COMPANY_NAME_BUTTON_ZH = "複製公司全名";
+export const COPY_COMPANY_NAME_DONE_ZH = "已複製";
+export const ICRIS_SELF_SERVICE_NOTE_ZH =
+  "呢個網站唔支援由本站預填。請自行：非登記用戶 → 公司名稱搜尋 → 準確名稱 → 貼上公司全名。";
+export const BR_ENQUIRY_SELF_SERVICE_NOTE_ZH =
+  "直接開啟稅務局商業登記號碼查詢。輸入業務全名同所在地區；亦可先複製公司全名。";
+export const ORO_SELF_SERVICE_NOTE_ZH =
+  "收費服務；要自行輸入公司名稱。本站唔會代你查冊。";
+
 export const OFFICIAL_VERIFY_LINK_LABELS = {
   icris: "公司註冊處電子服務網站（公司查冊）",
   oro: "破產管理署：破產及強制性清盤紀錄查冊（收費）",
-  brEnquiry: "政府一站通：查詢商業登記號碼（稅務局商業登記署）",
+  brEnquiry: "稅務局：查詢商業登記號碼（商業登記署）",
   bdRegister: "屋宇署：搜尋註冊專業人士或承建商",
-  bravo: "屋宇署百樓圖網（網上樓宇記錄）",
 } as const;
 
 export const OFFICIAL_VERIFY_LINK_NOTES = {
-  brEnquiry: "輸入業務全名同所在地區，就可以查到商業登記號碼。",
   bdRegister:
     "搜尋結果如有「%」標記，表示該人士或承建商喺最近三年（或者紀律委員會命令嘅期限內）曾經受紀律處分；本報告唔會自動查閱呢個標記。",
-  bravo:
-    "百樓圖網提供樓宇圖則同相關紀錄（要登記同收費），同承建商名冊無關；本報告唔會自動讀取。",
 } as const;
+
+export function crBrNoCompareNoteZh(brNo: string): string {
+  return `公司註冊處開放數據顯示商業登記號碼為 ${brNo}，可同對方商業登記證核對。`;
+}
 
 /** All user-facing strings from this module (for compliance grep tests). */
 export function collectReportTrustCopyStrings(): string[] {
@@ -286,6 +293,12 @@ export function collectReportTrustCopyStrings(): string[] {
     UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
     LEGAL_EVENT_SOURCE_LINK_LABEL_ZH,
     OFFICIAL_VERIFY_SECTION_HEADING_ZH,
+    COPY_COMPANY_NAME_BUTTON_ZH,
+    COPY_COMPANY_NAME_DONE_ZH,
+    ICRIS_SELF_SERVICE_NOTE_ZH,
+    BR_ENQUIRY_SELF_SERVICE_NOTE_ZH,
+    ORO_SELF_SERVICE_NOTE_ZH,
+    crBrNoCompareNoteZh("C0000000"),
     ...Object.values(OFFICIAL_VERIFY_LINK_LABELS),
     ...Object.values(OFFICIAL_VERIFY_LINK_NOTES),
     ...DEFAULT_CONTRACT_CHECKLIST_ZH,

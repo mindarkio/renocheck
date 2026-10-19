@@ -22,6 +22,9 @@ import {
   MWC_MISS_NOTE_CR_SIMILAR_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
+  COPY_COMPANY_NAME_BUTTON_ZH,
+  ICRIS_SELF_SERVICE_NOTE_ZH,
+  ORO_SELF_SERVICE_NOTE_ZH,
 } from "@/lib/report-trust-copy-zh";
 import type { CompaniesRegistryOfficial } from "@/lib/report-schema";
 import { summaryZhForLegalLookupDegraded } from "@/lib/search-pipeline-legal-summary";
@@ -442,5 +445,66 @@ describe("ReportCard report trust (PR-BC)", () => {
     assertClean(container.textContent ?? "");
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText(LEGAL_EVENT_SOURCE_LINK_LABEL_ZH)).toBeTruthy();
+  });
+
+  it("官方查證：複製掣、ICRIS note、ORO 收費註；唔含百樓圖網", () => {
+    const { container } = render(<ReportCard report={minimalReport()} />);
+    assertClean(container.textContent ?? "");
+    expect(screen.getByText(COPY_COMPANY_NAME_BUTTON_ZH)).toBeTruthy();
+    expect(container.textContent).toContain(ICRIS_SELF_SERVICE_NOTE_ZH);
+    expect(container.textContent).toContain(ORO_SELF_SERVICE_NOTE_ZH);
+    expect(container.textContent).not.toContain("百樓圖網");
+  });
+
+  it("CR matched 有 brNo：顯示核對文案", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({
+              matched: true,
+              brNo: "C1111111",
+              nameZh: "合成測試有限公司",
+            }),
+          },
+        })}
+      />,
+    );
+    assertClean(container.textContent ?? "");
+    expect(container.textContent).toContain("C1111111");
+    expect(container.textContent).toContain("商業登記證核對");
+  });
+
+  it("CR matched 無 brNo：唔顯示商業登記號碼為", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({ matched: true }),
+          },
+        })}
+      />,
+    );
+    expect(container.textContent).not.toContain("商業登記號碼為");
+  });
+
+  it("CR 未 matched：唔顯示 brNo 文案", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({
+              matched: false,
+              brNo: "C1111111",
+            }),
+          },
+        })}
+      />,
+    );
+    expect(container.textContent).not.toContain("C1111111");
+    expect(container.textContent).not.toContain("商業登記號碼為");
   });
 });

@@ -52,15 +52,15 @@
 | 用途 | URL | `verified_at` |
 |------|-----|---------------|
 | 公司註冊處電子服務（查冊入口） | `https://www.e-services.cr.gov.hk/` | 2026-10-18 |
-| 政府一站通 BR 查詢 | `https://www.gov.hk/tc/residents/taxes/etax/services/brn_enquiry.htm` | 2026-10-18 |
+| 稅務局 BTP 商業登記號碼查詢 | `https://btp.etax.ird.gov.hk/fe/pw/brn?language=ZH_HK` | 2026-10-19 |
 | 破產管理署：強制性清盤紀錄查冊 | `https://www.oro.gov.hk/cht/our_services/electronic_services/compulsory.html` | 2026-10-18 |
 | 屋宇署註冊承建商搜尋 | `https://www.bd.gov.hk/tc/resources/online-tools/registers-search/registrationsearch.html` | 2026-10-18 |
 | 屋宇署小型工程（誰可進行） | `https://www.bd.gov.hk/tc/building-works/minor-works/minor-works-items/who-can-carry-out-minor-works/index.html` | 2026-10-18 |
 | 屋宇署指定豁免工程 | `https://www.bd.gov.hk/tc/building-works/minor-works/designated-exempted-works/index.html` | 2026-10-18 |
-| 屋宇署 BRAVO 樓宇紀錄 | `https://www.bd.gov.hk/tc/resources/online-tools/BRAVO-online-building-records/index.html` | 2026-10-18 |
+| 屋宇署 BRAVO 樓宇紀錄 | `https://www.bd.gov.hk/tc/resources/online-tools/BRAVO-online-building-records/index.html` | 2026-10-18（2026-10-19 起唔再列於報告「官方查證連結」） |
 | 司法機構審訊案件表（e-services） | `https://e-services.judiciary.hk/dcl/index.jsp?lang=tc` | 2026-10-18 |
 
-**備註：** `https://www.judiciary.hk/zh/court_services_facilities/daily_cause_list.html` 於 2026-10-18 smoke 返 **404**；產品改用 **e-services** 入口（見上表）。`lang=tc` 為語言參數，**唔**預填公司名。
+**備註：** `https://www.judiciary.hk/zh/court_services_facilities/daily_cause_list.html` 於 2026-10-18 smoke 返 **404**；產品改用 **e-services** 入口（見上表）。`lang=tc` 為語言參數，**唔**預填公司名。稅務局 BTP 商業登記號碼查詢跳過 GovHK 介紹頁；BTP 仍可能先出反 bot／聲明頁，唔支援 URL 預填。
 
 ## 公司註冊處開放數據 API（PR-CR；2026-10-18 核實）
 
