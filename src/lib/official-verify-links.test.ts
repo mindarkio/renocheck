@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { REPORT_VERSION } from "./constants";
 import { buildEvaluationStub } from "./evaluation-stub";
 import type { RiskReport } from "./report-schema";
-import { buildOfficialVerifyLinks } from "./official-verify-links";
-import { CR_ESERVICES_URL } from "./report-trust-copy-zh";
+import {
+  buildOfficialVerifyLinks,
+  officialVerifyCopyName,
+} from "./official-verify-links";
+import { CR_ESERVICES_URL, IRD_BR_ENQUIRY_URL } from "./report-trust-copy-zh";
 
 function baseReport(overrides: Partial<RiskReport> = {}): RiskReport {
   const evaluation = buildEvaluationStub({
@@ -41,6 +44,47 @@ function baseReport(overrides: Partial<RiskReport> = {}): RiskReport {
   };
 }
 
+describe("officialVerifyCopyName", () => {
+  it("prefers matched nameZh", () => {
+    const report = baseReport({
+      official: {
+        mwcMatched: false,
+        companiesRegistry: {
+          lookupStatus: "ok",
+          retrievedAt: "2026-10-18T12:00:00.000Z",
+          hints: [],
+          icrisHomeUrl: CR_ESERVICES_URL,
+          matched: true,
+          nameZh: "合成測試有限公司",
+          nameEn: "SYNTHETIC TEST LIMITED",
+        },
+      },
+    });
+    expect(officialVerifyCopyName(report)).toBe("合成測試有限公司");
+  });
+
+  it("uses nameEn when nameZh missing", () => {
+    const report = baseReport({
+      official: {
+        mwcMatched: false,
+        companiesRegistry: {
+          lookupStatus: "ok",
+          retrievedAt: "2026-10-18T12:00:00.000Z",
+          hints: [],
+          icrisHomeUrl: CR_ESERVICES_URL,
+          matched: true,
+          nameEn: "SYNTHETIC TEST LIMITED",
+        },
+      },
+    });
+    expect(officialVerifyCopyName(report)).toBe("SYNTHETIC TEST LIMITED");
+  });
+
+  it("falls back to searchLabelUsed without CR match", () => {
+    expect(officialVerifyCopyName(baseReport())).toBe("合成測試有限公司");
+  });
+});
+
 describe("buildOfficialVerifyLinks", () => {
   it("includes CR e-services home without query string", () => {
     const links = buildOfficialVerifyLinks(baseReport());
@@ -50,9 +94,25 @@ describe("buildOfficialVerifyLinks", () => {
     expect(links.some((l) => l.id === "bd-discipline")).toBe(false);
   });
 
-  it("uses unique urls per link", () => {
-    const urls = buildOfficialVerifyLinks(baseReport()).map((l) => l.url);
+  it("returns four links without bravo", () => {
+    const links = buildOfficialVerifyLinks(baseReport());
+    expect(links).toHaveLength(4);
+    expect(links.some((l) => l.id === "bravo")).toBe(false);
+    const urls = links.map((l) => l.url);
     expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  it("br-enquiry uses IRD BTP url", () => {
+    const br = buildOfficialVerifyLinks(baseReport()).find(
+      (l) => l.id === "br-enquiry",
+    );
+    expect(br?.url).toBe(IRD_BR_ENQUIRY_URL);
+    expect(br?.url).not.toMatch(/^https:\/\/www\.gov\.hk\//);
+  });
+
+  it("oro note mentions fee", () => {
+    const oro = buildOfficialVerifyLinks(baseReport()).find((l) => l.id === "oro");
+    expect(oro?.noteZh).toContain("收費");
   });
 
   it("uses deep MWC search when license active", () => {

@@ -76,7 +76,7 @@ const JURISDICTION_2018: GuideSource = {
 };
 const BRN_ENQUIRY: GuideSource = {
   label: "GovHK：商業登記號碼查詢（稅務局商業登記署）",
-  url: "https://www.gov.hk/tc/residents/taxes/etax/services/brn_enquiry.htm",
+  url: "https://btp.etax.ird.gov.hk/fe/pw/brn?language=ZH_HK",
 };
 const CR_ESEARCH: GuideSource = {
   label: "公司註冊處：電子服務網站——電子查冊",
