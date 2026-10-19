@@ -31,7 +31,8 @@ import type { CrMappedSnapshot } from "./cr-register/types";
 import type { MwcRow } from "./mwc-lookup";
 import type { NormalizedSearchInput } from "./normalize-search-input";
 
-export const CR_LOOKUP_BUDGET_MS = 10_000;
+// 2026-10-19 實測 data.cr.gov.hk 9–14s；並行於 SERP（25s timeout）；總 maxDuration 60s。
+export const CR_LOOKUP_BUDGET_MS = 25_000;
 
 type CrLookupFetchStats = {
   fetchCount: number;

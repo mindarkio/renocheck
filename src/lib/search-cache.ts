@@ -9,10 +9,22 @@ export function isReportLegalLookupDegraded(report: RiskReport): boolean {
   return status === "error" || status === "timeout";
 }
 
+export function isReportCrLookupDegraded(report: RiskReport): boolean {
+  const s = report.official.companiesRegistry?.lookupStatus;
+  return s === "error" || s === "timeout";
+}
+
+export function isReportLookupDegraded(report: RiskReport): boolean {
+  return (
+    isReportLegalLookupDegraded(report) || isReportCrLookupDegraded(report)
+  );
+}
+
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** When legal lookup degrades, cache report briefly so share links still resolve. */
 export const LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS = 10 * 60 * 1000;
+export const LOOKUP_DEGRADED_CACHE_TTL_MS = LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS;
 
 export async function getCachedReport(
   supabase: SupabaseClient,
@@ -41,12 +53,9 @@ export async function setCachedReport(
   report: RiskReport,
   options?: { ttlMs?: number; skipIfHealthyCacheExists?: boolean },
 ): Promise<void> {
-  if (
-    options?.skipIfHealthyCacheExists &&
-    isReportLegalLookupDegraded(report)
-  ) {
+  if (options?.skipIfHealthyCacheExists && isReportLookupDegraded(report)) {
     const existing = await getCachedReport(supabase, fingerprint);
-    if (existing && !isReportLegalLookupDegraded(existing)) {
+    if (existing && !isReportLookupDegraded(existing)) {
       return;
     }
   }

@@ -225,6 +225,43 @@ describe("lookupCompaniesRegistryForSearch", () => {
     expect(official.hints).toContain("not_found_in_active_list");
   });
 
+  it("13800ms mock resolve → ok matched within budget", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    searchCrLocalByNameBeginsWith.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                kind: "rows",
+                rows: [
+                  {
+                    Brn: "C1111111",
+                    English_Company_Name: "SYNTHETIC TEST LIMITED",
+                    Chinese_Company_Name: "合成測試有限公司",
+                    Company_Type: "Private company limited by shares",
+                    Date_of_Incorporation: "01-01-2010",
+                    Address_of_Registered_Office: "HK",
+                  },
+                ],
+              }),
+            13800,
+          );
+        }),
+    );
+    const label = "合成測試有限公司";
+    const pending = lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    await vi.advanceTimersByTimeAsync(14000);
+    const official = await pending;
+    expect(official.lookupStatus).toBe("ok");
+    expect(official.matched).toBe(true);
+    vi.useRealTimers();
+  });
+
   it("7000ms mock no_result within 10s budget returns ok (A2)", async () => {
     vi.useFakeTimers();
     let calls = 0;

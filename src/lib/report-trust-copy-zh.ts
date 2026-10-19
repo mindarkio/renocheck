@@ -230,14 +230,31 @@ export const UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH =
 
 export const LEGAL_EVENT_SOURCE_LINK_LABEL_ZH = "司法機構判詞（官方）";
 
-export const OFFICIAL_VERIFY_SECTION_HEADING_ZH = "官方查證連結";
+export const CR_IDENTITY_CARD_HEADING_ZH = "公司身份（公司註冊處）";
+export const CR_IDENTITY_SOURCE_LABEL_ZH = "公司註冊處開放數據";
+export const CR_IDENTITY_FIELD_LABELS_ZH = {
+  brNo: "商業登記號碼",
+  nameZh: "中文名稱",
+  nameEn: "英文名稱",
+  companyType: "公司類別",
+  incorporationDate: "成立日期",
+  registeredOfficeAddress: "註冊辦事處地址",
+} as const;
+export const CR_IDENTITY_AMBIGUOUS_ZH =
+  "公司註冊處開放數據有多於一間名稱相近嘅公司，本報告未能確定係邊一間，所以唔顯示公司資料。可以用商業登記號碼再查一次。";
+export const CR_IDENTITY_NOT_FOUND_ZH =
+  "公司註冊處開放數據（存續本地公司）搵唔到同呢個名稱完全對應嘅紀錄。";
+export const CR_IDENTITY_INCONCLUSIVE_ZH =
+  "公司註冊處開放數據有結果，但未能確定同呢個名稱係同一間公司，所以唔顯示公司資料。";
+
+export const OFFICIAL_VERIFY_SECTION_HEADING_ZH = "官方來源";
 
 export const COPY_COMPANY_NAME_BUTTON_ZH = "複製公司全名";
 export const COPY_COMPANY_NAME_DONE_ZH = "已複製";
 export const ICRIS_SELF_SERVICE_NOTE_ZH =
-  "呢個網站唔支援由本站預填。請自行：非登記用戶 → 公司名稱搜尋 → 準確名稱 → 貼上公司全名。";
+  "公司註冊處網上查冊要先填查冊人姓名同身份證號碼，本站唔會代填。上面公司身份卡已顯示開放數據。";
 export const BR_ENQUIRY_SELF_SERVICE_NOTE_ZH =
-  "直接開啟稅務局商業登記號碼查詢。輸入業務全名同所在地區；亦可先複製公司全名。";
+  "免費，但每次要人手過圖片驗證碼。商業登記號碼已喺公司身份卡顯示（如有）。";
 export const ORO_SELF_SERVICE_NOTE_ZH =
   "收費服務；要自行輸入公司名稱。本站唔會代你查冊。";
 
@@ -287,6 +304,12 @@ export function collectReportTrustCopyStrings(): string[] {
     ...MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH,
     MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH,
     CR_DATA_ATTRIBUTION_ZH,
+    CR_IDENTITY_CARD_HEADING_ZH,
+    CR_IDENTITY_SOURCE_LABEL_ZH,
+    ...Object.values(CR_IDENTITY_FIELD_LABELS_ZH),
+    CR_IDENTITY_AMBIGUOUS_ZH,
+    CR_IDENTITY_NOT_FOUND_ZH,
+    CR_IDENTITY_INCONCLUSIVE_ZH,
     crHintIncorporationUnderOneYearZh("2026-01-01"),
     CR_LOOKUP_DEGRADED_ZH,
     UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,

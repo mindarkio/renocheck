@@ -28,6 +28,8 @@ export async function synthesizeRiskReport(params: {
     searchLabelUsed: string;
     nameAlignment: NameAlignment;
   };
+  /** Whole-pipeline deadline (search-pipeline.ts); aborts generateObject incl. retries. */
+  abortSignal?: AbortSignal;
 }): Promise<RiskReport> {
   const {
     input,
@@ -80,6 +82,7 @@ export async function synthesizeRiskReport(params: {
       schema: llmSliceSchema,
       system: RISK_REPORT_SYSTEM_PROMPT,
       prompt: userPayload,
+      ...(params.abortSignal ? { abortSignal: params.abortSignal } : {}),
     });
 
     const bound = bindLlmSliceToWebHits(raw, webHits);

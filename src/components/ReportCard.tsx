@@ -16,11 +16,9 @@ import type { ReactNode } from "react";
 import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
 import { DailyCauseListSearchForm } from "@/components/DailyCauseListSearchForm";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
-import { CopyCompanyNameButton } from "@/components/CopyCompanyNameButton";
-import {
-  buildOfficialVerifyLinks,
-  officialVerifyCopyName,
-} from "@/lib/official-verify-links";
+import { CompanyIdentityCard } from "@/components/CompanyIdentityCard";
+import { LegalEventsTable } from "@/components/LegalEventsTable";
+import { buildOfficialVerifyLinks } from "@/lib/official-verify-links";
 import { shouldShowNonLimitedContractorNotice } from "@/lib/non-limited-contractor-notice";
 import {
   BD_EXEMPTED_WORKS_URL,
@@ -30,20 +28,17 @@ import {
   DEFAULT_CONTRACT_CHECKLIST_ZH,
   DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH,
   DAILY_CAUSE_LIST_SELF_SERVICE_HEADING_ZH,
-  LEGAL_EVENT_SOURCE_LINK_LABEL_ZH,
   NEXT_STEPS_HEADING_ZH,
   NEXT_STEPS_INTRO_ZH,
   NEXT_STEPS_ITEMS,
   NEXT_STEPS_MINOR_WORKS_LINK_LABEL_ZH,
   NON_LIMITED_CONTRACTOR_NOTICE_ZH,
   NON_LIMITED_NOTICE_HEADING_ZH,
-  OFFICIAL_VERIFY_LINK_LABELS,
   OFFICIAL_VERIFY_SECTION_HEADING_ZH,
   REPORT_SCOPE_LIMITS_BULLETS_ZH,
   REPORT_SCOPE_LIMITS_CLOSING_ZH,
   REPORT_SCOPE_LIMITS_HEADING_ZH,
   CR_DATA_ATTRIBUTION_ZH,
-  CR_LOOKUP_DEGRADED_ZH,
   mwcMissFallbackBodyParagraphsZh,
   MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
@@ -51,8 +46,6 @@ import {
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
-  crHintIncorporationUnderOneYearZh,
-  crBrNoCompareNoteZh,
   mwcMissNoteBodyParagraphsZh,
 } from "@/lib/report-trust-copy-zh";
 import {
@@ -60,18 +53,7 @@ import {
   shouldShowMwcMissWithCrFoundNote,
   shouldShowUnverifiedCompanyRegistrationAlert,
 } from "@/lib/unverified-company-registration";
-import {
-  judgmentCategoryLabelZh,
-  outcomeHintLabelZh,
-  LEGAL_EVENTS_AI_VERIFIED_ZH,
-  LEGAL_EVENTS_AUTO_SUMMARY_ZH,
-  LEGAL_EVENTS_FACTS_ONLY_ZH,
-  LEGAL_EVENTS_SCOPE_ZH,
-  LEGAL_LOOKUP_DEGRADED_SECTION_ZH,
-  partyRoleLabelZh,
-} from "@/lib/legal-event-display";
-import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
-import { judgmentDedupeKey } from "@/lib/lookup-legal-judgments";
+import { LEGAL_LOOKUP_DEGRADED_SECTION_ZH } from "@/lib/legal-event-display";
 import {
   isReportLegalLookupDegraded,
   reportCardHeaderBandLabel,
@@ -347,23 +329,11 @@ export function ReportCard({ report }: { report: RiskReport }) {
     shouldShowUnverifiedCompanyRegistrationAlert(report);
   const showMwcMissNote = shouldShowMwcMissWithCrFoundNote(report);
   const showMwcMissFallbackNote = shouldShowMwcMissFallbackNote(report);
-  const showCrLookupDegraded =
-    companiesRegistry?.lookupStatus === "error" ||
-    companiesRegistry?.lookupStatus === "timeout";
-  const showCrIncorporationHint =
-    companiesRegistry?.lookupStatus === "ok" &&
-    companiesRegistry.incorporationDate &&
-    companiesRegistry.hints.includes("incorporation_under_one_year");
   const mwcMissNoteParagraphs = mwcMissNoteBodyParagraphsZh(
     companiesRegistry?.matchTier,
   );
   const showNonLimitedNotice = shouldShowNonLimitedContractorNotice(report);
   const officialVerifyLinks = buildOfficialVerifyLinks(report);
-  const officialVerifyCopyText = officialVerifyCopyName(report);
-  const showCrBrNoCompare =
-    companiesRegistry?.lookupStatus === "ok" &&
-    companiesRegistry.matched === true &&
-    Boolean(companiesRegistry.brNo?.trim());
   const saturation = report.evaluation.dataSaturation;
   const saturationNote = dataSaturationCaution(saturation);
   const showSaturationBanner =
@@ -373,7 +343,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
   const mwcRegistryHref = mwcRegistrySearchHref(report);
-  const licenseChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${heroChipToneClass(license.tone)}`;
+  const licenseChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(license.tone)}`;
   const disputeTone =
     report.evaluation.reputationTrack.disputeLevel === "severe" ||
     report.evaluation.reputationTrack.disputeLevel === "active_concerning"
@@ -444,7 +414,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
       <header
         className="bg-primary px-5 py-5 text-primary-foreground sm:px-6 sm:py-6"
       >
-        <p className="text-[11px] font-medium text-primary-foreground/70">
+        <p className="text-[11px] font-medium text-primary-foreground/70 sm:text-xs">
           查證對象
         </p>
         <h2 className="mt-0.5 text-base font-semibold leading-snug sm:text-lg">
@@ -511,7 +481,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
               </span>
             )}
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${heroChipToneClass(disputeTone)}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(disputeTone)}`}
             >
               <MessageSquare className="size-3 shrink-0" aria-hidden />
               {disputeChip(report)}
@@ -588,7 +558,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
               </p>
             ) : null}
             {officialRegister.registryDataAsOf ? (
-              <p className="mt-2 text-[10px] leading-relaxed text-primary-foreground/60">
+              <p className="mt-2 text-[10px] leading-relaxed text-primary-foreground/60 sm:text-xs">
                 名冊摘錄截至{" "}
                 <time dateTime={officialRegister.registryDataAsOf}>
                   {formatReportGeneratedAtHkt(
@@ -650,6 +620,8 @@ export function ReportCard({ report }: { report: RiskReport }) {
           </time>
         </p>
       </header>
+
+      <CompanyIdentityCard report={report} />
 
       {showMwcMissNote ? (
         <ReportBlock
@@ -727,175 +699,11 @@ export function ReportCard({ report }: { report: RiskReport }) {
         </ReportBlock>
       ) : null}
 
-      {showCrLookupDegraded ? (
-        <div
-          className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-sm text-muted-foreground"
-          role="status"
-        >
-          <p>{CR_LOOKUP_DEGRADED_ZH}</p>
-          <p className="mt-2">
-            <ReportExternalLink
-              href={companiesRegistry!.icrisHomeUrl}
-              className="font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {OFFICIAL_VERIFY_LINK_LABELS.icris}
-            </ReportExternalLink>
-          </p>
-        </div>
-      ) : null}
-
-      {showCrIncorporationHint && companiesRegistry?.incorporationDate ? (
-        <p className={`${reportBodyClass} text-muted-foreground`}>
-          {crHintIncorporationUnderOneYearZh(companiesRegistry.incorporationDate)}
-          <span className="mt-2 block text-xs sm:text-sm">
-            {CR_DATA_ATTRIBUTION_ZH}
-          </span>
-        </p>
-      ) : null}
-
       {showLegalEvents ? (
-        <ReportBlock
-          id="legal-events-heading"
-          icon={FileText}
-          title={`公開判詞紀錄（${legalEvents.length} 宗）`}
-        >
-          {legalEvents.some((ev) =>
-            hearingSummaryPendingForEvent(
-              ev.hearingKeyPointsZh,
-              ev.hearingPointsSource,
-            ),
-          ) ? (
-            <p className={`${reportMetaClass} -mt-1 mb-3`}>
-              {LEGAL_EVENTS_FACTS_ONLY_ZH}
-            </p>
-          ) : (
-            <p className={`${reportMetaClass} -mt-1 mb-3`}>
-              {LEGAL_EVENTS_SCOPE_ZH}
-            </p>
-          )}
-          <ul className="list-none space-y-0 p-0">
-            {legalEvents.map((ev) => {
-              const factsOnly = hearingSummaryPendingForEvent(
-                ev.hearingKeyPointsZh,
-                ev.hearingPointsSource,
-              );
-              return (
-                <li
-                  key={judgmentDedupeKey(ev)}
-                  className={reportListRowClass}
-                >
-                  <p className="text-sm font-semibold text-foreground sm:text-[15px]">
-                    {[ev.caseRef, ...(ev.relatedCaseRefs ?? [])].join("、")}
-                  </p>
-                  {ev.businessForm === "sole_proprietorship" &&
-                  ev.defendantDisplayNameZh ? (
-                    <p className={`mt-1.5 flex flex-wrap items-center gap-2 ${reportBodyClass}`}>
-                      <span className="font-medium text-foreground">
-                        {ev.defendantDisplayNameZh}
-                      </span>
-                      <span
-                        className="inline-flex rounded-full border border-muted-foreground/25 bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-                      >
-                        獨資經營
-                      </span>
-                    </p>
-                  ) : null}
-                  <p className={`mt-1.5 ${reportMetaClass}`}>
-                    {ev.neutralCitation ? `${ev.neutralCitation} · ` : ""}
-                    {ev.court} ·{" "}
-                    <time dateTime={ev.eventDate}>{ev.eventDate}</time>
-                    {" · "}
-                    {partyRoleLabelZh(ev.partyRole)}
-                    {" · "}
-                    {judgmentCategoryLabelZh(ev.judgmentCategory)}
-                    {ev.outcomeHint
-                      ? ` · ${outcomeHintLabelZh(ev.outcomeHint)}`
-                      : ""}
-                  </p>
-                  {!factsOnly ? (
-                    <>
-                      {ev.hearingPointsSource === "ai_verified" ? (
-                        <p className={`mt-2 ${reportMetaClass}`}>
-                          {LEGAL_EVENTS_AI_VERIFIED_ZH}
-                        </p>
-                      ) : ev.hearingPointsSource === "llm_draft" ? (
-                        <p className={`mt-2 ${reportMetaClass}`}>
-                          {LEGAL_EVENTS_AUTO_SUMMARY_ZH}
-                        </p>
-                      ) : null}
-                      <ul
-                        className={`mt-2 list-disc space-y-2 pl-5 marker:text-primary/40 ${reportBodyClass} text-muted-foreground`}
-                      >
-                        {ev.hearingKeyPointsZh.map((point, pointIndex) => {
-                          const quote =
-                            ev.hearingKeyPointQuotesZh?.[pointIndex]?.trim();
-                          return (
-                            <li key={`${pointIndex}-${point}`}>
-                              <span className="text-foreground/90">
-                                {point}
-                              </span>
-                              {quote ? (
-                                <details className="mt-1.5 group">
-                                  <summary
-                                    className="cursor-pointer list-none text-xs font-medium text-primary underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden"
-                                  >
-                                    <span className="inline-flex items-center gap-1">
-                                      判詞引文
-                                      <span
-                                        className="text-[10px] font-normal text-muted-foreground group-open:hidden"
-                                        aria-hidden
-                                      >
-                                        （展開）
-                                      </span>
-                                    </span>
-                                  </summary>
-                                  <p
-                                    className="mt-1.5 whitespace-pre-wrap rounded-md border border-border/60 bg-muted/30 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground"
-                                  >
-                                    {quote}
-                                  </p>
-                                  <a
-                                    href={ev.sourceUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
-                                  >
-                                    <ExternalLink
-                                      className="size-3 shrink-0"
-                                      aria-hidden
-                                    />
-                                    判詞原文（Legal Ref）
-                                  </a>
-                                </details>
-                              ) : null}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </>
-                  ) : null}
-                  <ReportExternalLink
-                    href={ev.sourceUrl}
-                    className="mt-2 inline-flex items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
-                  >
-                    {LEGAL_EVENT_SOURCE_LINK_LABEL_ZH}
-                  </ReportExternalLink>
-                  <p className={`mt-1.5 ${reportMetaClass}`}>
-                    {ev.matchReasonZh}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-          {report.official.legalRegistryAsOf ? (
-            <p className={`mt-3 ${reportMetaClass}`}>
-              判詞庫摘錄截至{" "}
-              <time dateTime={report.official.legalRegistryAsOf}>
-                {formatReportGeneratedAtHkt(report.official.legalRegistryAsOf)}
-              </time>
-            </p>
-          ) : null}
-        </ReportBlock>
+        <LegalEventsTable
+          events={legalEvents}
+          registryAsOf={report.official.legalRegistryAsOf}
+        />
       ) : showLegalLookupDegraded ? (
         <ReportBlock
           id="legal-events-heading"
@@ -1040,7 +848,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   {title}
                 </a>
                 {when ? (
-                  <p className="mt-2 text-[10px] leading-snug text-muted-foreground sm:text-[11px]">
+                  <p className="mt-2 text-[10px] leading-snug text-muted-foreground sm:text-xs">
                     {when}
                   </p>
                 ) : null}
@@ -1055,7 +863,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   <div className="flex-1" aria-hidden />
                 )}
                 {h.incidentType ? (
-                  <p className="mt-auto pt-2 text-[10px] font-medium text-primary/75 sm:text-[11px]">
+                  <p className="mt-auto pt-2 text-[10px] font-medium text-primary/75 sm:text-xs">
                     {incidentHashtag(h.incidentType)}
                   </p>
                 ) : null}
@@ -1120,43 +928,6 @@ export function ReportCard({ report }: { report: RiskReport }) {
 
     <section
       className={`${reportShellClass} ${reportBlockClass}`}
-      aria-labelledby="official-verify-heading"
-    >
-      <SectionHeading id="official-verify-heading" icon={Link2}>
-        {OFFICIAL_VERIFY_SECTION_HEADING_ZH}
-      </SectionHeading>
-      {officialVerifyCopyText ? (
-        <p className={`mt-3 ${reportBodyClass}`}>
-          <CopyCompanyNameButton text={officialVerifyCopyText} />
-        </p>
-      ) : null}
-      {showCrBrNoCompare && companiesRegistry?.brNo ? (
-        <div className={`mt-3 space-y-1 ${reportMetaClass} text-muted-foreground`}>
-          <p>{crBrNoCompareNoteZh(companiesRegistry.brNo)}</p>
-          <p>{CR_DATA_ATTRIBUTION_ZH}</p>
-        </div>
-      ) : null}
-      <ul
-        className={`mt-4 list-none space-y-3 p-0 ${reportBodyClass} text-muted-foreground`}
-      >
-        {officialVerifyLinks.map((item) => (
-          <li key={item.id} className={reportListRowClass}>
-            <ReportExternalLink
-              href={item.url}
-              className="font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {item.labelZh}
-            </ReportExternalLink>
-            {item.noteZh ? (
-              <p className={`mt-1.5 ${reportMetaClass}`}>{item.noteZh}</p>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </section>
-
-    <section
-      className={`${reportShellClass} ${reportBlockClass}`}
       aria-labelledby="report-limits-heading"
     >
       <SectionHeading id="report-limits-heading" icon={CircleHelp}>
@@ -1178,17 +949,36 @@ export function ReportCard({ report }: { report: RiskReport }) {
             <li key={line}>{line}</li>
           ))}
         </ul>
-        <div className="mt-3">
-          <DailyCauseListSearchForm
-            partyName={report.entity.searchLabelUsed}
-            className="inline-flex cursor-pointer items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
-            noteClassName="text-muted-foreground"
-          />
-        </div>
       </div>
       <p className={`mt-4 ${reportMetaClass}`}>
         {REPORT_SCOPE_LIMITS_CLOSING_ZH}
       </p>
+    </section>
+
+    <section
+      className={`${reportShellClass} ${reportBlockClass}`}
+      aria-labelledby="official-verify-heading"
+    >
+      <SectionHeading id="official-verify-heading" icon={Link2}>
+        {OFFICIAL_VERIFY_SECTION_HEADING_ZH}
+      </SectionHeading>
+      <ul
+        className={`mt-3 list-none space-y-2 p-0 ${reportBodyClass} text-muted-foreground`}
+      >
+        {officialVerifyLinks.map((item) => (
+          <li key={item.id}>
+            <ReportExternalLink
+              href={item.url}
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {item.labelZh}
+            </ReportExternalLink>
+            {item.noteZh ? (
+              <p className={`mt-1 ${reportMetaClass}`}>{item.noteZh}</p>
+            ) : null}
+          </li>
+        ))}
+      </ul>
     </section>
 
     <aside

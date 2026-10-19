@@ -117,6 +117,14 @@ describe("buildOfficialVerifyLinks", () => {
     expect(oro?.noteZh).toContain("收費");
   });
 
+  it("icris and br-enquiry notes mention id doc and captcha", () => {
+    const links = buildOfficialVerifyLinks(baseReport());
+    expect(links.find((l) => l.id === "icris")?.noteZh).toContain("身份證");
+    expect(links.find((l) => l.id === "br-enquiry")?.noteZh).toContain(
+      "驗證碼",
+    );
+  });
+
   it("uses deep MWC search when license active", () => {
     const evaluation = buildEvaluationStub({
       overallGrade: "B",

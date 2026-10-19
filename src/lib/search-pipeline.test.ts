@@ -73,13 +73,17 @@ vi.mock("./mwc-lookup", () => ({
   }),
 }));
 
-vi.mock("./cr-registry-lookup", () => ({
+const { lookupCompaniesRegistryForSearch } = vi.hoisted(() => ({
   lookupCompaniesRegistryForSearch: vi.fn().mockResolvedValue({
     lookupStatus: "skipped",
     retrievedAt: "2026-10-18T12:00:00.000Z",
     hints: [],
     icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
   }),
+}));
+
+vi.mock("./cr-registry-lookup", () => ({
+  lookupCompaniesRegistryForSearch,
 }));
 
 vi.mock("./llm-risk-report", () => ({
@@ -112,7 +116,12 @@ vi.mock("./legal-events-config", () => ({
 import { lookupLegalJudgments } from "./lookup-legal-judgments";
 import { lookupMwcWithMeta } from "./mwc-lookup";
 import { synthesizeRiskReport } from "./llm-risk-report";
-import { runSearchPipeline } from "./search-pipeline";
+import {
+  LLM_RESERVE_MS,
+  PIPELINE_BUDGET_MS,
+  runSearchPipeline,
+} from "./search-pipeline";
+import { fetchWebSearchHitsForEntity } from "./web-search";
 
 describe("runSearchPipeline cache + legal degraded", () => {
   beforeEach(() => {
@@ -164,6 +173,61 @@ describe("runSearchPipeline cache + legal degraded", () => {
         skipIfHealthyCacheExists: true,
       },
     );
+  });
+
+  it("passes degraded cache options when CR lookup times out", async () => {
+    lookupCompaniesRegistryForSearch.mockResolvedValueOnce({
+      lookupStatus: "timeout",
+      retrievedAt: "2026-10-18T12:00:00.000Z",
+      hints: [],
+      icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
+    });
+
+    await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "示例裝修有限公司",
+    });
+
+    expect(setCachedReport).toHaveBeenCalledWith(
+      supabase,
+      expect.any(String),
+      expect.any(Object),
+      expect.objectContaining({
+        official: expect.objectContaining({
+          companiesRegistry: expect.objectContaining({
+            lookupStatus: "timeout",
+          }),
+        }),
+      }),
+      {
+        ttlMs: LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
+        skipIfHealthyCacheExists: true,
+      },
+    );
+  });
+
+  it("ignores non-expired CR-degraded cache and re-runs pipeline", async () => {
+    const crDegradedCached: RiskReport = {
+      ...baseLlmReport(),
+      official: {
+        mwcMatched: false,
+        legalLookupStatus: "ok",
+        companiesRegistry: {
+          lookupStatus: "timeout",
+          retrievedAt: "2026-10-18T12:00:00.000Z",
+          hints: [],
+          icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
+        },
+      },
+    };
+    getCachedReport.mockResolvedValueOnce(crDegradedCached);
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "示例裝修有限公司",
+    });
+
+    expect(result.cacheHit).toBe(false);
   });
 
   it("does not apply degraded cache options when legal lookup ok", async () => {
@@ -234,5 +298,35 @@ describe("runSearchPipeline cache + legal degraded", () => {
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("search_cache upsert failed"),
     );
+  });
+});
+
+describe("runSearchPipeline whole-pipeline deadline (PR24 S1)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(synthesizeRiskReport).mockResolvedValue(baseLlmReport());
+    vi.mocked(lookupLegalJudgments).mockResolvedValue({
+      events: [],
+      registryAsOf: "2026-01-01T00:00:00.000Z",
+    });
+    getCachedReport.mockResolvedValue(null);
+  });
+
+  it("bounds SERP by deadline − LLM reserve and passes an abort signal to the LLM", async () => {
+    const t0 = Date.now();
+    await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "示例裝修有限公司",
+    });
+    const serpOpts = vi.mocked(fetchWebSearchHitsForEntity).mock.calls[0]?.[1];
+    expect(serpOpts?.deadlineMs).toBeGreaterThanOrEqual(
+      t0 + PIPELINE_BUDGET_MS - LLM_RESERVE_MS,
+    );
+    expect(serpOpts?.deadlineMs).toBeLessThanOrEqual(
+      Date.now() + PIPELINE_BUDGET_MS - LLM_RESERVE_MS,
+    );
+    const llmArgs = vi.mocked(synthesizeRiskReport).mock.calls[0]?.[0];
+    expect(llmArgs?.abortSignal).toBeInstanceOf(AbortSignal);
+    expect(PIPELINE_BUDGET_MS).toBeLessThanOrEqual(50_000);
   });
 });
