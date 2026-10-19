@@ -21,6 +21,8 @@ export type CrFetchOptions = {
   signal?: AbortSignal;
   /** Lookup wall-clock deadline (ms since epoch) for throttle queue budget. */
   deadlineMs?: number;
+  /** Per-lookup counters for logging only; never holds row data. */
+  stats?: { fetchCount: number; lastHttpStatus: number | null };
 };
 
 function buildSearchUrl(
@@ -62,6 +64,7 @@ async function fetchLocalSearch(
     async () => {
     const url = buildSearchUrl(key1, key2, key3);
     const startedAt = Date.now();
+    let responded = false;
     try {
       if (options?.signal?.aborted) {
         return { kind: "error" as const, message: "timeout" };
@@ -70,6 +73,11 @@ async function fetchLocalSearch(
         signal: options?.signal,
         headers: { Accept: "application/json" },
       });
+      responded = true;
+      if (options?.stats) {
+        options.stats.fetchCount += 1;
+        options.stats.lastHttpStatus = res.status;
+      }
       const len = res.headers.get("content-length");
       if (len && Number.parseInt(len, 10) > MAX_BODY_BYTES) {
         recordCrApiFailure(res.status);
@@ -119,6 +127,9 @@ async function fetchLocalSearch(
       recordCrApiSuccess();
       return { kind: "rows" as const, rows: body as CrApiLocalRow[] };
     } catch (e) {
+      if (options?.stats && !responded) {
+        options.stats.fetchCount += 1;
+      }
       const msg = e instanceof Error ? e.name : "fetch_failed";
       if (msg === "TimeoutError" || msg === "AbortError") {
         if (Date.now() - startedAt >= CR_UPSTREAM_SLOW_MS) {
