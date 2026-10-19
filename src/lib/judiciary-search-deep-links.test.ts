@@ -77,6 +77,9 @@ describe("judiciary-search-deep-links", () => {
       expect(dailyCauseListPartyQuery(label)).toBe("合成測試有限公司");
     }
     expect(dailyCauseListPartyQuery("ZZQ（香港）合成測試有限公司")).toBe("ZZQ（香港）合成測試有限公司");
+    expect(dailyCauseListPartyQuery("ZZQ（香港）")).toBe("ZZQ（香港）");
+    expect(dailyCauseListPartyQuery("AB(香港)")).toBe("AB(香港)");
+    expect(dailyCauseListPartyQuery("a/合")).toBe("a/合");
     expect(dailyCauseListPartyQuery("ABC合成測試有限公司")).toBe("ABC合成測試有限公司");
   });
 });

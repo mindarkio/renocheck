@@ -44,9 +44,16 @@ export function dailyCauseListPartyQuery(label: string): string | null {
   // "ZZQ（合成有限公司）" / "ZZQ/合成有限公司": one glued Latin word, so the split sees Chinese only.
   if (zh && /^[A-Za-z]/.test(zh)) {
     const cleaned = cleanZhPartyPart(zh);
-    if (cleaned !== zh) return cleaned;
+    // Keep only a real name: "ZZQ（香港）" must not become a bare "香港" search.
+    if (cleaned !== zh && hanCount(cleaned) >= 4) return cleaned;
   }
   return t;
+}
+
+function hanCount(s: string): number {
+  let n = 0;
+  for (const c of s) if (/\p{Script=Han}/u.test(c)) n += 1;
+  return n;
 }
 
 const OPEN_BRACKETS = "(（「【[";
