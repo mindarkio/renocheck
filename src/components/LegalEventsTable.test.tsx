@@ -74,4 +74,46 @@ describe("LegalEventsTable", () => {
     expect(container.textContent).toContain("合成匹配理由");
     expect(screen.getAllByText(LEGAL_EVENT_SOURCE_LINK_LABEL_ZH).length).toBeGreaterThanOrEqual(1);
   });
+
+  it("lg 先出表、短欄不換行、類別只在標點處可斷行", () => {
+    const { container } = render(<LegalEventsTable events={events} />);
+    const table = container.querySelector("table");
+    expect(table).toBeTruthy();
+    expect(table?.className).toContain("w-full");
+    const scroller = table?.parentElement;
+    expect(scroller?.className).toContain("overflow-x-auto");
+    expect(scroller?.className).toContain("lg:block");
+    expect(scroller?.className).not.toMatch(/\bmd:block\b/);
+    // keyboard users can scroll the overflow-x safety net (WCAG 2.1.1)
+    expect(scroller?.getAttribute("tabindex")).toBe("0");
+    expect(scroller?.getAttribute("role")).toBe("region");
+    const captionId = scroller?.getAttribute("aria-labelledby");
+    expect(captionId).toBeTruthy();
+    expect(table?.querySelector("caption")?.id).toBe(captionId);
+
+    const cardList = screen.getAllByTestId("legal-event-card")[0]?.closest("ul");
+    expect(cardList?.className).toContain("lg:hidden");
+    expect(cardList?.className).not.toContain("md:hidden");
+
+    const headers = table!.querySelectorAll("th");
+    expect(headers).toHaveLength(8);
+    for (const th of headers) {
+      expect(th.getAttribute("scope")).toBe("col");
+      expect(th.className).toContain("whitespace-nowrap");
+    }
+    expect(table?.querySelector("caption")?.textContent).toContain("公開判詞紀錄");
+
+    const cells = [...table!.querySelectorAll("tbody tr:first-child td")];
+    const roleCell = cells.find((td) => td.textContent?.includes("被告／答辯人"));
+    const outcomeCell = cells.find((td) => td.textContent?.includes("裁定須負責"));
+    const categoryCell = cells.find((td) =>
+      td.textContent?.includes("勞資糾紛（裝修工程相關）"),
+    );
+    expect(roleCell?.className).toContain("whitespace-nowrap");
+    expect(outcomeCell?.className).toContain("whitespace-nowrap");
+    const categoryParts = categoryCell?.querySelectorAll("span.whitespace-nowrap");
+    expect(categoryParts?.length).toBe(2);
+    expect(categoryCell?.textContent).toContain("勞資糾紛");
+    expect(categoryCell?.textContent).toContain("（裝修工程相關）");
+  });
 });
