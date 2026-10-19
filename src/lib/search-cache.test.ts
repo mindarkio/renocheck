@@ -1,9 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  isReportCrLookupDegraded,
+  isReportLookupDegraded,
   LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
   setCachedReport,
 } from "./search-cache";
+import { CR_ESERVICES_URL } from "./report-trust-copy-zh";
 import { REPORT_VERSION } from "./constants";
 import { buildEvaluationStub } from "./evaluation-stub";
 
@@ -148,6 +151,68 @@ describe("setCachedReport ttlMs", () => {
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("search_cache upsert failed"),
     );
+  });
+
+  it("isReportCrLookupDegraded and isReportLookupDegraded", () => {
+    const crTimeout = {
+      ...report,
+      official: {
+        mwcMatched: false,
+        companiesRegistry: {
+          lookupStatus: "timeout" as const,
+          retrievedAt: "2026-10-18T12:00:00.000Z",
+          hints: [],
+          icrisHomeUrl: CR_ESERVICES_URL,
+        },
+      },
+    };
+    expect(isReportCrLookupDegraded(crTimeout)).toBe(true);
+    expect(isReportLookupDegraded(crTimeout)).toBe(true);
+    const legalOnly = {
+      ...report,
+      official: { mwcMatched: false, legalLookupStatus: "timeout" as const },
+    };
+    expect(isReportCrLookupDegraded(legalOnly)).toBe(false);
+    expect(isReportLookupDegraded(legalOnly)).toBe(true);
+  });
+
+  it("skips upsert when healthy cache exists and new report is CR degraded", async () => {
+    const healthy = {
+      ...report,
+      official: { mwcMatched: false, legalLookupStatus: "ok" as const },
+    };
+    const crDegraded = {
+      ...report,
+      official: {
+        mwcMatched: false,
+        legalLookupStatus: "ok" as const,
+        companiesRegistry: {
+          lookupStatus: "timeout" as const,
+          retrievedAt: "2026-10-18T12:00:00.000Z",
+          hints: [],
+          icrisHomeUrl: CR_ESERVICES_URL,
+        },
+      },
+    };
+    maybeSingle.mockResolvedValueOnce({
+      data: {
+        report: healthy,
+        expires_at: "2026-10-18T12:00:00.000Z",
+      },
+    });
+
+    await setCachedReport(
+      supabase,
+      "fp1",
+      { matchType: "company_name" },
+      crDegraded,
+      {
+        ttlMs: LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
+        skipIfHealthyCacheExists: true,
+      },
+    );
+
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it("writes degraded report after prior healthy row expired", async () => {

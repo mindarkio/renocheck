@@ -23,7 +23,9 @@ import {
   MWC_MISS_NOTE_HEADING_ZH,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
   COPY_COMPANY_NAME_BUTTON_ZH,
+  DAILY_CAUSE_LIST_LINK_LABEL_ZH,
   ICRIS_SELF_SERVICE_NOTE_ZH,
+  OFFICIAL_VERIFY_SECTION_HEADING_ZH,
   ORO_SELF_SERVICE_NOTE_ZH,
 } from "@/lib/report-trust-copy-zh";
 import type { CompaniesRegistryOfficial } from "@/lib/report-schema";
@@ -202,7 +204,7 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.textContent).toContain(CR_DATA_ATTRIBUTION_ZH);
   });
 
-  it("MWC matched + CR matched（無 hint）：唔顯示 CR attribution (L1)", () => {
+  it("MWC matched + CR matched（無 hint）：身份卡顯示 CR attribution", () => {
     const { container } = render(
       <ReportCard
         report={minimalReport({
@@ -213,11 +215,12 @@ describe("ReportCard report trust (PR-BC)", () => {
         })}
       />,
     );
-    expect(container.textContent ?? "").not.toContain(CR_DATA_ATTRIBUTION_ZH);
+    expect(container.textContent ?? "").toContain(CR_DATA_ATTRIBUTION_ZH);
+    expect(container.textContent).toContain("公司身份（公司註冊處）");
   });
 
   it("CR degraded：顯示 degraded 文案、冇 alert", () => {
-    render(
+    const { container } = render(
       <ReportCard
         report={minimalReport({
           official: {
@@ -227,8 +230,11 @@ describe("ReportCard report trust (PR-BC)", () => {
         })}
       />,
     );
-    expect(screen.getByText(CR_LOOKUP_DEGRADED_ZH)).toBeTruthy();
+    expect(screen.getAllByText(CR_LOOKUP_DEGRADED_ZH)).toHaveLength(1);
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      container.querySelectorAll(`a[href="${CR_ESERVICES_URL}"]`),
+    ).toHaveLength(1);
   });
 
   it("CR timeout：degraded + fallback note（L-c）", () => {
@@ -244,7 +250,7 @@ describe("ReportCard report trust (PR-BC)", () => {
       />,
     );
     assertClean(container.textContent ?? "");
-    expect(screen.getByText(CR_LOOKUP_DEGRADED_ZH)).toBeTruthy();
+    expect(screen.getAllByText(CR_LOOKUP_DEGRADED_ZH)).toHaveLength(1);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText(MWC_MISS_NOTE_HEADING_ZH)).toBeTruthy();
     expect(
@@ -412,7 +418,8 @@ describe("ReportCard report trust (PR-BC)", () => {
       />,
     );
     assertClean(container.textContent ?? "");
-    expect(container.textContent).toContain("HCLA901/2024、HCLA903/2024");
+    expect(container.textContent).toContain("HCLA901/2024");
+    expect(container.textContent).toContain("HCLA903/2024");
     expect(container.textContent).toContain("勞資糾紛（裝修工程相關）");
     expect(container.textContent).toContain("裁定須負責");
     expect(container.textContent).toContain("公開判詞紀錄（1 宗）");
@@ -444,16 +451,56 @@ describe("ReportCard report trust (PR-BC)", () => {
     );
     assertClean(container.textContent ?? "");
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByText(LEGAL_EVENT_SOURCE_LINK_LABEL_ZH)).toBeTruthy();
+    expect(screen.getAllByText(LEGAL_EVENT_SOURCE_LINK_LABEL_ZH)[0]).toBeTruthy();
   });
 
-  it("官方查證：複製掣、ICRIS note、ORO 收費註；唔含百樓圖網", () => {
+  it("官方來源：ICRIS note、ORO 收費註；唔含百樓圖網；喺報告限制之後", () => {
     const { container } = render(<ReportCard report={minimalReport()} />);
     assertClean(container.textContent ?? "");
-    expect(screen.getByText(COPY_COMPANY_NAME_BUTTON_ZH)).toBeTruthy();
+    expect(container.textContent).toContain(OFFICIAL_VERIFY_SECTION_HEADING_ZH);
+    expect(container.textContent).not.toContain("官方查證連結");
     expect(container.textContent).toContain(ICRIS_SELF_SERVICE_NOTE_ZH);
     expect(container.textContent).toContain(ORO_SELF_SERVICE_NOTE_ZH);
     expect(container.textContent).not.toContain("百樓圖網");
+    const limitsIdx = container.textContent!.indexOf(
+      REPORT_SCOPE_LIMITS_HEADING_ZH,
+    );
+    const officialIdx = container.textContent!.indexOf(
+      OFFICIAL_VERIFY_SECTION_HEADING_ZH,
+    );
+    expect(limitsIdx).toBeGreaterThan(-1);
+    expect(officialIdx).toBeGreaterThan(limitsIdx);
+  });
+
+  it("審訊案件表掣只得一個", () => {
+    render(<ReportCard report={minimalReport()} />);
+    expect(
+      screen.getAllByText(DAILY_CAUSE_LIST_LINK_LABEL_ZH),
+    ).toHaveLength(1);
+  });
+
+  it("matched CR：身份卡喺 header 之後、複製掣在卡內", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({
+              matched: true,
+              nameZh: "合成測試有限公司",
+            }),
+          },
+        })}
+      />,
+    );
+    const header = container.querySelector("header");
+    const identity = screen.getByText("公司身份（公司註冊處）");
+    expect(header).toBeTruthy();
+    expect(
+      header!.compareDocumentPosition(identity) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText(COPY_COMPANY_NAME_BUTTON_ZH)).toBeTruthy();
   });
 
   it("CR matched 有 brNo：顯示核對文案", () => {

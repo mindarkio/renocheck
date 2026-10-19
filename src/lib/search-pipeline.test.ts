@@ -73,13 +73,17 @@ vi.mock("./mwc-lookup", () => ({
   }),
 }));
 
-vi.mock("./cr-registry-lookup", () => ({
+const { lookupCompaniesRegistryForSearch } = vi.hoisted(() => ({
   lookupCompaniesRegistryForSearch: vi.fn().mockResolvedValue({
     lookupStatus: "skipped",
     retrievedAt: "2026-10-18T12:00:00.000Z",
     hints: [],
     icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
   }),
+}));
+
+vi.mock("./cr-registry-lookup", () => ({
+  lookupCompaniesRegistryForSearch,
 }));
 
 vi.mock("./llm-risk-report", () => ({
@@ -164,6 +168,61 @@ describe("runSearchPipeline cache + legal degraded", () => {
         skipIfHealthyCacheExists: true,
       },
     );
+  });
+
+  it("passes degraded cache options when CR lookup times out", async () => {
+    lookupCompaniesRegistryForSearch.mockResolvedValueOnce({
+      lookupStatus: "timeout",
+      retrievedAt: "2026-10-18T12:00:00.000Z",
+      hints: [],
+      icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
+    });
+
+    await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "示例裝修有限公司",
+    });
+
+    expect(setCachedReport).toHaveBeenCalledWith(
+      supabase,
+      expect.any(String),
+      expect.any(Object),
+      expect.objectContaining({
+        official: expect.objectContaining({
+          companiesRegistry: expect.objectContaining({
+            lookupStatus: "timeout",
+          }),
+        }),
+      }),
+      {
+        ttlMs: LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
+        skipIfHealthyCacheExists: true,
+      },
+    );
+  });
+
+  it("ignores non-expired CR-degraded cache and re-runs pipeline", async () => {
+    const crDegradedCached: RiskReport = {
+      ...baseLlmReport(),
+      official: {
+        mwcMatched: false,
+        legalLookupStatus: "ok",
+        companiesRegistry: {
+          lookupStatus: "timeout",
+          retrievedAt: "2026-10-18T12:00:00.000Z",
+          hints: [],
+          icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
+        },
+      },
+    };
+    getCachedReport.mockResolvedValueOnce(crDegradedCached);
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "示例裝修有限公司",
+    });
+
+    expect(result.cacheHit).toBe(false);
   });
 
   it("does not apply degraded cache options when legal lookup ok", async () => {
