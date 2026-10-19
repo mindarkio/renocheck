@@ -57,6 +57,8 @@ export type LegalLookupResult = {
 };
 
 const MAX_EVENTS = 8;
+/** Collect more case-number rows than MAX_EVENTS so dedupe-by-judgment can still fill 8 distinct documents. */
+const COLLECT_CAP = MAX_EVENTS * 16;
 const FETCH_PAGE_SIZE = 500;
 
 const MATCH_SELECT =
@@ -319,7 +321,7 @@ export async function lookupLegalJudgments(
       .eq("br_normalized", br)
       .eq("renovation_relevant", true)
       .order("event_date", { ascending: false })
-      .limit(MAX_EVENTS + 2);
+      .limit(COLLECT_CAP);
 
     if (brError) throw brError;
 
@@ -332,11 +334,12 @@ export async function lookupLegalJudgments(
       seenCase.add(r.case_ref);
       matched.push(ev);
       if (r.id) matchedIds.push(r.id);
-      if (matched.length >= MAX_EVENTS) break;
+      if (matched.length >= COLLECT_CAP) break;
     }
   }
 
-  if (matched.length < MAX_EVENTS) {
+  // Spec B2: merge related case numbers first, then slice to MAX_EVENTS distinct judgments.
+  if (dedupeByJudgment(matched).length < MAX_EVENTS) {
     const label = ctx.searchLabelUsed.trim();
     const slimRows = await fetchMatchRows(supabase);
     const hitIds: string[] = [];
@@ -347,7 +350,7 @@ export async function lookupLegalJudgments(
       if (!r.id) continue;
       hitIds.push(r.id);
       seenCase.add(r.case_ref);
-      if (matched.length + hitIds.length >= MAX_EVENTS) break;
+      if (matched.length + hitIds.length >= COLLECT_CAP) break;
     }
 
     const fullRows = await fetchRowsByIds(supabase, hitIds);
@@ -358,7 +361,7 @@ export async function lookupLegalJudgments(
       const ev = rowToEvent(r, legalRowMatchReasonZh(label, r));
       if (!ev) continue;
       matched.push(ev);
-      if (matched.length >= MAX_EVENTS) break;
+      if (matched.length >= COLLECT_CAP) break;
     }
   }
 

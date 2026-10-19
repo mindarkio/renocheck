@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { lookupLegalJudgments } from "./lookup-legal-judgments";
+import { lookupLegalJudgments, dedupeByJudgment } from "./lookup-legal-judgments";
 
 function createQueryBuilder(
   resolver: () => Promise<{
@@ -250,6 +250,39 @@ describe("lookupLegalJudgments", () => {
     expect(result.events[0]?.caseRef).toBe("HCLA901/2024");
     expect(result.events[0]?.relatedCaseRefs).toEqual(["HCLA903/2024"]);
     expect(result.events[0]?.neutralCitation).toBe("[2025] HKCFI 9901");
+  });
+
+  it("dedupeByJudgment keeps relatedCaseRefs then caps distinct judgments", () => {
+    const mk = (caseRef: string, nc: string, dis: number) =>
+      ({
+        sourceType: "court_judgment" as const,
+        caseRef,
+        court: "CFI",
+        eventDate: "2025-02-10",
+        judgmentCategory: "employment_renovation" as const,
+        partyRole: "defendant" as const,
+        outcomeHint: "defendant_liable" as const,
+        hearingKeyPointsZh: ["合成"],
+        hearingKeyPointQuotesZh: [""],
+        sourceUrl: `https://legalref.judiciary.hk/lrs/common/ju/ju_frame.jsp?DIS=${dis}&TP=JU`,
+        matchReasonZh: "合成",
+        sourceLabel: "x",
+        reviewStatus: "auto" as const,
+        neutralCitation: nc,
+      });
+    const rows = [];
+    for (const [nc, dis0, prefix] of [
+      ["[2025] HKCFI 1", 100, "HCLA90"],
+      ["[2025] HKCFI 2", 200, "HCLA91"],
+      ["[2025] HKCFI 3", 300, "HCLA92"],
+    ] as const) {
+      for (let i = 0; i < 4; i++) rows.push(mk(`${prefix}${i}/2024`, nc, dis0 + i));
+    }
+    const early = dedupeByJudgment(rows.slice(0, 8));
+    expect(early.length).toBe(2);
+    const full = dedupeByJudgment(rows).slice(0, 8);
+    expect(full.length).toBe(3);
+    expect(full[0]!.relatedCaseRefs?.length).toBe(3);
   });
 
   it("excludes employment_labour from events", async () => {
