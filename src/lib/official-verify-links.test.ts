@@ -107,6 +107,8 @@ describe("buildOfficialVerifyLinks", () => {
       (l) => l.id === "br-enquiry",
     );
     expect(br?.url).toBe(IRD_BR_ENQUIRY_URL);
+    // Prefer host-prefix regex over toContain("gov.hk"): IRD host
+    // btp.etax.ird.gov.hk contains the substring "gov.hk".
     expect(br?.url).not.toMatch(/^https:\/\/www\.gov\.hk\//);
   });
 
