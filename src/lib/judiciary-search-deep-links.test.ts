@@ -67,5 +67,16 @@ describe("judiciary-search-deep-links", () => {
     expect(dailyCauseListPartyQuery("3D合成測試有限公司 3D ZZQ LIMITED")).toBe("3D合成測試有限公司");
     expect(dailyCauseListPartyQuery("ABC合成測試有限公司")).toBe("ABC合成測試有限公司");
     expect(dailyCauseListPartyQuery("3D(香港)合成測試有限公司 ZZQ LIMITED")).toBe("3D(香港)合成測試有限公司");
+    for (const label of [
+      "ZZQ（合成測試有限公司）",
+      "ZZQ(合成測試有限公司)",
+      "ZZQ/合成測試有限公司",
+      "ZZQ「合成測試有限公司」",
+      "ZZQ-LIMITED/合成測試有限公司",
+    ]) {
+      expect(dailyCauseListPartyQuery(label)).toBe("合成測試有限公司");
+    }
+    expect(dailyCauseListPartyQuery("ZZQ（香港）合成測試有限公司")).toBe("ZZQ（香港）合成測試有限公司");
+    expect(dailyCauseListPartyQuery("ABC合成測試有限公司")).toBe("ABC合成測試有限公司");
   });
 });

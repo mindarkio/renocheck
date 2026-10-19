@@ -41,6 +41,11 @@ export function dailyCauseListPartyQuery(label: string): string | null {
   if (zh && en) return cleanZhPartyPart(zh);
   // English only: use the normalised part (full-width ＡＢＣ → ABC).
   if (en) return en;
+  // "ZZQ（合成有限公司）" / "ZZQ/合成有限公司": one glued Latin word, so the split sees Chinese only.
+  if (zh && /^[A-Za-z]/.test(zh)) {
+    const cleaned = cleanZhPartyPart(zh);
+    if (cleaned !== zh) return cleaned;
+  }
   return t;
 }
 
