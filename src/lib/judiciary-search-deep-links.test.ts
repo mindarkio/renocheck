@@ -45,4 +45,27 @@ describe("judiciary-search-deep-links", () => {
     const label = "合".repeat(199) + "𠀋𠀋";
     expect(buildDailyCauseListPostFields(label, d).parties).toBe("合".repeat(199) + "𠀋");
   });
+
+  it("dailyCauseListPartyQuery: bracketed zh part and full-width English", () => {
+    expect(dailyCauseListPartyQuery("ZZQ TESTING LIMITED (合成測試有限公司)")).toBe("合成測試有限公司");
+    expect(dailyCauseListPartyQuery("ZZQ TESTING LIMITED（合成測試有限公司）")).toBe("合成測試有限公司");
+    expect(dailyCauseListPartyQuery("合成測試(香港)有限公司 ZZQ TESTING (HK) LIMITED")).toBe("合成測試(香港)有限公司");
+    expect(dailyCauseListPartyQuery("ＺＺＱ ＴＥＳＴＩＮＧ ＬＩＭＩＴＥＤ")).toBe("ZZQ TESTING LIMITED");
+    for (const label of [
+      "ZZQ TESTING LIMITED(合成測試有限公司)",
+      "ZZQ TESTING LIMITED （合成測試有限公司）",
+      "(合成測試有限公司) ZZQ TESTING LIMITED",
+      "ZZQ TESTING LIMITED/合成測試有限公司",
+      "ZZQ TESTING LIMITED 【合成測試有限公司】",
+      "ZZQ TESTING LIMITED「合成測試有限公司」",
+    ]) {
+      expect(dailyCauseListPartyQuery(label)).toBe("合成測試有限公司");
+    }
+    expect(
+      dailyCauseListPartyQuery("ZZQ TESTING (HK) LIMITED（合成測試（香港）有限公司）"),
+    ).toBe("合成測試(香港)有限公司");
+    expect(dailyCauseListPartyQuery("3D合成測試有限公司 3D ZZQ LIMITED")).toBe("3D合成測試有限公司");
+    expect(dailyCauseListPartyQuery("ABC合成測試有限公司")).toBe("ABC合成測試有限公司");
+    expect(dailyCauseListPartyQuery("3D(香港)合成測試有限公司 ZZQ LIMITED")).toBe("3D(香港)合成測試有限公司");
+  });
 });
