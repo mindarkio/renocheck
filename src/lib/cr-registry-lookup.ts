@@ -31,7 +31,20 @@ import type { CrMappedSnapshot } from "./cr-register/types";
 import type { MwcRow } from "./mwc-lookup";
 import type { NormalizedSearchInput } from "./normalize-search-input";
 
-const LOOKUP_BUDGET_MS = 6000;
+export const CR_LOOKUP_BUDGET_MS = 10_000;
+
+type CrLookupFetchStats = {
+  fetchCount: number;
+  lastHttpStatus: number | null;
+};
+
+function crLogFields(stats: CrLookupFetchStats, startedAt: number) {
+  return {
+    elapsed_ms: Date.now() - startedAt,
+    http_status: stats.lastHttpStatus,
+    fetch_count: stats.fetchCount,
+  };
+}
 
 function snapshotToOfficial(
   lookupStatus: CompaniesRegistryOfficial["lookupStatus"],
@@ -100,12 +113,14 @@ async function fetchPrefixCached(
   prefix: string,
   cache: Map<string, CrLocalSearchResult>,
   deadlineMs: number,
+  stats: CrLookupFetchStats,
 ): Promise<CrLocalSearchResult> {
   const cached = cache.get(prefix);
   if (cached) return cached;
   const res = await searchCrLocalByNameBeginsWith(prefix, {
     signal: fetchSignal(deadlineMs),
     deadlineMs,
+    stats,
   });
   cache.set(prefix, res);
   return res;
@@ -116,6 +131,7 @@ async function resolveNamePrefixes(
   searchLabelUsed: string,
   retrievedAt: string,
   deadlineMs: number,
+  stats: CrLookupFetchStats,
 ): Promise<
   | { kind: "snapshot"; snapshot: CrMappedSnapshot }
   | { kind: "degraded"; reason: "timeout" | "error" }
@@ -129,7 +145,7 @@ async function resolveNamePrefixes(
   const prefixCache = new Map<string, CrLocalSearchResult>();
 
   for (const prefix of primary) {
-    const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs);
+    const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs, stats);
     if (res.kind === "error") {
       return toDegraded(res.message);
     }
@@ -146,7 +162,7 @@ async function resolveNamePrefixes(
   }
 
   for (const prefix of allAttempts.slice(0, 4)) {
-    const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs);
+    const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs, stats);
     if (res.kind === "error") {
       return toDegraded(res.message);
     }
@@ -180,13 +196,14 @@ async function resolveNamePrefixes(
 async function runLiveLookup(
   input: NormalizedSearchInput,
   searchLabelUsed: string,
+  stats: CrLookupFetchStats,
 ): Promise<
   | { kind: "snapshot"; snapshot: CrMappedSnapshot }
   | { kind: "degraded"; reason: "timeout" | "error" }
   | { kind: "no_query" }
 > {
   const retrievedAt = new Date().toISOString();
-  const deadlineMs = Date.now() + LOOKUP_BUDGET_MS;
+  const deadlineMs = Date.now() + CR_LOOKUP_BUDGET_MS;
   if (!hasCrApiQueryPath(input, searchLabelUsed)) {
     return { kind: "no_query" };
   }
@@ -217,6 +234,7 @@ async function runLiveLookup(
     const res = await searchCrLocalByBrnEqual(brnEqual, {
       signal: fetchSignal(deadlineMs),
       deadlineMs,
+      stats,
     });
     if (res.kind === "error") {
       return toDegraded(res.message);
@@ -231,6 +249,7 @@ async function runLiveLookup(
           searchLabelUsed,
           retrievedAt,
           deadlineMs,
+          stats,
         );
         if (nameResult.kind === "degraded") return nameResult;
         return persist(nameResult.snapshot);
@@ -268,6 +287,7 @@ async function runLiveLookup(
     searchLabelUsed,
     retrievedAt,
     deadlineMs,
+    stats,
   );
   if (nameResult.kind === "degraded") return nameResult;
   return persist(nameResult.snapshot);
@@ -287,13 +307,20 @@ export async function lookupCompaniesRegistryForSearch(
     };
   }
 
+  const startedAt = Date.now();
+  const stats: CrLookupFetchStats = {
+    fetchCount: 0,
+    lastHttpStatus: null,
+  };
+
   try {
-    const live = await runLiveLookup(input, searchLabelUsed);
+    const live = await runLiveLookup(input, searchLabelUsed, stats);
     if (live.kind === "degraded") {
       console.warn(
         JSON.stringify({
           event: "cr_lookup_failed",
           reason: live.reason,
+          ...crLogFields(stats, startedAt),
         }),
       );
       return {
@@ -320,6 +347,8 @@ export async function lookupCompaniesRegistryForSearch(
         matched: snap.matched,
         match_ambiguous: Boolean(snap.matchAmbiguous),
         hint_count: snap.hints.length,
+        cache_hit: stats.fetchCount === 0,
+        ...crLogFields(stats, startedAt),
       }),
     );
 
@@ -329,6 +358,7 @@ export async function lookupCompaniesRegistryForSearch(
       JSON.stringify({
         event: "cr_lookup_failed",
         reason: "exception",
+        ...crLogFields(stats, startedAt),
       }),
     );
     return {

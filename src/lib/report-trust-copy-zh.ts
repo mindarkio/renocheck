@@ -130,10 +130,13 @@ export const DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH: readonly string[] = [
   "可以喺司法機構官方「審訊案件表」自行查閱（連結喺下面）。",
   "審訊案件表一般喺審訊日對上一個工作天下午6:30刊出，只列出當日同下一個工作天嘅聆訊，唔包括判決或者案件結果。",
   "有聆訊排期只代表有聆訊安排，唔代表任何一方有錯、勝訴或者敗訴。",
-  "揀咗法院之後，可以用瀏覽器搜尋（例如 Ctrl+F 或 ⌘+F）輸入公司名稱自行對照；本站唔會代你預填或者查詢。",
+  "下面個掣會將公司名稱交俾司法機構網站搜尋；本站唔會讀取或者保存搜尋結果。你亦可以揀法院之後自行用瀏覽器搜尋（例如 Ctrl+F 或 ⌘+F）對照。",
 ];
 
 export const DAILY_CAUSE_LIST_LINK_LABEL_ZH = "司法機構審訊案件表（官方）";
+
+export const DAILY_CAUSE_LIST_FORM_NOTE_ZH =
+  "撳掣會喺司法機構網站用公司名稱搜尋今日嘅審訊案件表；只涵蓋之後幾個開庭日嘅聆訊排期，唔包括判決或者案件結果。";
 
 export const DAILY_CAUSE_LIST_HERO_NOTE_ZH =
   "審訊案件表請喺司法機構網站自行查閱；小額錢債審裁處案件一般冇公開判詞。";
@@ -265,6 +268,7 @@ export function collectReportTrustCopyStrings(): string[] {
     DAILY_CAUSE_LIST_SELF_SERVICE_HEADING_ZH,
     ...DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH,
     DAILY_CAUSE_LIST_LINK_LABEL_ZH,
+    DAILY_CAUSE_LIST_FORM_NOTE_ZH,
     DAILY_CAUSE_LIST_HERO_NOTE_ZH,
     NON_LIMITED_NOTICE_HEADING_ZH,
     NON_LIMITED_CONTRACTOR_NOTICE_ZH,

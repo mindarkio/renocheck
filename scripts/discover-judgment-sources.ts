@@ -77,7 +77,7 @@ function loadProfiles(): ProfilesFile | null {
 /** HKLII site search (public HTML; respect ToS). */
 function hkliiSearchUrl(keyword: string): string {
   const q = encodeURIComponent(keyword);
-  return `https://v2.hklii.hk/search?q=${q}`;
+  return `https://www.hklii.hk/search?q=${q}`;
 }
 
 function buildFromProfiles(profiles: LrsProfile[]): SourceUrlEntry[] {

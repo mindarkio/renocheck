@@ -74,7 +74,7 @@
 | **按名稱** | `key1=Comp_name`, `key2=begins_with`, `key3=<前綴>`（**僅前綴**，唔支援 contains） |
 | **無結果** | HTTP **400**，JSON `{"status":400,"message":"No result found."}` |
 | **Auth** | 無 |
-| **Timeout（產品）** | 單次 lookup 總預算 6s（`cr-registry-lookup.ts`） |
+| **Timeout（產品）** | 單次 lookup 總預算 10s（`CR_LOOKUP_BUDGET_MS`，`cr-registry-lookup.ts`）；同網搜並行，見 `search-pipeline.ts` Promise.all |
 | **Throttle（產品）** | 每個 serverless instance ≤1 req/s（非全域；`throttle.ts` 串行化）。接受理由：DATA.GOV.HK 無全域配額文件，instance 級節流避免單一冷啟動打爆上游。 |
 | **條款** | [DATA.GOV.HK 使用條款及細則](https://data.gov.hk/tc/terms-and-conditions) — **容許商業用途**（須標示來源） |
 

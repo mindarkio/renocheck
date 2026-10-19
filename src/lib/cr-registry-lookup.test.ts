@@ -20,7 +20,10 @@ import {
 } from "./cr-register/circuit-breaker";
 import type { CrApiLocalRow } from "./cr-register/types";
 import { allNameSearchPrefixAttempts } from "./cr-register/prefix";
-import { lookupCompaniesRegistryForSearch } from "./cr-registry-lookup";
+import {
+  CR_LOOKUP_BUDGET_MS,
+  lookupCompaniesRegistryForSearch,
+} from "./cr-registry-lookup";
 import { companyNameOnlySearchInput } from "./normalize-search-input";
 import {
   shouldShowMwcMissFallbackNote,
@@ -222,6 +225,29 @@ describe("lookupCompaniesRegistryForSearch", () => {
     expect(official.hints).toContain("not_found_in_active_list");
   });
 
+  it("7000ms mock no_result within 10s budget returns ok (A2)", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    searchCrLocalByNameBeginsWith.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          const delayMs = calls === 0 ? 7000 : 0;
+          calls += 1;
+          setTimeout(() => resolve({ kind: "no_result" }), delayMs);
+        }),
+    );
+    const label = "合成測試有限公司";
+    const pending = lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    await Promise.all([pending, vi.advanceTimersByTimeAsync(8000)]);
+    const official = await pending;
+    expect(official.lookupStatus).toBe("ok");
+    vi.useRealTimers();
+  });
+
   it("lookup budget exceeded → lookupStatus timeout (c-L5)", async () => {
     vi.useFakeTimers();
     searchCrLocalByNameBeginsWith.mockImplementation(
@@ -244,7 +270,7 @@ describe("lookupCompaniesRegistryForSearch", () => {
       label,
       null,
     );
-    await vi.advanceTimersByTimeAsync(6001);
+    await vi.advanceTimersByTimeAsync(CR_LOOKUP_BUDGET_MS + 1);
     const official = await pending;
     expect(official.lookupStatus).toBe("timeout");
     expect(isCrCircuitOpen()).toBe(false);

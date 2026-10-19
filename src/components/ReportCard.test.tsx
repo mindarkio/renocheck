@@ -353,6 +353,22 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(screen.getByText(NON_LIMITED_NOTICE_HEADING_ZH)).toBeTruthy();
   });
 
+  it("審訊案件表 POST 表單（A5）", () => {
+    const { container } = render(<ReportCard report={minimalReport()} />);
+    assertClean(container.textContent ?? "");
+    const forms = container.querySelectorAll(
+      'form[method="post"][action="https://e-services.judiciary.hk/dcl/search.jsp"][target="_blank"]',
+    );
+    expect(forms.length).toBeGreaterThanOrEqual(1);
+    const form = forms[0]!;
+    expect(form.getAttribute("rel")).toContain("noopener");
+    for (const name of ["lang", "date", "mode", "parties"]) {
+      expect(
+        form.querySelector(`input[type="hidden"][name="${name}"]`),
+      ).toBeTruthy();
+    }
+  });
+
   it("legal degraded：唔顯示 C.2c alert", () => {
     const { container } = render(<ReportCard report={degradedReport()} />);
     assertClean(container.textContent ?? "");

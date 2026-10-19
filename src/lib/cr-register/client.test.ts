@@ -45,6 +45,32 @@ describe("searchCrLocalByNameBeginsWith", () => {
     resetCrCircuitBreakerForTests();
   });
 
+  it("records stats on successful fetch (A3)", async () => {
+    const stats = { fetchCount: 0, lastHttpStatus: null as number | null };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockFetchResponse({
+          ok: true,
+          status: 200,
+          body: JSON.stringify([
+            {
+              Brn: "C0000001",
+              English_Company_Name: "ZZQ TESTING LIMITED",
+              Chinese_Company_Name: "NULL",
+              Company_Type: "Co",
+              Date_of_Incorporation: "01-01-2020",
+              Address_of_Registered_Office: "HK",
+            },
+          ]),
+        }),
+      ),
+    );
+    await searchCrLocalByNameBeginsWith("ZZQ", { stats });
+    expect(stats.fetchCount).toBe(1);
+    expect(stats.lastHttpStatus).toBe(200);
+  });
+
   it("maps HTTP 400 no result message to no_result", async () => {
     vi.stubGlobal(
       "fetch",

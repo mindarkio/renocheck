@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
+import { DailyCauseListSearchForm } from "@/components/DailyCauseListSearchForm";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
 import { buildOfficialVerifyLinks } from "@/lib/official-verify-links";
 import { shouldShowNonLimitedContractorNotice } from "@/lib/non-limited-contractor-notice";
@@ -23,10 +24,8 @@ import {
   CONTRACT_CHECKLIST_HEADING_WITH_ACTIONABLE_ZH,
   CONTRACT_CHECKLIST_HEADING_ZH,
   DEFAULT_CONTRACT_CHECKLIST_ZH,
-  DAILY_CAUSE_LIST_LINK_LABEL_ZH,
   DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH,
   DAILY_CAUSE_LIST_SELF_SERVICE_HEADING_ZH,
-  JUDICIARY_DAILY_CAUSE_LIST_URL,
   LEGAL_EVENT_SOURCE_LINK_LABEL_ZH,
   NEXT_STEPS_HEADING_ZH,
   NEXT_STEPS_INTRO_ZH,
@@ -619,12 +618,9 @@ export function ReportCard({ report }: { report: RiskReport }) {
                     </ReportExternalLink>
                   </li>
                   <li>
-                    <ReportExternalLink
-                      href={links.dailyCauseListSearch}
-                      className="underline-offset-2 hover:underline"
-                    >
-                      {DAILY_CAUSE_LIST_LINK_LABEL_ZH}
-                    </ReportExternalLink>
+                    <DailyCauseListSearchForm
+                      partyName={report.entity.searchLabelUsed}
+                    />
                     <span className="mt-0.5 block text-primary-foreground/60">
                       {links.dailyCauseListNote}
                     </span>
@@ -1155,14 +1151,12 @@ export function ReportCard({ report }: { report: RiskReport }) {
             <li key={line}>{line}</li>
           ))}
         </ul>
-        <p className="mt-3">
-          <ReportExternalLink
-            href={JUDICIARY_DAILY_CAUSE_LIST_URL}
+        <div className="mt-3">
+          <DailyCauseListSearchForm
+            partyName={report.entity.searchLabelUsed}
             className="inline-flex items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
-          >
-            {DAILY_CAUSE_LIST_LINK_LABEL_ZH}
-          </ReportExternalLink>
-        </p>
+          />
+        </div>
       </div>
       <p className={`mt-4 ${reportMetaClass}`}>
         {REPORT_SCOPE_LIMITS_CLOSING_ZH}

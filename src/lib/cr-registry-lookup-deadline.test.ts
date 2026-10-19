@@ -5,7 +5,10 @@ import {
   resetCrApiThrottleForTests,
   scheduleCrApiRequest,
 } from "./cr-register/throttle";
-import { lookupCompaniesRegistryForSearch } from "./cr-registry-lookup";
+import {
+  CR_LOOKUP_BUDGET_MS,
+  lookupCompaniesRegistryForSearch,
+} from "./cr-registry-lookup";
 import { companyNameOnlySearchInput } from "./normalize-search-input";
 
 function mockFetchNoResult() {
@@ -63,7 +66,7 @@ describe("lookupCompaniesRegistryForSearch throttle deadline (c-L2)", () => {
     scheduleCrApiRequest(
       () =>
         new Promise<void>((resolve) => {
-          setTimeout(() => resolve(), 6000);
+          setTimeout(() => resolve(), CR_LOOKUP_BUDGET_MS);
         }),
     );
 
@@ -73,10 +76,100 @@ describe("lookupCompaniesRegistryForSearch throttle deadline (c-L2)", () => {
       label,
       null,
     );
-    await vi.advanceTimersByTimeAsync(6000);
+    await vi.advanceTimersByTimeAsync(CR_LOOKUP_BUDGET_MS);
     const official = await pending;
 
     expect(official.lookupStatus).toBe("timeout");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("lookupCompaniesRegistryForSearch CR logs (A3)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    clearCrRegistryCacheForTests();
+    resetCrApiThrottleForTests();
+    resetCrCircuitBreakerForTests();
+    vi.restoreAllMocks();
+  });
+
+  it("logs fetch_count and http_status on no_result", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(mockFetchNoResult()),
+    );
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const label = "合成測試有限公司";
+    await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    const crLine = infoSpy.mock.calls
+      .map((c) => c[0])
+      .find((line) => String(line).includes('"event":"cr_lookup"'));
+    expect(crLine).toBeTruthy();
+    const payload = JSON.parse(String(crLine));
+    expect(payload.fetch_count).toBeGreaterThanOrEqual(1);
+    expect(payload.http_status).toBe(400);
+    expect(typeof payload.elapsed_ms).toBe("number");
+    expect(payload.cache_hit).toBe(false);
+    expect(String(crLine)).not.toContain("合成測試");
+  });
+
+  it("logs timeout with fetch_count when upstream hangs", async () => {
+    vi.useFakeTimers({ now: 1_700_000_000_000 });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        (_url: string, init?: { signal?: AbortSignal }) =>
+          new Promise((_resolve, reject) => {
+            const signal = init?.signal;
+            const onAbort = () => {
+              const err = new Error("The operation was aborted");
+              err.name = "AbortError";
+              reject(err);
+            };
+            if (!signal) return;
+            if (signal.aborted) onAbort();
+            else signal.addEventListener("abort", onAbort, { once: true });
+          }),
+      ),
+    );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const label = "合成測試有限公司";
+    const pending = lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    await vi.advanceTimersByTimeAsync(CR_LOOKUP_BUDGET_MS + 1);
+    await pending;
+    const failLine = warnSpy.mock.calls
+      .map((c) => c[0])
+      .find((line) => String(line).includes('"event":"cr_lookup_failed"'));
+    const payload = JSON.parse(String(failLine));
+    expect(payload.reason).toBe("timeout");
+    expect(payload.http_status).toBeNull();
+    expect(payload.fetch_count).toBeGreaterThanOrEqual(1);
+  });
+
+  it("logs cache_hit on second lookup with same label", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(mockFetchNoResult()),
+    );
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const label = "合成測試有限公司";
+    const input = companyNameOnlySearchInput(label);
+    await lookupCompaniesRegistryForSearch(input, label, null);
+    await lookupCompaniesRegistryForSearch(input, label, null);
+    const lines = infoSpy.mock.calls
+      .map((c) => c[0])
+      .filter((line) => String(line).includes('"event":"cr_lookup"'));
+    const second = JSON.parse(String(lines[lines.length - 1]));
+    expect(second.cache_hit).toBe(true);
+    expect(second.fetch_count).toBe(0);
   });
 });
