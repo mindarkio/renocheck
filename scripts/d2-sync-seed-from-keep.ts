@@ -44,6 +44,7 @@ type KeepRow = {
   mwcMatch?: { companyName: string; registrationNo: string };
   reviewLookupAliases?: string[];
   sourceUrl: string;
+  reviewJudgmentCategory?: string;
 };
 
 type SeedRow = Record<string, unknown>;
@@ -69,7 +70,7 @@ function toJuFrameUrl(url: string): string {
 
 function seedRowFromKeep(
   k: KeepRow,
-  meta: { eventDate: string; partiesLine: string },
+  meta: { eventDate: string; partiesLine: string; neutralCitation?: string },
   prefixes: Record<string, string>,
   prior?: SeedRow,
 ): SeedRow {
@@ -103,7 +104,8 @@ function seedRowFromKeep(
     companyNameNormalized: defendant,
     ...(br ? { brNormalized: br } : {}),
     ...(aliases.length ? { lookupAliases: aliases } : {}),
-    judgmentCategory: "renovation_engineering_civil",
+    judgmentCategory:
+      k.reviewJudgmentCategory ?? "renovation_engineering_civil",
     partyRole: "defendant",
     outcomeHint:
       seedOutcomeOverride(caseRef) ??
@@ -116,6 +118,9 @@ function seedRowFromKeep(
     reviewStatus: priorVerified ? "human_verified" : "auto",
     sourceUrl: toJuFrameUrl(k.sourceUrl),
     renovationRelevant: true,
+    ...(meta.neutralCitation
+      ? { topicTags: [`neutral_citation:${meta.neutralCitation}`] }
+      : {}),
   };
 }
 
@@ -133,6 +138,7 @@ function main() {
       caseRef: string;
       eventDate: string;
       partiesLine: string;
+      neutralCitation?: string;
     }>;
   };
   const byRef = new Map(

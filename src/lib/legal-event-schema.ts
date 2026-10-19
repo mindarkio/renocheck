@@ -10,6 +10,7 @@ export const judgmentCategorySchema = z.enum([
   "small_works_regulatory",
   "criminal_regulatory",
   "winding_up_insolvency",
+  "employment_renovation",
   "employment_labour",
   "personal_injury_site",
   "landlord_tenant",
@@ -76,6 +77,9 @@ export const officialLegalEventSchema = z.object({
   businessForm: legalEventBusinessFormSchema.optional(),
   /** 獨資：UI 顯示東主／個人名；商號用 lookup alias 匹配。 */
   defendantDisplayNameZh: z.string().max(120).optional(),
+  neutralCitation: z.string().max(40).optional(),
+  /** Other case numbers in the same judgment document (same neutral citation). */
+  relatedCaseRefs: z.array(z.string().max(80)).max(10).optional(),
 });
 
 export type OfficialLegalEvent = z.infer<typeof officialLegalEventSchema>;

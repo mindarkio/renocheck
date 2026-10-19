@@ -109,7 +109,7 @@ curl -s -X POST http://localhost:3000/api/search \
 
 ### Smoke（電話 / BR / 公司名）
 
-`pnpm dev` 運行中，用 `refresh: true` 略過 cache；報告應含 `reportVersion` `2.5.0`、`evaluation`（雙軌骨架，DEC-0007）、`entity.searchLabelUsed`、`signals.boundHitCount`、`signals.retrievalEvidence`（檢索層 SSOT，DEC-0006）、`signals.contractChecklist`（即使零討論）。
+`pnpm dev` 運行中，用 `refresh: true` 略過 cache；報告應含 `reportVersion` `2.6.0`、`evaluation`（雙軌骨架，DEC-0007）、`entity.searchLabelUsed`、`signals.boundHitCount`、`signals.retrievalEvidence`（檢索層 SSOT，DEC-0006）、`signals.contractChecklist`（即使零討論）。
 
 **Track 1 判詞（DEC-0012）：** 本地 `pnpm dev` **預設開啟** lookup（除非 `LEGAL_EVENTS_ENABLED=0`）；Vercel 正式環境須設 `LEGAL_EVENTS_ENABLED=1`。先 `pnpm import:judgments`。改 env 後要**重啟** dev server。Lookup 自測：`pnpm legal:lookup-smoke "示例裝修工程有限公司"`（預期 1 宗 `DCCJ 9001/2020`）。完整報告 smoke：`POST /api/search` + `{"companyName":"示例裝修工程有限公司","refresh":true}` — 回應為 `{ report, fingerprint, cacheHit, meta }`；讀 `report.official.legalEvents`（非空）、`report.evaluation.riskBandZh`（合成 fixture 至少「風險中等」）。真實 seed 一鍵（與 `judgments-seed.local.json` 行數同步）：`pnpm judgment:poc-smoke --api-base=http://localhost:3000`（預期 `lookupAllHit` + `apiAllHaveLegalEvents`；輸出 `scripts/output/judgment-poc-smoke-2026-10-16.json`）。
 

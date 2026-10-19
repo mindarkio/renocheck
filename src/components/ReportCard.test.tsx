@@ -380,6 +380,41 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(screen.getByText(REPORT_SCOPE_LIMITS_HEADING_ZH)).toBeTruthy();
   });
 
+  it("employment_renovation：案號、類別、裁定與去重後宗數", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            legalLookupStatus: "ok",
+            legalEvents: [
+              {
+                sourceType: "court_judgment",
+                caseRef: "HCLA901/2024",
+                relatedCaseRefs: ["HCLA903/2024"],
+                neutralCitation: "[2025] HKCFI 9901",
+                court: "高院",
+                eventDate: "2025-02-10",
+                partyRole: "defendant",
+                judgmentCategory: "employment_renovation",
+                outcomeHint: "defendant_liable",
+                sourceUrl:
+                  "https://legalref.judiciary.hk/lrs/common/ju/ju_frame.jsp?DIS=1&TP=JU",
+                matchReasonZh: "合成",
+                hearingKeyPointsZh: ["合成勞資要點"],
+              },
+            ],
+          },
+        })}
+      />,
+    );
+    assertClean(container.textContent ?? "");
+    expect(container.textContent).toContain("HCLA901/2024、HCLA903/2024");
+    expect(container.textContent).toContain("勞資糾紛（裝修工程相關）");
+    expect(container.textContent).toContain("裁定須負責");
+    expect(container.textContent).toContain("公開判詞紀錄（1 宗）");
+  });
+
   it("有 legalEvents：唔顯示 C.2c alert", () => {
     const { container } = render(
       <ReportCard

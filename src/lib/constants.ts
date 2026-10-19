@@ -20,4 +20,4 @@ export const FOOTER_DISCLAIMER =
 export const DISCLAIMER_VERSION = "1.2.0";
 
 /** Bump when RiskReport shape changes; stale cache entries are ignored. */
-export const REPORT_VERSION = "2.5.0";
+export const REPORT_VERSION = "2.6.0";

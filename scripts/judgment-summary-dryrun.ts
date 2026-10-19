@@ -17,6 +17,7 @@ import {
   type JudgmentSummaryDraftPoint,
 } from "../src/lib/judgment-summary-draft";
 import { applySeedOutcomeOverride } from "../src/lib/judgment-seed-outcome-overrides";
+import { labourJudgmentRenovationContext } from "../src/lib/judgment-d2-labour-renovation";
 import {
   hearingSummaryPendingForEvent,
   isHearingSummaryPlaceholder,
@@ -43,6 +44,7 @@ type SeedRow = {
   reviewStatus?: "auto" | "human_verified";
   companyNameNormalized: string;
   partyNames?: string[];
+  judgmentCategory?: string;
 };
 
 type KeepRow = {
@@ -104,6 +106,15 @@ function csvEscape(value: string): string {
     return `"${value.replace(/"/g, '""')}"`;
   }
   return value;
+}
+
+function labourRenovationContextCsvCell(
+  row: SeedRow,
+  plainText?: string,
+): string {
+  if (row.judgmentCategory !== "employment_renovation") return "";
+  if (!plainText) return "no";
+  return labourJudgmentRenovationContext(plainText).ok ? "ok" : "no";
 }
 
 function partiesLineForRow(
@@ -189,6 +200,7 @@ async function main() {
     "outcome_hint",
     "keyPointZh",
     "sourceQuoteZh",
+    "labour_renovation_context",
   ];
   const lines: string[] = [headers.join(",")];
   const errors: Array<{ caseRef: string; error: string }> = [];
@@ -225,6 +237,7 @@ async function main() {
             csvEscape(outcomeHint),
             csvEscape(point.keyPointZh),
             csvEscape(point.sourceQuoteZh),
+            csvEscape(labourRenovationContextCsvCell(row)),
           ].join(","),
         );
       }
@@ -234,6 +247,7 @@ async function main() {
     try {
       await new Promise((r) => setTimeout(r, 3500));
       const { text } = await fetchLegalrefJudgmentPlainText(sourceUrl);
+      const labourCtxCell = labourRenovationContextCsvCell(row, text);
       const draft = await draftJudgmentSummaryWithRetry({
         caseRef: row.caseRef,
         defendantLabel: defendant,
@@ -252,6 +266,7 @@ async function main() {
             csvEscape(outcome),
             csvEscape(point.keyPointZh),
             csvEscape(point.sourceQuoteZh),
+            csvEscape(labourCtxCell),
           ].join(","),
         );
       }
@@ -264,6 +279,7 @@ async function main() {
           csvEscape(sourceUrl),
           csvEscape(row.outcomeHint ?? "unclear"),
           csvEscape(`（dry-run 失敗：${msg}）`),
+          csvEscape(""),
           csvEscape(""),
         ].join(","),
       );

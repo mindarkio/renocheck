@@ -124,7 +124,7 @@ export function runD2FilterPipeline(
 
   const cache: D2FilterStepCacheFile = initialCache ?? {
     schemaVersion: 1,
-    policy: "company_defendant_v3e",
+    policy: "company_defendant_v3f",
     updatedAt: new Date(0).toISOString(),
     byCaseRef: {},
   };

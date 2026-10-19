@@ -5,7 +5,7 @@
     {
       "id": "zero-discussion-open-checklist",
       "report": {
-        "reportVersion": "2.5.0",
+        "reportVersion": "2.6.0",
         "entity": {
           "displayName": "測試裝修有限公司",
           "matchType": "company_name",
@@ -60,7 +60,7 @@
     {
       "id": "mwc-authoritative-label",
       "report": {
-        "reportVersion": "2.5.0",
+        "reportVersion": "2.6.0",
         "entity": {
           "displayName": "名冊甲公司有限公司",
           "matchType": "phone",
@@ -131,7 +131,7 @@
     {
       "id": "actionable-clauses-open",
       "report": {
-        "reportVersion": "2.5.0",
+        "reportVersion": "2.6.0",
         "entity": {
           "displayName": "示例裝修有限公司",
           "matchType": "company_name",

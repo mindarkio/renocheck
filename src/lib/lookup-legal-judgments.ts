@@ -57,6 +57,8 @@ export type LegalLookupResult = {
 };
 
 const MAX_EVENTS = 8;
+/** Collect more case-number rows than MAX_EVENTS so dedupe-by-judgment can still fill 8 distinct documents. */
+const COLLECT_CAP = MAX_EVENTS * 16;
 const FETCH_PAGE_SIZE = 500;
 
 const MATCH_SELECT =
@@ -122,6 +124,12 @@ function rowToEvent(
   const parties = partyNamesArray(row);
   const soleDisplay = soleProprietorDefendantDisplayZh(parties);
 
+  const neutral = row.topic_tags
+    ?.find((t) => t.startsWith("neutral_citation:"))
+    ?.slice("neutral_citation:".length)
+    .trim()
+    .slice(0, 40);
+
   return {
     sourceType: "court_judgment",
     caseRef: row.case_ref,
@@ -162,7 +170,51 @@ function rowToEvent(
           defendantDisplayNameZh: soleDisplay,
         }
       : {}),
+    ...(neutral ? { neutralCitation: neutral } : {}),
   };
+}
+
+export function judgmentDedupeKey(ev: OfficialLegalEvent): string {
+  if (ev.neutralCitation) {
+    return `nc:${ev.neutralCitation.replace(/\s+/g, " ").toUpperCase()}`;
+  }
+  const dis = ev.sourceUrl.match(/DIS=(\d+)/i)?.[1];
+  if (dis) return `dis:${dis}`;
+  return `ref:${ev.caseRef}`;
+}
+
+export function dedupeByJudgment(
+  events: OfficialLegalEvent[],
+): OfficialLegalEvent[] {
+  const byKey = new Map<string, OfficialLegalEvent[]>();
+  for (const ev of events) {
+    const k = judgmentDedupeKey(ev);
+    const list = byKey.get(k) ?? [];
+    list.push(ev);
+    byKey.set(k, list);
+  }
+  const merged: OfficialLegalEvent[] = [];
+  for (const group of byKey.values()) {
+    const sorted = [...group].sort(
+      (a, b) =>
+        b.eventDate.localeCompare(a.eventDate) ||
+        a.caseRef.localeCompare(b.caseRef),
+    );
+    const primary = sorted[0]!;
+    const related = [
+      ...new Set(
+        sorted
+          .slice(1)
+          .map((e) => e.caseRef)
+          .filter((r) => r !== primary.caseRef),
+      ),
+    ].sort((a, b) => a.localeCompare(b, "zh-HK"));
+    merged.push({
+      ...primary,
+      ...(related.length ? { relatedCaseRefs: related } : {}),
+    });
+  }
+  return merged.sort((a, b) => b.eventDate.localeCompare(a.eventDate));
 }
 
 function shouldSkipLegalRow(row: LegalJudgmentRow): boolean {
@@ -180,6 +232,7 @@ function strongestCategory(events: OfficialLegalEvent[]): JudgmentCategory | und
     "winding_up_insolvency",
     "personal_injury_site",
     "small_works_regulatory",
+    "employment_renovation",
     "employment_labour",
     "other_civil",
     "landlord_tenant",
@@ -268,7 +321,7 @@ export async function lookupLegalJudgments(
       .eq("br_normalized", br)
       .eq("renovation_relevant", true)
       .order("event_date", { ascending: false })
-      .limit(MAX_EVENTS + 2);
+      .limit(COLLECT_CAP);
 
     if (brError) throw brError;
 
@@ -281,11 +334,12 @@ export async function lookupLegalJudgments(
       seenCase.add(r.case_ref);
       matched.push(ev);
       if (r.id) matchedIds.push(r.id);
-      if (matched.length >= MAX_EVENTS) break;
+      if (matched.length >= COLLECT_CAP) break;
     }
   }
 
-  if (matched.length < MAX_EVENTS) {
+  // Spec B2: merge related case numbers first, then slice to MAX_EVENTS distinct judgments.
+  if (dedupeByJudgment(matched).length < MAX_EVENTS) {
     const label = ctx.searchLabelUsed.trim();
     const slimRows = await fetchMatchRows(supabase);
     const hitIds: string[] = [];
@@ -296,7 +350,7 @@ export async function lookupLegalJudgments(
       if (!r.id) continue;
       hitIds.push(r.id);
       seenCase.add(r.case_ref);
-      if (matched.length + hitIds.length >= MAX_EVENTS) break;
+      if (matched.length + hitIds.length >= COLLECT_CAP) break;
     }
 
     const fullRows = await fetchRowsByIds(supabase, hitIds);
@@ -307,12 +361,13 @@ export async function lookupLegalJudgments(
       const ev = rowToEvent(r, legalRowMatchReasonZh(label, r));
       if (!ev) continue;
       matched.push(ev);
-      if (matched.length >= MAX_EVENTS) break;
+      if (matched.length >= COLLECT_CAP) break;
     }
   }
 
+  const deduped = dedupeByJudgment(matched);
   return {
-    events: matched.slice(0, MAX_EVENTS),
+    events: deduped.slice(0, MAX_EVENTS),
     registryAsOf,
   };
 }

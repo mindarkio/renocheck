@@ -12,9 +12,11 @@ import {
   plaintiffIsOwnersCorporation,
 } from "./judgment-d2-defendant-exclusions";
 import {
+  isLabourRenovationVerified,
   manualDropReason,
   manualKeepOverride,
 } from "./judgment-d2-manual-triage";
+import { isLabourRenovationCandidate } from "./judgment-d2-labour-renovation";
 import type { JudgmentCategory } from "./legal-event-schema";
 import {
   extractSoleProprietorTradeAlias,
@@ -190,13 +192,44 @@ export function runD2Gates(input: D2GateInput): D2GateResult {
   }
 
   if (isLabourPrefixDrop(row.caseRef)) {
+    const kind = classifyDefendantEntity(defendantLabel);
+    if (
+      isLabourRenovationCandidate({
+        caseRef: row.caseRef,
+        defendantLabel,
+        entityKind: kind,
+      })
+    ) {
+      if (isLabourRenovationVerified(row.caseRef)) {
+        return {
+          disposition: "keep",
+          reasons: ["employment_renovation_keep"],
+          defendantLabel,
+          plaintiffLabel,
+          renovationRelevantSuggested: true,
+          matchConfidence: "high",
+          defendantEntityKind: kind,
+          reviewJudgmentCategory: "employment_renovation",
+        };
+      }
+      return {
+        disposition: "review",
+        reasons: ["employment_renovation_review"],
+        defendantLabel,
+        plaintiffLabel,
+        renovationRelevantSuggested: true,
+        matchConfidence: "review",
+        defendantEntityKind: kind,
+        reviewJudgmentCategory: "employment_renovation",
+      };
+    }
     return {
       disposition: "drop",
       reasons: ["employment_labour_dropped"],
       defendantLabel,
       plaintiffLabel,
       renovationRelevantSuggested,
-      defendantEntityKind: classifyDefendantEntity(defendantLabel),
+      defendantEntityKind: kind,
     };
   }
 

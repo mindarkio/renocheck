@@ -1,7 +1,10 @@
 import type { z } from "zod";
 import type { RiskReport, gradeSchema, disputeLevelSchema } from "./report-schema";
 import type { OfficialLegalEvent, JudgmentCategory } from "./legal-event-schema";
-import { strongestCategory } from "./lookup-legal-judgments";
+import {
+  dedupeByJudgment,
+  strongestCategory,
+} from "./lookup-legal-judgments";
 import type { riskBandZhSchema } from "./report-schema";
 
 type Grade = z.infer<typeof gradeSchema>;
@@ -41,6 +44,7 @@ const DEFENDANT_FLOOR_CATEGORIES = new Set<JudgmentCategory>([
   "criminal_regulatory",
   "winding_up_insolvency",
   "personal_injury_site",
+  "employment_renovation",
 ]);
 
 const CATEGORY_BASE: Partial<
@@ -64,6 +68,10 @@ const CATEGORY_BASE: Partial<
   criminal_regulatory: { band: "風險中等", dispute: "active_concerning" },
   winding_up_insolvency: { band: "風險中等", dispute: "active_concerning" },
   personal_injury_site: { band: "風險中等", dispute: "active_concerning" },
+  employment_renovation: {
+    band: "風險中等",
+    dispute: "active_concerning",
+  },
   employment_labour: { band: "中性", dispute: "historical_isolated" },
   landlord_tenant: { band: "中性", dispute: "historical_isolated" },
   intellectual_property: { band: "中性", dispute: "none_detected" },
@@ -92,6 +100,13 @@ function eventContributesFloor(
   if (ev.outcomeHint === "procedural_only") return null;
   if (ev.partyRole === "plaintiff") return null;
   if (ev.partyRole !== "defendant") return null;
+
+  if (ev.judgmentCategory === "employment_renovation") {
+    if (ev.outcomeHint !== "defendant_liable" && ev.outcomeHint !== "partial") {
+      return null;
+    }
+    return { band: "風險中等", dispute: "active_concerning" };
+  }
 
   const base = CATEGORY_BASE[ev.judgmentCategory];
   if (!base) return null;
@@ -146,22 +161,19 @@ export function computeLegalFloors(
   boundHitCount: number,
   generatedAt: string,
 ): { riskBandZh: RiskBandZh; disputeLevel: DisputeLevel } | null {
+  const deduped = dedupeByJudgment(events);
   let band: RiskBandZh = "中性";
   let dispute: DisputeLevel = "none_detected";
   let any = false;
 
-  const effectiveDefendant = events.filter((ev) => {
-    if (ev.partyRole !== "defendant") return false;
-    if (ev.outcomeHint === "defendant_not_liable") return false;
-    return true;
-  });
-
-  const recentAgainst = effectiveDefendant.filter((ev) => {
+  const recentAgainst = deduped.filter((ev) => {
     if (ev.outcomeHint !== "defendant_liable") return false;
-    return yearsSince(ev.eventDate, generatedAt) <= 5;
+    if (yearsSince(ev.eventDate, generatedAt) > 5) return false;
+    const c = eventContributesFloor(ev, boundHitCount);
+    return c !== null && BAND_SEVERITY[c.band] >= BAND_SEVERITY["風險中等"];
   });
 
-  for (const ev of events) {
+  for (const ev of deduped) {
     const contrib = eventContributesFloor(ev, boundHitCount);
     if (!contrib) continue;
     any = true;
@@ -200,8 +212,10 @@ export function applyLegalEventFloors(
 ): RiskReport {
   if (events.length === 0) return report;
 
+  const deduped = dedupeByJudgment(events);
+
   const floors = computeLegalFloors(
-    events,
+    deduped,
     boundHitCount,
     report.generatedAt,
   );
@@ -211,8 +225,8 @@ export function applyLegalEventFloors(
       evaluation: {
         ...report.evaluation,
         legalTrack: {
-          matchedCount: events.length,
-          strongestCategory: strongestCategory(events),
+          matchedCount: deduped.length,
+          strongestCategory: strongestCategory(deduped),
         },
       },
     };
@@ -243,8 +257,8 @@ export function applyLegalEventFloors(
         disputeLevel: nextDispute,
       },
       legalTrack: {
-        matchedCount: events.length,
-        strongestCategory: strongestCategory(events),
+        matchedCount: deduped.length,
+        strongestCategory: strongestCategory(deduped),
       },
     },
   };
