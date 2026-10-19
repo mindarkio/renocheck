@@ -50,18 +50,18 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
       className={reportBlockClass}
       aria-labelledby="cr-identity-heading"
     >
-      <h2
+      <h3
         id="cr-identity-heading"
         className={`flex items-center gap-2 ${brandReportSectionTitleClass}`}
       >
         <Building2 className="size-5 shrink-0 text-primary" aria-hidden />
         {CR_IDENTITY_CARD_HEADING_ZH}
-      </h2>
+      </h3>
 
       <div className="mt-4 space-y-3">
         {isMatched ? (
           <>
-            <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-[auto,1fr]">
+            <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-[auto_1fr]">
               {cr.brNo?.trim() ? (
                 <>
                   <dt className={reportMetaClass}>

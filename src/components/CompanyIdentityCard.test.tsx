@@ -213,3 +213,18 @@ describe("CompanyIdentityCard", () => {
     expect(c2.firstChild).toBeNull();
   });
 });
+
+describe("CompanyIdentityCard layout/a11y (PR24 L1/L2)", () => {
+  it("heading is h3 like other report sections; dl grid uses a valid template", () => {
+    const { container } = render(
+      <CompanyIdentityCard
+        report={minimalReport(
+          crRegistry({ matched: true, brNo: "C1111111", nameZh: "合成測試有限公司" }),
+        )}
+      />,
+    );
+    expect(container.querySelector("h3#cr-identity-heading")).not.toBeNull();
+    expect(container.querySelector("h2")).toBeNull();
+    expect(container.innerHTML).toContain("sm:grid-cols-[auto_1fr]");
+  });
+});

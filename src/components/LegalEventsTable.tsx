@@ -151,13 +151,13 @@ export function LegalEventsTable({
       className={reportBlockClass}
       aria-labelledby="legal-events-heading"
     >
-      <h2
+      <h3
         id="legal-events-heading"
         className={`flex items-center gap-2 ${brandReportSectionTitleClass}`}
       >
         <FileText className="size-5 shrink-0 text-primary" aria-hidden />
         {`公開判詞紀錄（${events.length} 宗）`}
-      </h2>
+      </h3>
 
       {factsOnlyBanner ? (
         <p className={`${reportMetaClass} -mt-1 mb-3`}>
@@ -263,7 +263,7 @@ export function LegalEventsTable({
               className="rounded-lg border border-border/60 bg-card px-3 py-3"
             >
               <CaseRefCell ev={ev} />
-              <dl className="mt-3 grid grid-cols-[auto,1fr] gap-x-3 gap-y-1.5 text-sm">
+              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
                 <dt className={reportMetaClass}>中立引用</dt>
                 <dd>{ev.neutralCitation ?? "—"}</dd>
                 <dt className={reportMetaClass}>法院</dt>
