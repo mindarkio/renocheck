@@ -1,4 +1,5 @@
 import { legalEventAffectsHeroDisputeWarning } from "./legal-event-calibration";
+import { dedupeByJudgment } from "./lookup-legal-judgments";
 import type { RiskReport } from "./report-schema";
 
 const HERO_SUMMARY_MAX = 160;
@@ -72,7 +73,8 @@ export function legalRecordsChip(
   report: RiskReport,
 ): { label: string } | null {
   if (!isLegalSummaryScope(report)) return null;
-  const count = report.official.legalEvents?.length ?? 0;
+  const events = report.official.legalEvents ?? [];
+  const count = dedupeByJudgment(events).length;
   if (count > 0) {
     return {
       label: count === 1 ? "公開判詞 · 1 宗" : `公開判詞 · ${count} 宗`,
@@ -106,7 +108,7 @@ export function forumDisputeChip(report: RiskReport): { label: string } {
     case "severe":
       return { label: "多宗可引用討論" };
     default:
-      return { label: "公開討論提及" };
+      return { label: "請核實來源" };
   }
 }
 
@@ -117,13 +119,16 @@ export function heroForumChipTone(
   return hasForumDisputeSignal(report) ? disputeTone : "muted";
 }
 
-export function heroLegalChipTone(report: RiskReport): HeroChipTone {
-  const count = report.official.legalEvents?.length ?? 0;
-  if (count === 0) return "muted";
-  const bound = report.signals.boundHitCount ?? 0;
+export function heroLegalChipTone(
+  report: RiskReport,
+  disputeTone: HeroChipTone,
+): HeroChipTone {
+  if (disputeTone !== "warning") return "muted";
   const events = report.official.legalEvents ?? [];
+  if (events.length === 0) return "muted";
+  const bound = report.signals.boundHitCount ?? 0;
   const warns = events.some((ev) =>
-    legalEventAffectsHeroDisputeWarning(ev, bound),
+    legalEventAffectsHeroDisputeWarning(ev, bound, report.generatedAt),
   );
   return warns ? "warning" : "muted";
 }

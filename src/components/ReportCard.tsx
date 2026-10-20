@@ -340,7 +340,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const forumHeroChip = forumDisputeChip(report);
   const forumHeroTone = heroForumChipTone(report, disputeTone);
   const legalHeroChip = legalRecordsChip(report);
-  const legalHeroTone = heroLegalChipTone(report);
+  const legalHeroTone = heroLegalChipTone(report, disputeTone);
   const forumHeroChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(forumHeroTone)}`;
   const legalHeroChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(legalHeroTone)}`;
 

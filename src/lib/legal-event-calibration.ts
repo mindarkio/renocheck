@@ -136,13 +136,15 @@ function eventContributesFloor(
   return { band, dispute };
 }
 
-/** Display-only: hero legal chip amber when judgment matches floor dispute rules. */
+/** Display-only: hero legal chip amber; mirrors floor age cap, not grading. */
 export function legalEventAffectsHeroDisputeWarning(
   ev: OfficialLegalEvent,
   boundHitCount: number,
+  generatedAt: string,
 ): boolean {
   const contribution = eventContributesFloor(ev, boundHitCount);
   if (!contribution) return false;
+  if (yearsSince(ev.eventDate, generatedAt) > 10) return false;
   return (
     contribution.dispute === "active_concerning" ||
     contribution.dispute === "severe"
