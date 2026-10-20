@@ -560,4 +560,66 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.textContent).not.toContain("C1111111");
     expect(container.textContent).not.toContain("商業登記號碼為");
   });
+
+  it("PRU-A1：淨判詞升高分檔 — 公開討論未檢出 + 公開判詞 chip，唔出近期糾紛提及", () => {
+    const evaluation = buildEvaluationStub({
+      overallGrade: "C",
+      confidence: "medium",
+      mwcMatched: false,
+      boundHitCount: 0,
+      highlightCount: 0,
+    });
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          summaryZh:
+            "未檢出相關的裝修糾紛或投訴討論摘要（不包括判詞紀錄）。",
+          evaluation: {
+            ...evaluation,
+            riskBandZh: "風險中等",
+            reputationTrack: {
+              disputeLevel: "active_concerning",
+              recentDisputeCount: 0,
+            },
+          },
+          official: {
+            mwcMatched: false,
+            legalLookupStatus: "ok",
+            legalEvents: [
+              {
+                sourceType: "court_judgment",
+                caseRef: "HCLA 99/2024",
+                court: "高院",
+                eventDate: "2025-01-01",
+                judgmentCategory: "employment_renovation",
+                partyRole: "defendant",
+                outcomeHint: "defendant_liable",
+                hearingKeyPointsZh: ["合成勞資要點"],
+                sourceUrl: "https://example.com/judgment",
+                matchReasonZh: "合成匹配",
+              },
+            ],
+          },
+          signals: {
+            discussionCount: 0,
+            themes: [],
+            highlights: [],
+            retrievalEvidence: [],
+            contractChecklist: ["佔位"],
+            actionableClauses: [],
+            boundHitCount: 0,
+          },
+        })}
+      />,
+    );
+    const chipText = "公開討論：未檢出公開判詞 · 1 宗";
+    assertClean(chipText);
+    expect(screen.getByText("公開討論：未檢出")).toBeTruthy();
+    expect(screen.getByText("公開判詞 · 1 宗")).toBeTruthy();
+    expect(container.textContent).not.toContain("近期糾紛提及");
+    const legalChip = screen.getByText("公開判詞 · 1 宗").closest("span");
+    expect(legalChip?.className).toContain("amber");
+    const forumChip = screen.getByText("公開討論：未檢出").closest("span");
+    expect(forumChip?.className).not.toContain("amber");
+  });
 });

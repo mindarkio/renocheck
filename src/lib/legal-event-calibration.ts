@@ -136,6 +136,19 @@ function eventContributesFloor(
   return { band, dispute };
 }
 
+/** Display-only: hero legal chip amber when judgment matches floor dispute rules. */
+export function legalEventAffectsHeroDisputeWarning(
+  ev: OfficialLegalEvent,
+  boundHitCount: number,
+): boolean {
+  const contribution = eventContributesFloor(ev, boundHitCount);
+  if (!contribution) return false;
+  return (
+    contribution.dispute === "active_concerning" ||
+    contribution.dispute === "severe"
+  );
+}
+
 function mergeBand(current: RiskBandZh, floor: RiskBandZh): RiskBandZh {
   return BAND_SEVERITY[floor] > BAND_SEVERITY[current] ? floor : current;
 }

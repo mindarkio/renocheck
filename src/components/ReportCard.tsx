@@ -76,6 +76,12 @@ import {
   surfaceCardClass as reportShellClass,
 } from "@/lib/ui-surfaces";
 import { legalEventsPanelClass, reportReadingColumnClass } from "./report-column";
+import {
+  forumDisputeChip,
+  heroForumChipTone,
+  heroLegalChipTone,
+  legalRecordsChip,
+} from "@/lib/report-hero-summary";
 import { RiskBandMeter } from "./RiskBandMeter";
 
 function confidenceLabelZh(confidence: RiskReport["confidence"]): string {
@@ -122,26 +128,6 @@ function licenseStatusChip(report: RiskReport): {
     return { label: "政府名冊需再核實", tone: "warning" };
   }
   return { label: "政府名冊未匹配", tone: "muted" };
-}
-
-function disputeChip(report: RiskReport): string {
-  const { disputeLevel, recentDisputeCount } = report.evaluation.reputationTrack;
-  switch (disputeLevel) {
-    case "none_detected":
-      return "未檢出活躍投訴";
-    case "historical_isolated":
-      return recentDisputeCount > 0
-        ? `較早提及 · ${recentDisputeCount} 則`
-        : "較早公開提及";
-    case "active_concerning":
-      return recentDisputeCount > 0
-        ? `近期糾紛提及 · ${recentDisputeCount} 則`
-        : "近期糾紛提及";
-    case "severe":
-      return "多宗可引用討論";
-    default:
-      return "請核實來源";
-  }
 }
 
 function heroChipToneClass(tone: "primary" | "warning" | "muted"): string {
@@ -351,6 +337,12 @@ export function ReportCard({ report }: { report: RiskReport }) {
     report.evaluation.reputationTrack.disputeLevel === "active_concerning"
       ? "warning"
       : "muted";
+  const forumHeroChip = forumDisputeChip(report);
+  const forumHeroTone = heroForumChipTone(report, disputeTone);
+  const legalHeroChip = legalRecordsChip(report);
+  const legalHeroTone = heroLegalChipTone(report);
+  const forumHeroChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(forumHeroTone)}`;
+  const legalHeroChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(legalHeroTone)}`;
 
   const legalLookupDegraded = isReportLegalLookupDegraded(report);
   const showFooterNotes = reportCardShowFooterNotes(
@@ -579,12 +571,16 @@ export function ReportCard({ report }: { report: RiskReport }) {
                 {license.label}
               </span>
             )}
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(disputeTone)}`}
-            >
+            <span className={forumHeroChipClass}>
               <MessageSquare className="size-3 shrink-0" aria-hidden />
-              {disputeChip(report)}
+              {forumHeroChip.label}
             </span>
+            {legalHeroChip ? (
+              <span className={legalHeroChipClass}>
+                <FileText className="size-3 shrink-0" aria-hidden />
+                {legalHeroChip.label}
+              </span>
+            ) : null}
           </div>
           <p className="mt-3 text-sm leading-[1.7] text-primary-foreground/90 sm:text-[15px]">
             {report.summaryZh}

@@ -5,6 +5,8 @@ import {
   forumDisputeChip,
   hasForumDisputeSignal,
   hasMatchedLegalEvents,
+  heroForumChipTone,
+  heroLegalChipTone,
   legalRecordsChip,
   reportHeroSummaryZh,
 } from "./report-hero-summary";
@@ -53,6 +55,26 @@ function baseReport(overrides: Partial<RiskReport> = {}): RiskReport {
   };
 }
 
+const legalEventDefendant = {
+  sourceType: "court_judgment" as const,
+  caseRef: "HCLA 1/2024",
+  court: "高院",
+  eventDate: "2024-01-01",
+  judgmentCategory: "employment_renovation" as const,
+  partyRole: "defendant" as const,
+  outcomeHint: "defendant_liable" as const,
+  hearingKeyPointsZh: ["合成"],
+  sourceUrl: "https://example.com/j",
+  matchReasonZh: "合成",
+};
+
+const legalEventPlaintiff = {
+  ...legalEventDefendant,
+  partyRole: "plaintiff" as const,
+  outcomeHint: undefined,
+  judgmentCategory: "other_civil" as const,
+};
+
 describe("reportHeroSummaryZh", () => {
   it("uses LLM summary when legal scope off", () => {
     const r = baseReport({
@@ -66,19 +88,7 @@ describe("reportHeroSummaryZh", () => {
     const r = baseReport({
       official: {
         mwcMatched: false,
-        legalEvents: [
-          {
-            sourceType: "court_judgment",
-            caseRef: "X",
-            court: "C",
-            eventDate: "2021-01-01",
-            judgmentCategory: "renovation_engineering_civil",
-            partyRole: "defendant",
-            hearingKeyPointsZh: ["a"],
-            sourceUrl: "https://example.com",
-            matchReasonZh: "m",
-          },
-        ],
+        legalEvents: [legalEventDefendant],
       },
       evaluation: {
         ...baseReport().evaluation,
@@ -122,19 +132,7 @@ describe("reportHeroSummaryZh", () => {
     const r = baseReport({
       official: {
         mwcMatched: false,
-        legalEvents: [
-          {
-            sourceType: "court_judgment",
-            caseRef: "X",
-            court: "C",
-            eventDate: "2021-01-01",
-            judgmentCategory: "small_claims_debt",
-            partyRole: "defendant",
-            hearingKeyPointsZh: ["a"],
-            sourceUrl: "https://example.com",
-            matchReasonZh: "m",
-          },
-        ],
+        legalEvents: [legalEventDefendant],
       },
       signals: {
         ...baseReport().signals,
@@ -149,25 +147,37 @@ describe("reportHeroSummaryZh", () => {
     });
     expect(reportHeroSummaryZh(r)).toContain("同時檢出");
   });
+});
 
-  it("legal chip shows count; forum chip muted when only legal", () => {
+describe("hero chips — four quadrants (labels)", () => {
+  it("neither: 公開討論未檢出 + 判詞庫未對照", () => {
+    const r = baseReport();
+    expect(forumDisputeChip(r).label).toBe("公開討論：未檢出");
+    expect(legalRecordsChip(r)?.label).toBe("判詞庫未對照");
+  });
+
+  it("forum only", () => {
     const r = baseReport({
-      official: {
-        mwcMatched: false,
-        legalEvents: [
-          {
-            sourceType: "court_judgment",
-            caseRef: "X",
-            court: "C",
-            eventDate: "2021-01-01",
-            judgmentCategory: "renovation_engineering_civil",
-            partyRole: "defendant",
-            hearingKeyPointsZh: ["a"],
-            sourceUrl: "https://example.com",
-            matchReasonZh: "m",
-          },
-        ],
+      signals: {
+        ...baseReport().signals,
+        boundHitCount: 1,
+        highlights: [{ summaryZh: "提及", url: "https://example.com/x" }],
       },
+      evaluation: {
+        ...baseReport().evaluation,
+        reputationTrack: {
+          disputeLevel: "active_concerning",
+          recentDisputeCount: 2,
+        },
+      },
+    });
+    expect(forumDisputeChip(r).label).toBe("近期糾紛提及 · 2 則");
+    expect(legalRecordsChip(r)?.label).toBe("判詞庫未對照");
+  });
+
+  it("legal only", () => {
+    const r = baseReport({
+      official: { mwcMatched: false, legalEvents: [legalEventDefendant] },
       evaluation: {
         ...baseReport().evaluation,
         reputationTrack: {
@@ -176,7 +186,61 @@ describe("reportHeroSummaryZh", () => {
         },
       },
     });
+    expect(forumDisputeChip(r).label).toBe("公開討論：未檢出");
     expect(legalRecordsChip(r)?.label).toBe("公開判詞 · 1 宗");
-    expect(forumDisputeChip(r).label).toBe("網上投訴");
+  });
+
+  it("both", () => {
+    const r = baseReport({
+      official: { mwcMatched: false, legalEvents: [legalEventDefendant] },
+      signals: {
+        ...baseReport().signals,
+        boundHitCount: 1,
+        highlights: [{ summaryZh: "投訴", url: "https://example.com/p" }],
+      },
+      evaluation: {
+        ...baseReport().evaluation,
+        reputationTrack: {
+          disputeLevel: "active_concerning",
+          recentDisputeCount: 1,
+        },
+      },
+    });
+    expect(forumDisputeChip(r).label).toBe("近期糾紛提及 · 1 則");
+    expect(legalRecordsChip(r)?.label).toBe("公開判詞 · 1 宗");
+  });
+});
+
+describe("hero chip tones", () => {
+  it("forum with signal uses disputeTone; without signal muted", () => {
+    const quiet = baseReport();
+    expect(heroForumChipTone(quiet, "warning")).toBe("muted");
+    const loud = baseReport({
+      signals: {
+        ...baseReport().signals,
+        highlights: [{ summaryZh: "x", url: "https://example.com" }],
+      },
+    });
+    expect(heroForumChipTone(loud, "warning")).toBe("warning");
+    expect(heroForumChipTone(loud, "muted")).toBe("muted");
+  });
+
+  it("legal: defendant liable employment = warning; plaintiff = muted", () => {
+    const defendant = baseReport({
+      official: { mwcMatched: false, legalEvents: [legalEventDefendant] },
+    });
+    expect(heroLegalChipTone(defendant)).toBe("warning");
+
+    const plaintiff = baseReport({
+      official: { mwcMatched: false, legalEvents: [legalEventPlaintiff] },
+      evaluation: {
+        ...baseReport().evaluation,
+        reputationTrack: {
+          disputeLevel: "active_concerning",
+          recentDisputeCount: 0,
+        },
+      },
+    });
+    expect(heroLegalChipTone(plaintiff)).toBe("muted");
   });
 });
