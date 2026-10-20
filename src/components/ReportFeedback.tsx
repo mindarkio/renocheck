@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { FEEDBACK_ERROR_ZH } from "@/lib/feedback-copy-zh";
 import { FeedbackInline } from "./FeedbackInline";
 import { FeedbackSlideIn } from "./FeedbackSlideIn";
 
@@ -60,6 +61,7 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
   const [phase, setPhase] = useState<"editing" | "submitting" | "done">(() =>
     readStorage(fingerprint) === "submitted" ? "done" : "editing",
   );
+  const [error, setError] = useState<string | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
   const [inlineUsed, setInlineUsed] = useState(false);
   const [storageBlock, setStorageBlock] = useState(() => {
@@ -74,6 +76,13 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
   const sentinelSeen = useRef(false);
   const timerReady = useRef(false);
   const slideOpenRef = useRef(false);
+  const thanksTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (thanksTimer.current != null) window.clearTimeout(thanksTimer.current);
+    };
+  }, []);
 
   function syncInlineInView() {
     const el = inlineRef.current;
@@ -145,9 +154,16 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageBlock, inlineUsed, phase, slideOpen, fingerprint]);
 
+  function clearThanksTimer() {
+    if (thanksTimer.current == null) return;
+    window.clearTimeout(thanksTimer.current);
+    thanksTimer.current = null;
+  }
+
   async function submit(placement: "inline" | "slide_in") {
     if (!rating || phase !== "editing") return;
     setPhase("submitting");
+    setError(null);
     try {
       const res = await fetch("/api/feedback", {
         method: "POST",
@@ -162,9 +178,12 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
       });
       if (res.status === 204 || res.status === 404) {
         writeStorage(fingerprint, "submitted");
+        setStorageBlock(true);
         setPhase("done");
         if (placement === "slide_in") {
-          window.setTimeout(() => {
+          clearThanksTimer();
+          thanksTimer.current = window.setTimeout(() => {
+            thanksTimer.current = null;
             const slide = document.getElementById("report-feedback-slide");
             if (slide?.contains(document.activeElement)) {
               inlineSectionRef.current?.focus();
@@ -178,6 +197,13 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
     } catch {
       // The page stays usable. The form remains so they can retry.
     }
+    setError(FEEDBACK_ERROR_ZH);
+    setPhase("editing");
+  }
+
+  function changeRating() {
+    clearThanksTimer();
+    setError(null);
     setPhase("editing");
   }
 
@@ -211,6 +237,7 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
           comment={comment}
           done={phase === "done"}
           busy={phase === "submitting"}
+          error={error}
           onRating={(next) => {
             setInlineUsed(true);
             if (slideOpenRef.current) {
@@ -221,6 +248,7 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
           }}
           onComment={setComment}
           onSubmit={() => void submit("inline")}
+          onChangeRating={changeRating}
         />
       </div>
       <FeedbackSlideIn
@@ -229,9 +257,11 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
         comment={comment}
         done={phase === "done"}
         busy={phase === "submitting"}
+        error={error}
         onRating={setRating}
         onComment={setComment}
         onSubmit={() => void submit("slide_in")}
+        onChangeRating={changeRating}
         onDismiss={dismissSlide}
       />
     </>

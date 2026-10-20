@@ -12,9 +12,13 @@ import {
 import { FeedbackSlideIn } from "./FeedbackSlideIn";
 import { ReportFeedback } from "./ReportFeedback";
 import {
+  FEEDBACK_CHANGE_ZH,
   FEEDBACK_CLOSE_LABEL_ZH,
   FEEDBACK_DISMISS_ZH,
+  FEEDBACK_DOWN_ZH,
+  FEEDBACK_ERROR_ZH,
   FEEDBACK_REGION_LABEL_ZH,
+  FEEDBACK_SUBMIT_ZH,
   FEEDBACK_THANKS_ZH,
   FEEDBACK_UP_ZH,
 } from "@/lib/feedback-copy-zh";
@@ -142,6 +146,7 @@ describe("FeedbackSlideIn", () => {
         onRating={() => {}}
         onComment={() => {}}
         onSubmit={() => {}}
+        onChangeRating={() => {}}
         onDismiss={onDismiss}
       />,
     );
@@ -172,6 +177,7 @@ describe("FeedbackSlideIn", () => {
         onRating={() => {}}
         onComment={() => {}}
         onSubmit={() => {}}
+        onChangeRating={() => {}}
         onDismiss={onDismiss}
       />,
     );
@@ -307,6 +313,45 @@ describe("ReportFeedback slide-in", () => {
       { timeout: 3_000 },
     );
     expect(screen.getByText(FEEDBACK_THANKS_ZH)).toBeTruthy();
+    expect(screen.getByRole("button", { name: FEEDBACK_CHANGE_ZH })).toBeTruthy();
+  });
+
+  it("keeps the form and announces when the vote fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ error: "unavailable" }), { status: 503 })),
+    );
+    render(<ReportFeedback fingerprint={FP} />);
+    fireEvent.click(screen.getByRole("button", { name: FEEDBACK_UP_ZH }));
+    fireEvent.click(screen.getByRole("button", { name: FEEDBACK_SUBMIT_ZH }));
+    const message = await screen.findByText(FEEDBACK_ERROR_ZH);
+    expect(message.closest("[aria-live]")?.getAttribute("aria-live")).toBe(
+      "polite",
+    );
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    expect(screen.getByRole("button", { name: FEEDBACK_SUBMIT_ZH })).toBeTruthy();
+    expect(localStorage.getItem(`renocheck:fb:company_report:${FP}`)).toBeNull();
+  });
+
+  it("sends a changed rating through the same feedback endpoint", async () => {
+    const fetchMock = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ReportFeedback fingerprint={FP} />);
+    fireEvent.click(screen.getByRole("button", { name: FEEDBACK_UP_ZH }));
+    fireEvent.click(screen.getByRole("button", { name: FEEDBACK_SUBMIT_ZH }));
+    await screen.findByText(FEEDBACK_THANKS_ZH);
+    fireEvent.click(screen.getByRole("button", { name: FEEDBACK_CHANGE_ZH }));
+    fireEvent.click(screen.getByRole("button", { name: FEEDBACK_DOWN_ZH }));
+    fireEvent.click(screen.getByRole("button", { name: FEEDBACK_SUBMIT_ZH }));
+    await screen.findByText(FEEDBACK_THANKS_ZH);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/api/feedback");
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe("/api/feedback");
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)).rating).toBe(
+      "down",
+    );
   });
 
   it("falls back to sessionStorage when localStorage throws", () => {

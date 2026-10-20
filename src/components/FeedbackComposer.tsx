@@ -2,6 +2,7 @@
 
 import { useId, useLayoutEffect, useRef } from "react";
 import {
+  FEEDBACK_CHANGE_ZH,
   FEEDBACK_COMMENT_MAX,
   FEEDBACK_DOWN_ZH,
   FEEDBACK_PLACEHOLDER_ZH,
@@ -19,22 +20,28 @@ export function FeedbackComposer({
   comment,
   done,
   busy,
+  error,
   onRating,
   onComment,
   onSubmit,
+  onChangeRating,
 }: {
   heading: string;
   rating: "up" | "down" | null;
   comment: string;
   done: boolean;
   busy?: boolean;
+  error?: string | null;
   onRating: (rating: "up" | "down") => void;
   onComment: (comment: string) => void;
   onSubmit: () => void;
+  onChangeRating: () => void;
 }) {
   const counterId = useId();
   const thanksRef = useRef<HTMLParagraphElement>(null);
+  const upRef = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef(false);
+  const changeFocus = useRef(false);
 
   useLayoutEffect(() => {
     if (!done || !returnFocus.current) return;
@@ -42,21 +49,43 @@ export function FeedbackComposer({
     thanksRef.current?.focus();
   }, [done]);
 
+  useLayoutEffect(() => {
+    if (done || !changeFocus.current) return;
+    changeFocus.current = false;
+    upRef.current?.focus();
+  }, [done]);
+
   return (
-    <div aria-live="polite" className="space-y-3">
+    <div className="space-y-3">
+      <div aria-live="polite" className="space-y-2">
+        {error ? <p className="text-sm text-foreground">{error}</p> : null}
+        {done ? (
+          <p
+            ref={thanksRef}
+            tabIndex={-1}
+            className="text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          >
+            {FEEDBACK_THANKS_ZH}
+          </p>
+        ) : null}
+      </div>
       {done ? (
-        <p
-          ref={thanksRef}
-          tabIndex={-1}
-          className="text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        <button
+          type="button"
+          className={`${tap} border-border bg-background text-foreground`}
+          onClick={() => {
+            changeFocus.current = true;
+            onChangeRating();
+          }}
         >
-          {FEEDBACK_THANKS_ZH}
-        </p>
+          {FEEDBACK_CHANGE_ZH}
+        </button>
       ) : (
         <>
       <p className="text-sm font-medium text-foreground">{heading}</p>
       <div className="flex flex-wrap gap-2">
         <button
+          ref={upRef}
           type="button"
           className={`${tap} ${
             rating === "up"

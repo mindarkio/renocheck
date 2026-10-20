@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { REPORT_TRUST_FORBIDDEN_ZH } from "./report-trust-copy-zh";
 import {
+  FEEDBACK_CHANGE_ZH,
   FEEDBACK_CLOSE_LABEL_ZH,
   FEEDBACK_COMPANY_HEADING_ZH,
+  FEEDBACK_ERROR_ZH,
   FEEDBACK_DISMISS_ZH,
   FEEDBACK_DOWN_ZH,
   FEEDBACK_PLACEHOLDER_ZH,
@@ -25,6 +27,9 @@ describe("feedback copy", () => {
     expect(FEEDBACK_DISMISS_ZH).toBe("唔使喇");
     expect(FEEDBACK_REGION_LABEL_ZH).toBe("意見回饋");
     expect(FEEDBACK_CLOSE_LABEL_ZH).toBe("關閉");
+    expect(FEEDBACK_ERROR_ZH).toBe("暫時送唔到，請稍後再試。");
+    expect(FEEDBACK_CHANGE_ZH).toBe("改評分");
+    expect(FEEDBACK_PLACEHOLDER_ZH).toContain("唔好填姓名或電話");
     expect(FEEDBACK_COMPANY_HEADING_ZH).not.toBe(FEEDBACK_QUOTE_HEADING_ZH);
   });
 
@@ -40,6 +45,8 @@ describe("feedback copy", () => {
       FEEDBACK_DISMISS_ZH,
       FEEDBACK_REGION_LABEL_ZH,
       FEEDBACK_CLOSE_LABEL_ZH,
+      FEEDBACK_ERROR_ZH,
+      FEEDBACK_CHANGE_ZH,
     ].join("\n");
     for (const word of REPORT_TRUST_FORBIDDEN_ZH) {
       expect(text).not.toContain(word);

@@ -10,5 +10,8 @@ export const FEEDBACK_THANKS_ZH = "多謝你嘅意見！";
 export const FEEDBACK_DISMISS_ZH = "唔使喇";
 export const FEEDBACK_REGION_LABEL_ZH = "意見回饋";
 export const FEEDBACK_CLOSE_LABEL_ZH = "關閉";
+/** Aaron approved 2026-10-20. */
+export const FEEDBACK_ERROR_ZH = "暫時送唔到，請稍後再試。";
+export const FEEDBACK_CHANGE_ZH = "改評分";
 
 export const FEEDBACK_COMMENT_MAX = 500;

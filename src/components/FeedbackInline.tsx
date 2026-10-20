@@ -10,18 +10,22 @@ export function FeedbackInline({
   comment,
   done,
   busy,
+  error,
   onRating,
   onComment,
   onSubmit,
+  onChangeRating,
 }: {
   sectionRef?: Ref<HTMLElement>;
   rating: "up" | "down" | null;
   comment: string;
   done: boolean;
   busy?: boolean;
+  error?: string | null;
   onRating: (rating: "up" | "down") => void;
   onComment: (comment: string) => void;
   onSubmit: () => void;
+  onChangeRating: () => void;
 }) {
   return (
     <section
@@ -36,9 +40,11 @@ export function FeedbackInline({
         comment={comment}
         done={done}
         busy={busy}
+        error={error}
         onRating={onRating}
         onComment={onComment}
         onSubmit={onSubmit}
+        onChangeRating={onChangeRating}
       />
     </section>
   );

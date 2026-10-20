@@ -16,9 +16,11 @@ export function FeedbackSlideIn({
   comment,
   done,
   busy,
+  error,
   onRating,
   onComment,
   onSubmit,
+  onChangeRating,
   onDismiss,
 }: {
   open: boolean;
@@ -26,9 +28,11 @@ export function FeedbackSlideIn({
   comment: string;
   done: boolean;
   busy?: boolean;
+  error?: string | null;
   onRating: (rating: "up" | "down") => void;
   onComment: (comment: string) => void;
   onSubmit: () => void;
+  onChangeRating: () => void;
   onDismiss: () => void;
 }) {
   const regionRef = useRef<HTMLDivElement>(null);
@@ -141,9 +145,11 @@ export function FeedbackSlideIn({
         comment={comment}
         done={done}
         busy={busy}
+        error={error}
         onRating={onRating}
         onComment={onComment}
         onSubmit={onSubmit}
+        onChangeRating={onChangeRating}
       />
       <button
         type="button"
