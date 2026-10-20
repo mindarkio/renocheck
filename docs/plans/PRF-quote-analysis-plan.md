@@ -405,12 +405,12 @@ create table public.report_feedback (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   surface text not null check (surface in ('company_report','quote_analysis')),
-  report_ref text not null check (report_ref ~ '^[0-9a-f]{32}$' or report_ref ~ '^[0-9a-f-]{36}$'), -- fingerprint or quote analysis uuid
-  report_version text,                      -- REPORT_VERSION or QUOTE_ANALYSIS_VERSION at time of rating
+  report_ref text not null check (report_ref ~ '^[0-9a-f]{32}$' or report_ref ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'), -- fingerprint or quote analysis uuid [Rev6.3 L7]
+  report_version text check (report_version is null or char_length(report_version) <= 32), -- REPORT_VERSION or QUOTE_ANALYSIS_VERSION at time of rating [Rev6.3 L7]
   rating text not null check (rating in ('up','down')),
   comment text check (comment is null or char_length(comment) <= 500),  -- server-redacted; C0/C1 control + bidi chars stripped before insert [Rev3 L3]
   placement text not null check (placement in ('slide_in','inline')),
-  device_hash text not null,                -- HMAC(rc_did); never raw cookie
+  device_hash text not null check (device_hash ~ '^[0-9a-f]{64}$'), -- HMAC(rc_did); never raw cookie [Rev6.3 L7]
   unique (surface, report_ref, device_hash) -- one vote per report per device; upsert allows changing vote
 );
 create index report_feedback_created_at_idx on public.report_feedback (created_at desc);
@@ -1041,6 +1041,7 @@ The other bullets, the third-party tip, the crop step and the collection stateme
 - After a pick, an optional textarea appears: placeholder 「想補充啲咩？（可選，唔好填姓名或電話）」, max 500 characters with a live counter, then the 「送出」 button.
 - Submitting the thumb alone is allowed. A comment can be added and re-sent, upserting on the unique key.
 - Done state: 「多謝你嘅意見！」 in an `aria-live="polite"` region.
+- [Rev6.3 L-N3] 「改評分」 after a reload starts blank. The browser stores only `shown`, `dismissed`, or `submitted`; the rating and the comment are not kept client-side. 改評分 then shows an empty form (neither thumb pressed, comment box empty once a thumb is picked). Saving replaces the earlier rating and comment. Leaving the comment empty overwrites the stored comment with null.
 
 **Slide-in card:**
 - Trigger, whichever comes first:

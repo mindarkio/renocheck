@@ -122,7 +122,7 @@ Before insert, the F1 redactor (M1) folds full-width digits, Latin letters, `＠
 
 **Residual:** numbers spelled in Chinese numerals (九一二三…) and free-form names without an honorific are not caught. The placeholder warning and the not-public rule cover that.
 
-The F1 privacy notice is drafted in that PR description for Aaron. It is **not** committed to `/legal` here. `DISCLAIMER_VERSION` stays `1.2.0` until he approves a follow-up (proposed patch `1.2.1`). `FEEDBACK_ENABLED` stays off until that notice ships and M1 is applied.
+The F1 feedback notice (approved by Aaron 2026-10-20) is published in `/legal/disclaimer` §七 `#feedback-privacy` by PR-F1, with `DISCLAIMER_VERSION` 1.2.1. `FEEDBACK_ENABLED` stays off until M1 is applied. The approved notice discloses the 12-month random device-id cookie (the server stores only the hash), says masking covers common phone and email formats but may not catch everything, and names the rights to restrict and object to the processing.
 
 ## 10. ICO
 
