@@ -71,10 +71,25 @@ import {
   riskBandMeterActiveLabelClass,
   riskBandSurfaceClass,
 } from "@/lib/risk-band-display";
+import { surfaceCardClass as reportShellClass } from "@/lib/ui-surfaces";
 import {
-  brandReportSectionTitleClass,
-  surfaceCardClass as reportShellClass,
-} from "@/lib/ui-surfaces";
+  reportBlockPaddingClass,
+  reportBodyTextClass,
+  reportExternalLinkTouchClass,
+  reportH1Class,
+  reportH2SectionClass,
+  reportHeroBodyClass,
+  reportHeroChipClass,
+  reportHeroMetaClass,
+  reportHighlightGridClass,
+  reportHighlightLastOddClass,
+  reportListItemGapClass,
+  reportMajorGroupGapClass,
+  reportMetaTextClass,
+  reportRiskBandDisplayClass,
+  reportSectionStackClass,
+  reportTitleToContentClass,
+} from "@/lib/report-tokens";
 import { legalEventsPanelClass, reportReadingColumnClass } from "./report-column";
 import {
   forumDisputeChip,
@@ -226,20 +241,19 @@ function sourceBadgeAppearance(sourceName: string, url: string): string {
   return "bg-muted text-foreground/85 shadow-sm ring-1 ring-inset ring-border/60";
 }
 
-const reportBlockClass = "px-5 py-5 sm:px-6 sm:py-6";
+const reportBlockClass = reportBlockPaddingClass;
 
 const reportBlockDividerClass =
   "border-t border-border/60 first:border-t-0";
 
-const reportSectionTitleClass = brandReportSectionTitleClass;
+const reportSectionTitleClass = reportH2SectionClass;
 
-const reportBodyClass = "text-sm leading-[1.7] text-foreground/90 sm:text-[15px]";
+const reportBodyClass = reportBodyTextClass;
 
-const reportMetaClass =
-  "text-xs leading-[1.65] text-muted-foreground sm:text-[13px]";
+const reportMetaClass = reportMetaTextClass;
 
 const reportListRowClass =
-  "border-b border-border/50 py-4 last:border-b-0 last:pb-0 first:pt-0";
+  `border-b border-border/50 py-4 last:border-b-0 last:pb-0 first:pt-0 ${reportListItemGapClass}`;
 
 function SectionHeading({
   id,
@@ -251,13 +265,13 @@ function SectionHeading({
   children: ReactNode;
 }) {
   return (
-    <h3
+    <h2
       id={id}
       className={`${reportSectionTitleClass} flex items-center gap-2.5`}
     >
       <Icon className="size-[1.125rem] shrink-0 text-primary/75" aria-hidden />
       {children}
-    </h3>
+    </h2>
   );
 }
 
@@ -275,7 +289,7 @@ function ReportExternalLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={className}
+      className={`${reportExternalLinkTouchClass} ${className ?? ""}`}
     >
       {children}
       <ExternalLink className="ms-1 inline size-3.5 opacity-80" aria-hidden />
@@ -303,7 +317,7 @@ function ReportBlock({
       aria-labelledby={id}
     >
       <SectionHeading id={id} icon={icon}>{title}</SectionHeading>
-      <div className="mt-4">{children}</div>
+      <div className={reportTitleToContentClass}>{children}</div>
     </section>
   );
 }
@@ -331,7 +345,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
   const mwcRegistryHref = mwcRegistrySearchHref(report);
-  const licenseChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(license.tone)}`;
+  const licenseChipClass = `${reportHeroChipClass} ${heroChipToneClass(license.tone)}`;
   const disputeTone =
     report.evaluation.reputationTrack.disputeLevel === "severe" ||
     report.evaluation.reputationTrack.disputeLevel === "active_concerning"
@@ -341,8 +355,8 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const forumHeroTone = heroForumChipTone(report, disputeTone);
   const legalHeroChip = legalRecordsChip(report);
   const legalHeroTone = heroLegalChipTone(report, disputeTone);
-  const forumHeroChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(forumHeroTone)}`;
-  const legalHeroChipClass = `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium sm:text-xs ${heroChipToneClass(legalHeroTone)}`;
+  const forumHeroChipClass = `${reportHeroChipClass} ${heroChipToneClass(forumHeroTone)}`;
+  const legalHeroChipClass = `${reportHeroChipClass} ${heroChipToneClass(legalHeroTone)}`;
 
   const legalLookupDegraded = isReportLegalLookupDegraded(report);
   const showFooterNotes = reportCardShowFooterNotes(
@@ -459,8 +473,8 @@ export function ReportCard({ report }: { report: RiskReport }) {
   }
 
   return (
-    <div className="space-y-4 text-left">
-    <div className={`${reportReadingColumnClass} space-y-4`}>
+    <div className={`${reportMajorGroupGapClass} text-left`}>
+    <div className={`${reportReadingColumnClass} ${reportSectionStackClass}`}>
     {showCrRegistrationAlert ? (
       <div
         className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm sm:px-5 sm:py-5"
@@ -505,12 +519,12 @@ export function ReportCard({ report }: { report: RiskReport }) {
       <header
         className="bg-primary px-5 py-5 text-primary-foreground sm:px-6 sm:py-6"
       >
-        <p className="text-[11px] font-medium text-primary-foreground/70 sm:text-xs">
+        <p className={`${reportHeroMetaClass} font-medium`}>
           查證對象
         </p>
-        <h2 className="mt-0.5 text-base font-semibold leading-snug sm:text-lg">
+        <h1 className={`mt-0.5 ${reportH1Class}`}>
           {report.entity.displayName}
-        </h2>
+        </h1>
 
         <div className="mt-4 border-t border-primary-foreground/15 pt-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-primary-foreground">
@@ -518,7 +532,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
             風險參考分檔
           </p>
           <p
-            className={`mt-2 text-2xl leading-tight tracking-tight sm:text-[1.65rem] ${riskBandMeterActiveLabelClass(headerRiskBandZh, true)}`}
+            className={`mt-2 ${reportRiskBandDisplayClass} ${riskBandMeterActiveLabelClass(headerRiskBandZh, true)}`}
           >
             {headerBandLabel}
           </p>
@@ -526,7 +540,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
             bandZh={headerRiskBandZh}
             emphasized
           />
-          <p className="mt-3 flex items-start gap-2 text-[11px] leading-[1.6] text-primary-foreground/75 sm:text-xs">
+          <p className={`mt-3 flex items-start gap-2 ${reportHeroMetaClass}`}>
             <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span>
               置信度{confidenceLabelZh(report.evaluation.confidence)} ·
@@ -582,7 +596,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
               </span>
             ) : null}
           </div>
-          <p className="mt-3 text-sm leading-[1.7] text-primary-foreground/90 sm:text-[15px]">
+          <p className={`mt-3 ${reportHeroBodyClass}`}>
             {report.summaryZh}
           </p>
           {showSaturationNote ? (
@@ -595,7 +609,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
             </p>
           ) : null}
           {showThemes ? (
-            <p className="mt-3 text-xs leading-[1.65] text-primary-foreground/75 sm:text-[13px]">
+            <p className={`mt-3 ${reportHeroMetaClass}`}>
               <span className="font-medium text-primary-foreground/90">主題：</span>
               {report.signals.themes.join("、")}
             </p>
@@ -606,7 +620,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
           <div className="mt-4 border-t border-primary-foreground/15 pt-3">
             <p
               id="scope-heading"
-              className="flex items-center gap-1.5 text-xs font-medium text-primary-foreground/75"
+              className={`flex items-center gap-1.5 text-xs font-medium text-primary-foreground/80 lg:text-sm`}
             >
               <ScanSearch className="size-3.5 shrink-0" aria-hidden />
               政府名冊
@@ -616,7 +630,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                 href={mwcRegistryHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-xs leading-relaxed text-primary-foreground/90 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/45"
+                className={`mt-2 inline-flex items-center gap-1 text-xs leading-relaxed text-primary-foreground/90 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/45 ${reportExternalLinkTouchClass}`}
               >
                 {officialRegister.companyName}
                 {officialRegister.registrationNo
@@ -653,7 +667,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
               </p>
             ) : null}
             {officialRegister.registryDataAsOf ? (
-              <p className="mt-2 text-[10px] leading-relaxed text-primary-foreground/60 sm:text-xs">
+              <p className={`mt-2 ${reportHeroMetaClass} opacity-80`}>
                 名冊摘錄截至{" "}
                 <time dateTime={officialRegister.registryDataAsOf}>
                   {formatReportGeneratedAtHkt(
@@ -671,7 +685,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
             <Link2 className="size-3.5 shrink-0" aria-hidden />
             一鍵查證（外部連結）
           </p>
-          <ul className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-primary-foreground/85 sm:text-xs">
+          <ul className={`mt-2 space-y-1.5 ${reportHeroMetaClass}`}>
             {(() => {
               const links = buildJudiciaryDeepLinks(
                 report.entity.searchLabelUsed,
@@ -698,7 +712,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                     <DailyCauseListSearchForm
                       partyName={report.entity.searchLabelUsed}
                     />
-                    <span className="mt-0.5 block text-primary-foreground/60">
+                    <span className="mt-0.5 block text-primary-foreground/80">
                       {links.dailyCauseListNote}
                     </span>
                   </li>
@@ -708,9 +722,9 @@ export function ReportCard({ report }: { report: RiskReport }) {
           </ul>
         </div>
 
-        <p className="mt-4 border-t border-primary-foreground/15 pt-3 text-[11px] leading-[1.6] text-primary-foreground/65 sm:text-xs">
+        <p className={`mt-4 border-t border-primary-foreground/15 pt-3 ${reportHeroMetaClass}`}>
           生成時間{" "}
-          <time dateTime={report.generatedAt}>
+          <time className="tabular-nums" dateTime={report.generatedAt}>
             {formatReportGeneratedAtHkt(report.generatedAt)}
           </time>
         </p>
@@ -821,7 +835,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
       </div>
     ) : null}
 
-    <div className={`${reportReadingColumnClass} space-y-4`}>
+    <div className={`${reportReadingColumnClass} ${reportSectionStackClass}`}>
     {showLegalEvents && showArticleTail ? (
       <article className={`${reportShellClass} overflow-hidden`}>
         {afterLegalEventsBody()}
@@ -834,15 +848,17 @@ export function ReportCard({ report }: { report: RiskReport }) {
         role="region"
         aria-labelledby="highlights-heading"
       >
-        <h3
+        <h2
           id="highlights-heading"
           className={`${reportSectionTitleClass} flex items-center gap-2 px-1 sm:px-0`}
         >
           <MessageSquare className="size-[1.125rem] shrink-0 text-primary/75" aria-hidden />
           公開討論摘要（{report.signals.discussionCount} 則）
-        </h3>
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+        </h2>
+        <div className={reportHighlightGridClass}>
           {highlights.map((h, index) => {
+            const isLastOdd =
+              highlights.length % 2 === 1 && index === highlights.length - 1;
             const titleId = `highlight-title-${index}`;
             const title = highlightCardTitle(h);
             const body = highlightCardBody(h);
@@ -851,12 +867,12 @@ export function ReportCard({ report }: { report: RiskReport }) {
             return (
               <section
                 key={h.url}
-                className={`${reportShellClass} relative flex h-full min-w-0 flex-col overflow-hidden px-3 pb-3 pt-5 sm:px-5 sm:pb-5 sm:pt-6`}
+                className={`${reportShellClass} relative flex h-full min-w-0 flex-col overflow-hidden px-5 pb-5 pt-6 lg:px-8 lg:pb-8 lg:pt-8 ${isLastOdd ? reportHighlightLastOddClass : ""}`}
                 aria-labelledby={titleId}
               >
                 {source ? (
                   <span
-                    className={`pointer-events-none absolute right-0 top-0 z-[1] inline-flex max-w-[62%] items-center truncate rounded-bl-xl rounded-tr-2xl px-2 py-1 text-[9px] font-bold leading-none tracking-wide sm:px-2.5 sm:py-1.5 sm:text-[10px] ${sourceBadgeAppearance(source, h.url)}`}
+                    className={`pointer-events-none absolute right-0 top-0 z-[1] inline-flex max-w-[62%] items-center truncate rounded-bl-xl rounded-tr-2xl px-2.5 py-1.5 text-xs font-bold leading-none tracking-wide ${sourceBadgeAppearance(source, h.url)}`}
                     aria-hidden
                   >
                     {sourceBadgeLabel(source, h.url)}
@@ -867,13 +883,13 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   href={h.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full line-clamp-3 text-[12px] font-semibold leading-snug text-primary underline-offset-2 hover:underline sm:text-sm"
+                  className={`block w-full max-w-[40em] line-clamp-3 text-[15px] font-semibold leading-snug text-primary underline-offset-2 hover:underline lg:text-base ${reportExternalLinkTouchClass}`}
                   title={title}
                 >
                   {title}
                 </a>
                 {when ? (
-                  <p className="mt-2 text-[10px] leading-snug text-muted-foreground sm:text-xs">
+                  <p className={`mt-2 ${reportMetaClass} tabular-nums`}>
                     {when}
                   </p>
                 ) : null}
@@ -888,7 +904,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   <div className="flex-1" aria-hidden />
                 )}
                 {h.incidentType ? (
-                  <p className="mt-auto pt-2 text-[10px] font-medium text-primary/75 sm:text-xs">
+                  <p className={`mt-auto pt-2 text-xs font-medium text-primary/75 lg:text-sm`}>
                     {incidentHashtag(h.incidentType)}
                   </p>
                 ) : null}
@@ -1006,17 +1022,14 @@ export function ReportCard({ report }: { report: RiskReport }) {
       </ul>
     </section>
 
-    <aside
-      className="px-1 py-2 sm:px-0"
-      aria-label="報告免責"
-    >
-      <p className="flex items-start gap-1.5 text-[11px] leading-[1.6] text-muted-foreground sm:text-xs">
+    <div className="px-1 py-2 sm:px-0" aria-label="報告免責">
+      <p className={`flex items-start gap-1.5 ${reportMetaClass}`}>
         <Info className="mt-0.5 size-3.5 shrink-0 text-primary/60" aria-hidden />
         <span>
           本報告為公開資料摘要及風險參考分檔，非信貸報告，非對承辦商的推薦。
         </span>
       </p>
-    </aside>
+    </div>
     </div>
     </div>
   );

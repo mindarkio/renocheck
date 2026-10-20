@@ -66,7 +66,7 @@ export function RiskBandMeter({
       </div>
       <div
         className={`mt-2.5 grid grid-cols-4 gap-1 text-center leading-snug ${
-          emphasized ? "text-[11px] sm:text-xs" : "text-[10px] sm:text-[11px]"
+          emphasized ? "text-xs" : "text-xs sm:text-sm"
         }`}
         aria-hidden
       >

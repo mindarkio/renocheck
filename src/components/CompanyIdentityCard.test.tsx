@@ -225,6 +225,6 @@ describe("CompanyIdentityCard layout/a11y (PR24 L1/L2)", () => {
     );
     expect(container.querySelector("h3#cr-identity-heading")).not.toBeNull();
     expect(container.querySelector("h2")).toBeNull();
-    expect(container.innerHTML).toContain("sm:grid-cols-[auto_1fr]");
+    expect(container.innerHTML).toContain("grid-cols-[auto_1fr]");
   });
 });

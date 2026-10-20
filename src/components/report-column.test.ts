@@ -1,23 +1,32 @@
 import { describe, expect, it } from "vitest";
 import {
   legalEventsPanelClass,
+  reportGridClass,
+  reportMainColumnClass,
   reportPageColumnClass,
-  reportReadingColumnClass,
+  siteLayoutContainerClass,
 } from "./report-column";
 
 describe("report column widths", () => {
-  it("prose stays on the 584px reading measure", () => {
-    expect(reportReadingColumnClass).toContain("max-w-[584px]");
-    expect(reportReadingColumnClass).not.toContain("lg:max-w");
+  it("site shell uses PRU-1 container breakpoints", () => {
+    expect(siteLayoutContainerClass).toContain("max-w-[640px]");
+    expect(siteLayoutContainerClass).toContain("lg:px-10");
+    expect(siteLayoutContainerClass).toContain("min-[1280px]:max-w-[1120px]");
+    expect(siteLayoutContainerClass).toContain("min-[1440px]:max-w-[1200px]");
   });
 
-  it("report page can grow at lg so the judgments panel has room", () => {
-    expect(reportPageColumnClass).toContain("max-w-[584px]");
-    expect(reportPageColumnClass).toContain("lg:max-w-7xl");
+  it("report page uses the shared container", () => {
+    expect(reportPageColumnClass).toBe(siteLayoutContainerClass);
   });
 
-  it("judgments panel fills the page shell only from lg", () => {
-    expect(legalEventsPanelClass).toContain("max-w-[584px]");
-    expect(legalEventsPanelClass).toContain("lg:max-w-none");
+  it("lg grid is 12 columns with 24px gutter", () => {
+    expect(reportGridClass).toContain("lg:grid-cols-12");
+    expect(reportGridClass).toContain("lg:gap-x-6");
+    expect(reportMainColumnClass).toContain("lg:col-span-8");
+  });
+
+  it("judgments panel stays inside main column", () => {
+    expect(legalEventsPanelClass).not.toContain("lg:max-w-none");
+    expect(legalEventsPanelClass).toContain("w-full");
   });
 });

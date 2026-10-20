@@ -424,11 +424,8 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.textContent).toContain("裁定須負責");
     expect(container.textContent).toContain("公開判詞紀錄（1 宗）");
     const panel = container.querySelector("[data-testid=legal-events-panel]");
-    expect(panel?.className).toContain("lg:max-w-none");
-    expect(panel?.className).toContain("max-w-[584px]");
-    const article = container.querySelector("article");
-    expect(article?.parentElement?.className).toContain("max-w-[584px]");
-    expect(article?.parentElement?.className).not.toContain("lg:max-w-none");
+    expect(panel?.className).toContain("w-full");
+    expect(panel?.className).not.toContain("lg:max-w-none");
   });
 
   it("有 legalEvents：唔顯示 C.2c alert", () => {
@@ -612,8 +609,8 @@ describe("ReportCard report trust (PR-BC)", () => {
         })}
       />,
     );
-    const chipText = "公開討論：未檢出公開判詞 · 1 宗";
-    assertClean(chipText);
+    const header = container.querySelector("header");
+    assertClean(header?.textContent ?? "");
     expect(screen.getByText("公開討論：未檢出")).toBeTruthy();
     expect(screen.getByText("公開判詞 · 1 宗")).toBeTruthy();
     expect(container.textContent).not.toContain("近期糾紛提及");
@@ -763,6 +760,6 @@ describe("ReportCard report trust (PR-BC)", () => {
     const header = container.querySelector("header");
     assertClean(header?.textContent ?? "");
     expect(screen.queryByText("判詞庫未對照")).toBeNull();
-    expect(screen.queryByText("公開判詞 ·")).toBeNull();
+    expect(container.textContent ?? "").not.toMatch(/公開判詞 ·/);
   });
 });

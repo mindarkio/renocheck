@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { BrandMenuMark } from "@/components/BrandMenuMark";
+import { siteLayoutContainerClass } from "@/components/report-column";
 
 const HOME_NAV = [
   { href: "/guides", label: "裝修指南" },
@@ -109,24 +111,39 @@ export function SiteHeader() {
         }`}
       >
         <nav
-          className="mx-auto flex max-w-[584px] items-center justify-end px-4 py-3 sm:px-6"
+          className={`${siteLayoutContainerClass} flex items-center justify-between gap-4 py-3`}
           aria-label="頁首"
         >
-          <button
-            type="button"
-            className={menuButtonClass(menuOpen)}
-            aria-expanded={menuOpen}
-            aria-controls={menuId}
-            aria-label={menuOpen ? "關閉選單" : "開啟選單"}
-            onClick={() => setMenuOpen((open) => !open)}
+          <Link
+            href="/"
+            className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
           >
-            <BrandMenuMark
-              open={menuOpen}
-              onPrimary={menuOpen}
-              className="size-7"
+            <Image
+              src="/logo/lockup-horizontal.svg"
+              alt="Renocheck 裝修點評"
+              width={280}
+              height={48}
+              className="h-6 w-auto sm:h-7 lg:h-8"
+              priority
             />
-          </button>
-          <DesktopNavLinks />
+          </Link>
+          <div className="flex items-center gap-2">
+            <DesktopNavLinks />
+            <button
+              type="button"
+              className={menuButtonClass(menuOpen)}
+              aria-expanded={menuOpen}
+              aria-controls={menuId}
+              aria-label={menuOpen ? "關閉選單" : "開啟選單"}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <BrandMenuMark
+                open={menuOpen}
+                onPrimary={menuOpen}
+                className="size-7"
+              />
+            </button>
+          </div>
         </nav>
       </header>
       <MobileNavMenuPortal

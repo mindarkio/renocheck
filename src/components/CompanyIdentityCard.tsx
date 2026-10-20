@@ -15,12 +15,16 @@ import {
   crBrNoCompareNoteZh,
   crHintIncorporationUnderOneYearZh,
 } from "@/lib/report-trust-copy-zh";
-import { brandReportSectionTitleClass } from "@/lib/ui-surfaces";
+import {
+  reportBlockPaddingClass,
+  reportBodyTextClass,
+  reportH3CardClass,
+  reportMetaTextClass,
+} from "@/lib/report-tokens";
 
-const reportBlockClass = "px-5 py-5 sm:px-6 sm:py-6 border-t border-border/60";
-const reportBodyClass = "text-sm leading-[1.7] text-foreground/90 sm:text-[15px]";
-const reportMetaClass =
-  "text-xs leading-[1.65] text-muted-foreground sm:text-[13px]";
+const reportBlockClass = `${reportBlockPaddingClass} border-t border-border/60`;
+const reportBodyClass = reportBodyTextClass;
+const reportMetaClass = reportMetaTextClass;
 
 function CrSourceAttribution({ retrievedAt }: { retrievedAt: string }) {
   return (
@@ -52,7 +56,7 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
     >
       <h3
         id="cr-identity-heading"
-        className={`flex items-center gap-2 ${brandReportSectionTitleClass}`}
+        className={`flex items-center gap-2 ${reportH3CardClass}`}
       >
         <Building2 className="size-5 shrink-0 text-primary" aria-hidden />
         {CR_IDENTITY_CARD_HEADING_ZH}
@@ -61,7 +65,7 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
       <div className="mt-4 space-y-3">
         {isMatched ? (
           <>
-            <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-[auto_1fr]">
+            <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-2">
               {cr.brNo?.trim() ? (
                 <>
                   <dt className={reportMetaClass}>
