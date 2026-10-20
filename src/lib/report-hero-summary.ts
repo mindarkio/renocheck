@@ -1,3 +1,5 @@
+import { legalEventAffectsHeroDisputeWarning } from "./legal-event-calibration";
+import { dedupeByJudgment } from "./lookup-legal-judgments";
 import type { RiskReport } from "./report-schema";
 
 const HERO_SUMMARY_MAX = 160;
@@ -66,28 +68,25 @@ export function reportHeroSummaryZh(report: RiskReport): string {
 
 export type HeroChipTone = "primary" | "warning" | "muted";
 
-/** Third hero badge — Track 1 imported judgments (independent of forum chip). */
+/** Track 1 judgments chip label (tone via heroLegalChipTone). */
 export function legalRecordsChip(
   report: RiskReport,
-): { label: string; tone: HeroChipTone } | null {
+): { label: string } | null {
   if (!isLegalSummaryScope(report)) return null;
-  const count = report.official.legalEvents?.length ?? 0;
+  const events = report.official.legalEvents ?? [];
+  const count = dedupeByJudgment(events).length;
   if (count > 0) {
     return {
       label: count === 1 ? "公開判詞 · 1 宗" : `公開判詞 · ${count} 宗`,
-      tone: "warning",
     };
   }
-  return { label: "判詞庫未對照", tone: "muted" };
+  return { label: "判詞庫未對照" };
 }
 
-/** Forum-only dispute badge when legal track is split out. */
-export function forumDisputeChip(report: RiskReport): {
-  label: string;
-  tone: HeroChipTone;
-} {
+/** Forum / public discussion chip label (tone via heroForumChipTone). */
+export function forumDisputeChip(report: RiskReport): { label: string } {
   if (!hasForumDisputeSignal(report)) {
-    return { label: "網上投訴", tone: "muted" };
+    return { label: "公開討論：未檢出" };
   }
   const { disputeLevel, recentDisputeCount } =
     report.evaluation.reputationTrack;
@@ -98,7 +97,6 @@ export function forumDisputeChip(report: RiskReport): {
           recentDisputeCount > 0
             ? `較早提及 · ${recentDisputeCount} 則`
             : "較早公開提及",
-        tone: "muted",
       };
     case "active_concerning":
       return {
@@ -106,11 +104,31 @@ export function forumDisputeChip(report: RiskReport): {
           recentDisputeCount > 0
             ? `近期糾紛提及 · ${recentDisputeCount} 則`
             : "近期糾紛提及",
-        tone: "warning",
       };
     case "severe":
-      return { label: "多宗可引用討論", tone: "warning" };
+      return { label: "多宗可引用討論" };
     default:
-      return { label: "公開討論提及", tone: "warning" };
+      return { label: "請核實來源" };
   }
+}
+
+export function heroForumChipTone(
+  report: RiskReport,
+  disputeTone: HeroChipTone,
+): HeroChipTone {
+  return hasForumDisputeSignal(report) ? disputeTone : "muted";
+}
+
+export function heroLegalChipTone(
+  report: RiskReport,
+  disputeTone: HeroChipTone,
+): HeroChipTone {
+  if (disputeTone !== "warning") return "muted";
+  const events = report.official.legalEvents ?? [];
+  if (events.length === 0) return "muted";
+  const bound = report.signals.boundHitCount ?? 0;
+  const warns = events.some((ev) =>
+    legalEventAffectsHeroDisputeWarning(ev, bound, report.generatedAt),
+  );
+  return warns ? "warning" : "muted";
 }

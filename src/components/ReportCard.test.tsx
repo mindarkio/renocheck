@@ -560,4 +560,209 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.textContent).not.toContain("C1111111");
     expect(container.textContent).not.toContain("商業登記號碼為");
   });
+
+  it("PRU-A1：淨判詞升高分檔 — 公開討論未檢出 + 公開判詞 chip，唔出近期糾紛提及", () => {
+    const evaluation = buildEvaluationStub({
+      overallGrade: "C",
+      confidence: "medium",
+      mwcMatched: false,
+      boundHitCount: 0,
+      highlightCount: 0,
+    });
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          summaryZh:
+            "未檢出相關的裝修糾紛或投訴討論摘要（不包括判詞紀錄）。",
+          evaluation: {
+            ...evaluation,
+            riskBandZh: "風險中等",
+            reputationTrack: {
+              disputeLevel: "active_concerning",
+              recentDisputeCount: 0,
+            },
+          },
+          official: {
+            mwcMatched: false,
+            legalLookupStatus: "ok",
+            legalEvents: [
+              {
+                sourceType: "court_judgment",
+                caseRef: "HCLA 99/2024",
+                court: "高院",
+                eventDate: "2025-01-01",
+                judgmentCategory: "employment_renovation",
+                partyRole: "defendant",
+                outcomeHint: "defendant_liable",
+                hearingKeyPointsZh: ["合成勞資要點"],
+                sourceUrl: "https://example.com/judgment",
+                matchReasonZh: "合成匹配",
+              },
+            ],
+          },
+          signals: {
+            discussionCount: 0,
+            themes: [],
+            highlights: [],
+            retrievalEvidence: [],
+            contractChecklist: ["佔位"],
+            actionableClauses: [],
+            boundHitCount: 0,
+          },
+        })}
+      />,
+    );
+    const chipText = "公開討論：未檢出公開判詞 · 1 宗";
+    assertClean(chipText);
+    expect(screen.getByText("公開討論：未檢出")).toBeTruthy();
+    expect(screen.getByText("公開判詞 · 1 宗")).toBeTruthy();
+    expect(container.textContent).not.toContain("近期糾紛提及");
+    const legalChip = screen.getByText("公開判詞 · 1 宗").closest("span");
+    expect(legalChip?.className).toContain("amber");
+    const forumChip = screen.getByText("公開討論：未檢出").closest("span");
+    expect(forumChip?.className).not.toContain("amber");
+  });
+
+  it("hero chip 顏色：兩樣都冇（兩粒灰）", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            legalLookupStatus: "ok",
+            legalEvents: [],
+            companiesRegistry: crRegistry(),
+          },
+        })}
+      />,
+    );
+    const header = container.querySelector("header");
+    assertClean(header?.textContent ?? "");
+    const forum = screen.getByText("公開討論：未檢出").closest("span");
+    const legal = screen.getByText("判詞庫未對照").closest("span");
+    expect(forum?.className).not.toContain("amber");
+    expect(legal?.className).not.toContain("amber");
+  });
+
+  it("hero chip 顏色：淨討論區（討論區琥珀、判詞庫未對照灰）", () => {
+    const evaluation = buildEvaluationStub({
+      overallGrade: "C",
+      confidence: "medium",
+      mwcMatched: false,
+      boundHitCount: 2,
+      highlightCount: 1,
+    });
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          evaluation: {
+            ...evaluation,
+            reputationTrack: {
+              disputeLevel: "active_concerning",
+              recentDisputeCount: 1,
+            },
+          },
+          signals: {
+            discussionCount: 1,
+            themes: [],
+            highlights: [
+              { summaryZh: "合成提及", url: "https://example.com/x" },
+            ],
+            retrievalEvidence: [],
+            contractChecklist: ["佔位"],
+            actionableClauses: [],
+            boundHitCount: 2,
+          },
+          official: {
+            mwcMatched: false,
+            legalLookupStatus: "ok",
+            legalEvents: [],
+          },
+        })}
+      />,
+    );
+    const header = container.querySelector("header");
+    assertClean(header?.textContent ?? "");
+    expect(screen.getByText("近期糾紛提及 · 1 則").closest("span")?.className).toContain(
+      "amber",
+    );
+    expect(screen.getByText("判詞庫未對照").closest("span")?.className).not.toContain(
+      "amber",
+    );
+  });
+
+  it("hero chip 顏色：兩樣都有（兩粒可一齊琥珀）", () => {
+    const evaluation = buildEvaluationStub({
+      overallGrade: "C",
+      confidence: "medium",
+      mwcMatched: false,
+      boundHitCount: 1,
+      highlightCount: 1,
+    });
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          evaluation: {
+            ...evaluation,
+            riskBandZh: "風險中等",
+            reputationTrack: {
+              disputeLevel: "active_concerning",
+              recentDisputeCount: 1,
+            },
+          },
+          signals: {
+            discussionCount: 1,
+            themes: [],
+            highlights: [
+              { summaryZh: "合成提及", url: "https://example.com/x" },
+            ],
+            retrievalEvidence: [],
+            contractChecklist: ["佔位"],
+            actionableClauses: [],
+            boundHitCount: 1,
+          },
+          official: {
+            mwcMatched: false,
+            legalLookupStatus: "ok",
+            legalEvents: [
+              {
+                sourceType: "court_judgment",
+                caseRef: "HCLA 1/2024",
+                court: "高院",
+                eventDate: "2024-06-01",
+                judgmentCategory: "employment_renovation",
+                partyRole: "defendant",
+                outcomeHint: "defendant_liable",
+                hearingKeyPointsZh: ["合成"],
+                sourceUrl: "https://example.com/j",
+                matchReasonZh: "合成",
+              },
+            ],
+          },
+        })}
+      />,
+    );
+    const header = container.querySelector("header");
+    assertClean(header?.textContent ?? "");
+    expect(screen.getByText("近期糾紛提及 · 1 則").closest("span")?.className).toContain(
+      "amber",
+    );
+    expect(screen.getByText("公開判詞 · 1 宗").closest("span")?.className).toContain(
+      "amber",
+    );
+  });
+
+  it("legal scope 關：冇判詞 chip", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          official: { mwcMatched: false },
+        })}
+      />,
+    );
+    const header = container.querySelector("header");
+    assertClean(header?.textContent ?? "");
+    expect(screen.queryByText("判詞庫未對照")).toBeNull();
+    expect(screen.queryByText("公開判詞 ·")).toBeNull();
+  });
 });
