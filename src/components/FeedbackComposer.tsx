@@ -25,6 +25,7 @@ export function FeedbackComposer({
   done,
   busy,
   error,
+  announce,
   onRating,
   onComment,
   onSubmit,
@@ -36,6 +37,7 @@ export function FeedbackComposer({
   done: boolean;
   busy?: boolean;
   error?: string | null;
+  announce?: boolean;
   onRating: (rating: "up" | "down") => void;
   onComment: (comment: string) => void;
   onSubmit: () => void;
@@ -61,7 +63,7 @@ export function FeedbackComposer({
 
   return (
     <div className="space-y-3">
-      <div aria-live="polite" className="space-y-2">
+      <div aria-live={announce === false ? undefined : "polite"} className="space-y-2">
         {error ? <p className="text-sm text-foreground">{error}</p> : null}
         {done ? (
           <p

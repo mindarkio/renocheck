@@ -11,6 +11,7 @@ export function FeedbackInline({
   done,
   busy,
   error,
+  announce,
   onRating,
   onComment,
   onSubmit,
@@ -22,6 +23,7 @@ export function FeedbackInline({
   done: boolean;
   busy?: boolean;
   error?: string | null;
+  announce?: boolean;
   onRating: (rating: "up" | "down") => void;
   onComment: (comment: string) => void;
   onSubmit: () => void;
@@ -41,6 +43,7 @@ export function FeedbackInline({
         done={done}
         busy={busy}
         error={error}
+        announce={announce}
         onRating={onRating}
         onComment={onComment}
         onSubmit={onSubmit}

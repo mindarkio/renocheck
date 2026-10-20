@@ -240,9 +240,10 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
           sectionRef={inlineSectionRef}
           rating={rating}
           comment={comment}
-          done={phase === "done" && lastPlacement === "inline"}
-          busy={phase === "submitting" && lastPlacement === "inline"}
+          done={phase === "done"}
+          busy={phase === "submitting"}
           error={lastPlacement === "inline" ? error : null}
+          announce={lastPlacement === "inline"}
           onRating={(next) => {
             setInlineUsed(true);
             if (slideOpenRef.current) {
@@ -260,9 +261,10 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
         open={slideOpen}
         rating={rating}
         comment={comment}
-        done={phase === "done" && lastPlacement === "slide_in"}
-        busy={phase === "submitting" && lastPlacement === "slide_in"}
+        done={phase === "done"}
+        busy={phase === "submitting"}
         error={lastPlacement === "slide_in" ? error : null}
+        announce={lastPlacement === "slide_in"}
         onRating={setRating}
         onComment={setComment}
         onSubmit={() => void submit("slide_in")}

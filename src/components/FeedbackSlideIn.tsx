@@ -17,6 +17,7 @@ export function FeedbackSlideIn({
   done,
   busy,
   error,
+  announce,
   onRating,
   onComment,
   onSubmit,
@@ -29,6 +30,7 @@ export function FeedbackSlideIn({
   done: boolean;
   busy?: boolean;
   error?: string | null;
+  announce?: boolean;
   onRating: (rating: "up" | "down") => void;
   onComment: (comment: string) => void;
   onSubmit: () => void;
@@ -145,6 +147,7 @@ export function FeedbackSlideIn({
         done={done}
         busy={busy}
         error={error}
+        announce={announce}
         onRating={onRating}
         onComment={onComment}
         onSubmit={onSubmit}

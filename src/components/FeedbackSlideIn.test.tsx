@@ -383,7 +383,10 @@ describe("ReportFeedback slide-in", () => {
     await waitFor(() => {
       expect(within(region).getByText(FEEDBACK_THANKS_ZH)).toBeTruthy();
     });
-    expect(within(inlineBox()).queryByText(FEEDBACK_THANKS_ZH)).toBeNull();
+    const inline = inlineBox();
+    expect(within(inline).getByText(FEEDBACK_THANKS_ZH)).toBeTruthy();
+    expect(within(inline).getByRole("button", { name: FEEDBACK_CHANGE_ZH })).toBeTruthy();
+    expect(within(inline).queryByRole("button", { name: FEEDBACK_SUBMIT_ZH })).toBeNull();
     const thanksLives = [...document.querySelectorAll("[aria-live='polite']")].filter((el) =>
       el.textContent?.includes(FEEDBACK_THANKS_ZH),
     );
