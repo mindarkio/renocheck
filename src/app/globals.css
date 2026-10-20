@@ -9,6 +9,9 @@
 
   --background: #ffffff;
   --foreground: #2b2f36;
+  /* Opaque page surface (White / Ink). `bg-card` must not paint transparent. */
+  --card: #ffffff;
+  --card-foreground: #2b2f36;
   --primary: var(--brand-navy);
   --primary-foreground: #ffffff;
   --accent: var(--brand-coral);
@@ -23,6 +26,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
