@@ -27,7 +27,7 @@ export function SiteFooter() {
           className="mx-auto max-w-md rounded-lg bg-white/10 px-3.5 py-2.5 ring-1 ring-white/10 sm:px-4 sm:py-3"
         >
           <p
-            className="text-pretty text-center text-[11px] leading-snug text-primary-foreground/90 sm:text-xs sm:leading-normal"
+            className="text-pretty text-center text-xs leading-snug text-primary-foreground/90 sm:leading-normal"
           >
             {FOOTER_DISCLAIMER}
           </p>
@@ -54,7 +54,7 @@ export function SiteFooter() {
         </nav>
 
         <p
-          className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-0 text-[11px] text-primary-foreground/65 sm:text-xs"
+          className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-0 text-xs text-primary-foreground/65"
         >
           <a
             href={`mailto:${SITE_CONTACT_EMAIL}`}

@@ -65,57 +65,57 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
       <div className="mt-4 space-y-3">
         {isMatched ? (
           <>
-            <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-2">
+            <dl className="space-y-2">
               {cr.brNo?.trim() ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-3">
+                  <dt className={`${reportMetaClass} shrink-0 leading-[26px] lg:leading-7`}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.brNo}
                   </dt>
-                  <dd className={`${reportBodyClass} font-mono tabular-nums`}>
+                  <dd className={`${reportBodyClass} min-w-0 flex-1 font-mono tabular-nums`}>
                     {cr.brNo}
                   </dd>
-                </>
+                </div>
               ) : null}
               {cr.nameZh?.trim() ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-3 gap-y-1">
+                  <dt className={`${reportMetaClass} shrink-0 leading-[26px] lg:leading-7`}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.nameZh}
                   </dt>
-                  <dd className={`${reportBodyClass} flex flex-wrap items-center gap-2`}>
+                  <dd className={`${reportBodyClass} min-w-0 flex-1 flex flex-wrap items-center gap-2`}>
                     <span>{cr.nameZh}</span>
                     {copyName ? (
                       <CopyCompanyNameButton text={copyName} />
                     ) : null}
                   </dd>
-                </>
+                </div>
               ) : null}
               {cr.nameEn?.trim() ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-3">
+                  <dt className={`${reportMetaClass} shrink-0 leading-[26px] lg:leading-7`}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.nameEn}
                   </dt>
-                  <dd className={reportBodyClass}>{cr.nameEn}</dd>
-                </>
+                  <dd className={`${reportBodyClass} min-w-0 flex-1`}>{cr.nameEn}</dd>
+                </div>
               ) : null}
               {cr.companyType?.trim() ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-3">
+                  <dt className={`${reportMetaClass} shrink-0 leading-[26px] lg:leading-7`}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.companyType}
                   </dt>
-                  <dd className={reportBodyClass}>{cr.companyType}</dd>
-                </>
+                  <dd className={`${reportBodyClass} min-w-0 flex-1`}>{cr.companyType}</dd>
+                </div>
               ) : null}
               {cr.incorporationDate ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-3">
+                  <dt className={`${reportMetaClass} shrink-0 leading-[26px] lg:leading-7`}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.incorporationDate}
                   </dt>
-                  <dd className={reportBodyClass}>
+                  <dd className={`${reportBodyClass} min-w-0 flex-1`}>
                     <time dateTime={cr.incorporationDate}>
                       {cr.incorporationDate}
                     </time>
                   </dd>
-                </>
+                </div>
               ) : null}
             </dl>
             <div className={`space-y-1 ${reportMetaClass}`}>

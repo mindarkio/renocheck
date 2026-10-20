@@ -5,12 +5,14 @@ import {
   reportMainColumnClass,
   reportPageColumnClass,
   siteLayoutContainerClass,
+  siteLayoutGutterClass,
 } from "./report-column";
 
 describe("report column widths", () => {
   it("site shell uses PRU-1 container breakpoints", () => {
     expect(siteLayoutContainerClass).toContain("max-w-[640px]");
-    expect(siteLayoutContainerClass).toContain("lg:px-10");
+    expect(siteLayoutGutterClass).toContain("lg:px-10");
+    expect(siteLayoutContainerClass).toContain("min-[1024px]:max-w-[calc(100%-5rem)]");
     expect(siteLayoutContainerClass).toContain("min-[1280px]:max-w-[1120px]");
     expect(siteLayoutContainerClass).toContain("min-[1440px]:max-w-[1200px]");
   });

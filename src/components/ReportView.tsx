@@ -14,6 +14,8 @@ import {
   reportPageColumnClass,
   reportReadingColumnClass,
   reportSidebarColumnClass,
+  reportSidebarStickyClass,
+  siteLayoutGutterClass,
 } from "./report-column";
 
 function readSessionReport(fingerprint: string): RiskReport | null {
@@ -84,8 +86,9 @@ export function ReportView({
 
   return (
     <main className="flex min-h-0 flex-1 flex-col pb-12 pt-5 sm:pb-16 sm:pt-7">
-      <div className={reportPageColumnClass}>
-        <div className={reportGridClass}>
+      <div className={siteLayoutGutterClass}>
+      <div className={reportPageColumnClass} data-testid="report-layout-container">
+        <div className={reportGridClass} data-testid="report-layout-grid">
           <div className={reportMainColumnClass} data-testid="report-main-column">
         {error && (
           <div
@@ -148,13 +151,14 @@ export function ReportView({
           </div>
           {report ? (
             <aside
-              className={reportSidebarColumnClass}
+              className={`${reportSidebarColumnClass} ${reportSidebarStickyClass}`}
               data-testid="report-layout-sidebar"
             >
               <ReportSidebarToc report={report} />
             </aside>
           ) : null}
         </div>
+      </div>
       </div>
     </main>
   );

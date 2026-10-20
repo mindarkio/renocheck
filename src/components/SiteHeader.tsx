@@ -5,7 +5,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { BrandMenuMark } from "@/components/BrandMenuMark";
-import { siteLayoutContainerClass } from "@/components/report-column";
+import {
+  siteLayoutContainerClass,
+  siteLayoutGutterClass,
+} from "@/components/report-column";
 
 const HOME_NAV = [
   { href: "/guides", label: "裝修指南" },
@@ -110,10 +113,12 @@ export function SiteHeader() {
           menuOpen ? "z-[120] bg-transparent" : "z-[60] bg-background"
         }`}
       >
-        <nav
-          className={`${siteLayoutContainerClass} flex items-center justify-between gap-4 py-3`}
-          aria-label="頁首"
-        >
+        <div className={siteLayoutGutterClass}>
+          <nav
+            className={`${siteLayoutContainerClass} flex items-center justify-between gap-4 py-3`}
+            aria-label="頁首"
+            data-testid="site-header-nav"
+          >
           <Link
             href="/"
             className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
@@ -144,7 +149,8 @@ export function SiteHeader() {
               />
             </button>
           </div>
-        </nav>
+          </nav>
+        </div>
       </header>
       <MobileNavMenuPortal
         open={menuOpen}

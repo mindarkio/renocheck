@@ -289,10 +289,10 @@ function ReportExternalLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${reportExternalLinkTouchClass} ${className ?? ""}`}
+      className={`inline-flex min-h-11 items-center ${reportExternalLinkTouchClass} ${className ?? ""}`}
     >
       {children}
-      <ExternalLink className="ms-1 inline size-3.5 opacity-80" aria-hidden />
+      <ExternalLink className="ms-1 inline size-3.5 shrink-0 opacity-80" aria-hidden />
       <span className="sr-only">（新分頁開啟）</span>
     </a>
   );
@@ -569,7 +569,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                 href={mwcRegistryHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${licenseChipClass} transition-colors hover:bg-primary-foreground/22 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/45`}
+                className={`${licenseChipClass} min-h-11 transition-colors hover:bg-primary-foreground/22 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/45`}
               >
                 <BadgeCheck className="size-3 shrink-0" aria-hidden />
                 {license.label}
@@ -695,7 +695,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   <li>
                     <ReportExternalLink
                       href={links.lrsPartiesSearch}
-                      className="underline-offset-2 hover:underline"
+                      className={`py-2 underline-offset-2 hover:underline ${reportExternalLinkTouchClass}`}
                     >
                       司法機構法律參考（訴訟方搜尋）
                     </ReportExternalLink>
@@ -703,7 +703,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   <li>
                     <ReportExternalLink
                       href={links.hkliiSearch}
-                      className="underline-offset-2 hover:underline"
+                      className={`py-2 underline-offset-2 hover:underline ${reportExternalLinkTouchClass}`}
                     >
                       HKLII 站內搜尋
                     </ReportExternalLink>

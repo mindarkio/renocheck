@@ -1,13 +1,10 @@
 import { buildReportTocEntries } from "@/lib/report-section-toc";
 import type { RiskReport } from "@/lib/report-schema";
-import { reportSidebarStickyClass } from "./report-column";
-
 export function ReportSidebarToc({ report }: { report: RiskReport }) {
   const entries = buildReportTocEntries(report);
 
   return (
     <nav
-      className={reportSidebarStickyClass}
       aria-label="報告章節"
       data-testid="report-sidebar-toc"
     >

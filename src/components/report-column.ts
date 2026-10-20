@@ -1,8 +1,14 @@
 /** Shared site + report shell widths (PRU-1). */
 
-/** Mobile 640px measure + 16px gutter; lg+ uses 40px gutter until xl cap. */
+/** Horizontal gutter outside the capped inner container. */
+export const siteLayoutGutterClass = "px-4 lg:px-10";
+
+/**
+ * Inner container width (grid / header content). At 1280 viewport: 1120px;
+ * at 1440+: 1200px. Below lg: 640px max reading measure.
+ */
 export const siteLayoutContainerClass =
-  "mx-auto w-full max-w-[640px] px-4 lg:max-w-none lg:px-10 min-[1280px]:max-w-[1120px] min-[1440px]:max-w-[1200px]";
+  "mx-auto w-full max-w-[640px] min-[1024px]:max-w-[calc(100%-5rem)] min-[1280px]:max-w-[1120px] min-[1440px]:max-w-[1200px]";
 
 /** @deprecated Use full main column width inside report grid. */
 export const reportReadingColumnClass = "w-full min-w-0";
@@ -17,7 +23,8 @@ export const reportGridClass =
 
 export const reportMainColumnClass = "min-w-0 lg:col-span-8";
 
-export const reportSidebarColumnClass = "hidden lg:col-span-4 lg:block";
+export const reportSidebarColumnClass =
+  "hidden lg:col-span-4 lg:block lg:self-start";
 
 export const reportSidebarStickyClass =
   "sticky top-[88px] max-h-[calc(100vh-104px)] overflow-y-auto overscroll-contain";
