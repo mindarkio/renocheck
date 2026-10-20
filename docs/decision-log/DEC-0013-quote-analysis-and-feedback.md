@@ -1,6 +1,6 @@
 # DEC-0013: Quote analysis and private report feedback
 
-- **Status:** proposed — Aaron approved the scope and the Group A decisions below on 2026-10-20. This write-up is ready for his sign-off; it is not **accepted** until he marks it.
+- **Status:** accepted — Aaron, 2026-10-20.
 - **Date:** 2026-10-20
 - **Plan:** [`PRF-quote-analysis-plan.md`](../plans/PRF-quote-analysis-plan.md) Rev 6.2 (蟲 PASS on Rev 6 for F0/F1)
 - **Related:** [`DPIA-quote-analysis.md`](../privacy/DPIA-quote-analysis.md) (DRAFT, unsigned), [`quote-azure-1.md`](../consent/quote-azure-1.md) (DRAFT, D3a), [`llm-provider-outage.md`](../runbooks/llm-provider-outage.md), [`quote-provider-paused.md`](../runbooks/quote-provider-paused.md)
@@ -33,7 +33,7 @@ Company reports stay on the existing Gemini path. Quote analysis is a separate p
 ### Scope
 
 - AI quote analysis moves from V2 into current scope (D15). It flags missing or vague quote items only. It does not judge price fairness and it does not grade the contractor.
-- Report rating is **private product feedback**, not UGC (D15). One vote per report per device. Comments are not displayed publicly. There is no admin UI in v1; Aaron reads rows with the service role.
+- Report rating is **private product feedback**, not UGC (D15). One vote per report per device. Comments are not displayed publicly. There is no admin UI in v1; Aaron reads rows with the service role. Aaron confirmed on 2026-10-20 that the form collects only the rating and an optional free-text comment, so RenoCheck can see how to do better. It does not ask for a name, a phone number, or other personal data.
 - Company search stays free and unlimited. `/api/search`, `RiskReport`, grading, and `REPORT_VERSION` (`2.6.0`) are unchanged by this decision.
 
 ### Pricing model

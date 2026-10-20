@@ -6,7 +6,7 @@
 - **Controller:** MindArk IO Ltd (UK), company no. 17141212, trading as RenoCheck
 - **Registered office:** Office 18282, 182-184 High Street North, East Ham, London, E6 2JA, United Kingdom (Companies House, checked 2026-10-20)
 - **Contact:** hello@renocheck.homes, 「個人資料事務負責人」
-- **Decision:** [DEC-0013](../decision-log/DEC-0013-quote-analysis-and-feedback.md) (proposed)
+- **Decision:** [DEC-0013](../decision-log/DEC-0013-quote-analysis-and-feedback.md) (accepted 2026-10-20). This DPIA stays unsigned until Aaron signs it.
 - **Plan:** [PRF-quote-analysis-plan.md](../plans/PRF-quote-analysis-plan.md) Rev 6.2, §6 item 9
 - **Author of this draft:** engineering write-up for Aaron. This is not a legal opinion and not a signature.
 
