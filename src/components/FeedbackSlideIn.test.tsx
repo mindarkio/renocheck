@@ -128,6 +128,29 @@ afterEach(() => {
 });
 
 describe("FeedbackSlideIn", () => {
+  it("paints a bordered card layer above the page", () => {
+    render(
+      <FeedbackSlideIn
+        open
+        rating={null}
+        comment=""
+        done={false}
+        onRating={() => {}}
+        onComment={() => {}}
+        onSubmit={() => {}}
+        onChangeRating={() => {}}
+        onDismiss={() => {}}
+      />,
+    );
+    const classes = screen
+      .getByRole("region", { name: FEEDBACK_REGION_LABEL_ZH })
+      .className.split(/\s+/);
+    expect(classes).toContain("bg-card");
+    expect(classes).toContain("border");
+    expect(classes).toContain("border-border");
+    expect(classes).toContain("shadow-lg");
+  });
+
   it("does not steal focus, dismisses only from inside, and respects reduced motion", () => {
     const matchMedia = vi.fn().mockReturnValue({ matches: true });
     vi.stubGlobal("matchMedia", matchMedia);
