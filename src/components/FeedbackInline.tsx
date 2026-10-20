@@ -1,9 +1,11 @@
 "use client";
 
+import type { Ref } from "react";
 import { FeedbackComposer } from "./FeedbackComposer";
 import { FEEDBACK_COMPANY_HEADING_ZH } from "@/lib/feedback-copy-zh";
 
 export function FeedbackInline({
+  sectionRef,
   rating,
   comment,
   done,
@@ -12,6 +14,7 @@ export function FeedbackInline({
   onComment,
   onSubmit,
 }: {
+  sectionRef?: Ref<HTMLElement>;
   rating: "up" | "down" | null;
   comment: string;
   done: boolean;
@@ -22,8 +25,10 @@ export function FeedbackInline({
 }) {
   return (
     <section
+      ref={sectionRef}
+      tabIndex={-1}
       aria-label={FEEDBACK_COMPANY_HEADING_ZH}
-      className="rounded-xl border border-border bg-card px-4 py-4 shadow-sm"
+      className="rounded-xl border border-border bg-card px-4 py-4 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
     >
       <FeedbackComposer
         heading={FEEDBACK_COMPANY_HEADING_ZH}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FeedbackComposer } from "./FeedbackComposer";
 import { reportReadingColumnClass } from "./report-column";
 import {
@@ -8,7 +8,6 @@ import {
   FEEDBACK_COMPANY_HEADING_ZH,
   FEEDBACK_DISMISS_ZH,
   FEEDBACK_REGION_LABEL_ZH,
-  FEEDBACK_THANKS_ZH,
 } from "@/lib/feedback-copy-zh";
 
 export function FeedbackSlideIn({
@@ -32,10 +31,17 @@ export function FeedbackSlideIn({
   onSubmit: () => void;
   onDismiss: () => void;
 }) {
-  const titleId = useId();
   const regionRef = useRef<HTMLDivElement>(null);
   const liveRef = useRef<HTMLParagraphElement>(null);
   const [liftPx, setLiftPx] = useState<number | null>(null);
+  const [entered, setEntered] = useState(false);
+  if (!open && entered) setEntered(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const id = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   useEffect(() => {
     const region = regionRef.current;
@@ -43,7 +49,14 @@ export function FeedbackSlideIn({
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     if (!media?.matches) return;
     region.dataset.motion = "reduced";
-    region.classList.remove("transition-transform", "duration-200", "ease-out");
+    region.classList.remove(
+      "transition-transform",
+      "transition-opacity",
+      "duration-200",
+      "ease-out",
+      "translate-y-4",
+      "opacity-0",
+    );
   }, [open]);
 
   useEffect(() => {
@@ -99,7 +112,9 @@ export function FeedbackSlideIn({
       aria-label={FEEDBACK_REGION_LABEL_ZH}
       ref={regionRef}
       data-motion="slide"
-      className={`${reportReadingColumnClass} fixed z-20 rounded-xl border border-border bg-card p-4 shadow motion-reduce:transition-none transition-transform duration-200 ease-out`}
+      className={`${reportReadingColumnClass} fixed z-20 rounded-xl border border-border bg-card p-4 shadow transition-transform transition-opacity duration-200 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${
+        entered ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+      }`}
       style={{
         bottom,
         left: "1rem",
@@ -113,32 +128,26 @@ export function FeedbackSlideIn({
       <div className="mb-2 flex items-start justify-end">
         <button
           type="button"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           aria-label={FEEDBACK_CLOSE_LABEL_ZH}
           onClick={onDismiss}
         >
           ✕
         </button>
       </div>
-      {done ? (
-        <p id={titleId} aria-live="polite" className="text-sm text-foreground">
-          {FEEDBACK_THANKS_ZH}
-        </p>
-      ) : (
-        <FeedbackComposer
-          heading={FEEDBACK_COMPANY_HEADING_ZH}
-          rating={rating}
-          comment={comment}
-          done={false}
-          busy={busy}
-          onRating={onRating}
-          onComment={onComment}
-          onSubmit={onSubmit}
-        />
-      )}
+      <FeedbackComposer
+        heading={FEEDBACK_COMPANY_HEADING_ZH}
+        rating={rating}
+        comment={comment}
+        done={done}
+        busy={busy}
+        onRating={onRating}
+        onComment={onComment}
+        onSubmit={onSubmit}
+      />
       <button
         type="button"
-        className="mt-3 inline-flex min-h-11 items-center text-sm text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className="mt-3 inline-flex min-h-11 items-center text-sm text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         onClick={onDismiss}
       >
         {FEEDBACK_DISMISS_ZH}

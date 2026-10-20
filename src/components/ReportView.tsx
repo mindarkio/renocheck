@@ -120,7 +120,7 @@ export function ReportView({
 
         {(report || error) && (
           <div
-            id="report-new-search"
+            id={feedbackEnabled ? "report-new-search" : undefined}
             className={`${reportReadingColumnClass} mt-8 sm:mt-10`}
           >
             <Link

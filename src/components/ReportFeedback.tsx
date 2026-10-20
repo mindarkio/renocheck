@@ -69,6 +69,7 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const inlineRef = useRef<HTMLDivElement>(null);
+  const inlineSectionRef = useRef<HTMLElement>(null);
   const inlineInView = useRef(true);
   const sentinelSeen = useRef(false);
   const timerReady = useRef(false);
@@ -164,6 +165,10 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
         setPhase("done");
         if (placement === "slide_in") {
           window.setTimeout(() => {
+            const slide = document.getElementById("report-feedback-slide");
+            if (slide?.contains(document.activeElement)) {
+              inlineSectionRef.current?.focus();
+            }
             slideOpenRef.current = false;
             setSlideOpen(false);
           }, THANKS_MS);
@@ -177,6 +182,10 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
   }
 
   function dismissSlide() {
+    const slide = document.getElementById("report-feedback-slide");
+    if (slide?.contains(document.activeElement)) {
+      inlineSectionRef.current?.focus();
+    }
     writeStorage(fingerprint, "dismissed");
     setStorageBlock(true);
     slideOpenRef.current = false;
@@ -197,6 +206,7 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
         className="mx-auto mt-8 w-full max-w-[584px] sm:mt-10"
       >
         <FeedbackInline
+          sectionRef={inlineSectionRef}
           rating={rating}
           comment={comment}
           done={phase === "done"}

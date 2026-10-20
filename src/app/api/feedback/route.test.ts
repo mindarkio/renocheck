@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { REPORT_VERSION } from "@/lib/constants";
+import * as rateLimit from "@/lib/feedback/rate-limit";
 import { resetFeedbackRateLimitForTests } from "@/lib/feedback/rate-limit";
 
 const FP = "ab".repeat(16);
@@ -37,14 +38,18 @@ function body(overrides: Record<string, unknown> = {}) {
 function request(
   payload: Record<string, unknown> = body(),
   headers: Record<string, string> = {},
+  options: { origin?: string | null } = {},
 ) {
+  const origin = options.origin === undefined ? "http://localhost" : options.origin;
+  const merged: Record<string, string> = {
+    "content-type": "application/json",
+    "x-forwarded-for": "203.0.113.10",
+    ...headers,
+  };
+  if (origin) merged.origin = origin;
   return new Request("http://localhost/api/feedback", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-forwarded-for": "203.0.113.10",
-      ...headers,
-    },
+    headers: merged,
     body: JSON.stringify(payload),
   });
 }
@@ -152,21 +157,137 @@ describe("POST /api/feedback", () => {
   });
 
   it("rate limits the 11th request from the same IP", async () => {
+    let cookie = "";
     for (let i = 0; i < 10; i += 1) {
-      const res = await POST(request());
+      const res = await POST(
+        request(body({ reportRef: i.toString(16).padStart(32, "0") }), {
+          ...(cookie ? { cookie } : {}),
+          "x-forwarded-for": "203.0.113.10",
+        }),
+      );
       expect(res.status).toBe(204);
+      if (!cookie) {
+        const id = /rc_did=([0-9a-f]{32})/.exec(
+          res.headers.get("set-cookie") ?? "",
+        )?.[1];
+        cookie = `rc_did=${id}`;
+      }
     }
-    const limited = await POST(request());
+    const limited = await POST(
+      request(body({ reportRef: "f".repeat(32) }), {
+        cookie,
+        "x-forwarded-for": "203.0.113.10",
+      }),
+    );
     expect(limited.status).toBe(429);
     expect(limited.headers.get("set-cookie")).toBeNull();
   });
 
+  it("rejects a non-JSON content type, a foreign origin, and a missing origin without a cookie", async () => {
+    const plain = await POST(
+      new Request("http://localhost/api/feedback", {
+        method: "POST",
+        headers: {
+          "content-type": "text/plain",
+          origin: "http://localhost",
+          "x-forwarded-for": "203.0.113.40",
+        },
+        body: "hello",
+      }),
+    );
+    expect(plain.status).toBe(415);
+    expect(plain.headers.get("set-cookie")).toBeNull();
+
+    const evil = await POST(
+      request(body(), { "x-forwarded-for": "203.0.113.41" }, {
+        origin: "https://evil.example",
+      }),
+    );
+    expect(evil.status).toBe(403);
+    expect(evil.headers.get("set-cookie")).toBeNull();
+
+    const missing = await POST(
+      request(body(), { "x-forwarded-for": "203.0.113.42" }, { origin: null }),
+    );
+    expect(missing.status).toBe(403);
+    expect(missing.headers.get("set-cookie")).toBeNull();
+    expect(admin.getSupabaseAdmin).not.toHaveBeenCalled();
+  });
+
+  it("caps new device ids and votes per report per IP", async () => {
+    for (let i = 0; i < 3; i += 1) {
+      const res = await POST(
+        request(body({ reportRef: i.toString(16).padStart(32, "a") }), {
+          "x-forwarded-for": "203.0.113.20",
+        }),
+      );
+      expect(res.status).toBe(204);
+    }
+    const fourthDevice = await POST(
+      request(body({ reportRef: "b".repeat(32) }), {
+        "x-forwarded-for": "203.0.113.20",
+      }),
+    );
+    expect(fourthDevice.status).toBe(429);
+    expect(fourthDevice.headers.get("set-cookie")).toBeNull();
+
+    const ref = "c".repeat(32);
+    let cookie = "";
+    for (let i = 0; i < 3; i += 1) {
+      const res = await POST(
+        request(body({ reportRef: ref }), {
+          "x-forwarded-for": "203.0.113.21",
+          ...(cookie ? { cookie } : {}),
+        }),
+      );
+      expect(res.status).toBe(204);
+      if (!cookie) {
+        const id = /rc_did=([0-9a-f]{32})/.exec(
+          res.headers.get("set-cookie") ?? "",
+        )?.[1];
+        cookie = `rc_did=${id}`;
+      }
+    }
+    const fourthVote = await POST(
+      request(body({ reportRef: ref }), {
+        "x-forwarded-for": "203.0.113.21",
+        cookie,
+      }),
+    );
+    expect(fourthVote.status).toBe(429);
+    expect(fourthVote.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("rejects an oversized body before parsing", async () => {
+    const raw = "x".repeat(4097);
+    const res = await POST(
+      new Request("http://localhost/api/feedback", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: "http://localhost",
+          "content-length": String(raw.length),
+          "x-forwarded-for": "203.0.113.43",
+        },
+        body: raw,
+      }),
+    );
+    expect(res.status).toBe(413);
+    expect(res.headers.get("set-cookie")).toBeNull();
+    expect(admin.getSupabaseAdmin).not.toHaveBeenCalled();
+  });
+
   it("returns 503 when the flag is off, the secret is missing, or the table is missing", async () => {
+    const spy = vi.spyOn(rateLimit, "checkFeedbackRateLimit");
     vi.stubEnv("FEEDBACK_ENABLED", "");
-    const disabled = await POST(request());
+    const disabled = await POST(
+      request({ nope: true }, { "x-forwarded-for": "203.0.113.30" }),
+    );
     expect(disabled.status).toBe(503);
+    expect(spy).not.toHaveBeenCalled();
     expect(admin.getSupabaseAdmin).not.toHaveBeenCalled();
     expect(disabled.headers.get("set-cookie")).toBeNull();
+    spy.mockRestore();
 
     vi.stubEnv("FEEDBACK_ENABLED", "1");
     vi.stubEnv("QUOTE_HASH_SECRET", "");

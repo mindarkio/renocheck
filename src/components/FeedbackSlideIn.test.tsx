@@ -260,9 +260,14 @@ describe("ReportFeedback slide-in", () => {
   it("writes dismissed for ✕ and 唔使喇 and does not reopen", () => {
     render(<ReportFeedback fingerprint={FP} />);
     showViaSentinel();
-    fireEvent.click(screen.getByRole("button", { name: FEEDBACK_CLOSE_LABEL_ZH }));
+    const close = screen.getByRole("button", { name: FEEDBACK_CLOSE_LABEL_ZH });
+    close.focus();
+    fireEvent.click(close);
     expect(localStorage.getItem(`renocheck:fb:company_report:${FP}`)).toBe(
       "dismissed",
+    );
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(
+      "呢份報告有冇幫到你？",
     );
     expect(screen.queryByRole("region", { name: FEEDBACK_REGION_LABEL_ZH })).toBeNull();
 
@@ -289,6 +294,7 @@ describe("ReportFeedback slide-in", () => {
     await waitFor(() => {
       expect(within(region).getByText(FEEDBACK_THANKS_ZH)).toBeTruthy();
     });
+    expect(document.activeElement?.textContent).toBe(FEEDBACK_THANKS_ZH);
     expect(localStorage.getItem(`renocheck:fb:company_report:${FP}`)).toBe(
       "submitted",
     );

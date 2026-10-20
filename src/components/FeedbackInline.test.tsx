@@ -64,10 +64,15 @@ describe("FeedbackInline", () => {
     expect(down.getAttribute("aria-pressed")).toBe("true");
     expect(up.getAttribute("aria-pressed")).toBe("false");
 
+    fireEvent.click(up);
+    expect(up.className).toContain("font-semibold");
+
     fireEvent.click(screen.getByRole("button", { name: FEEDBACK_SUBMIT_ZH }));
-    expect(screen.getByText(FEEDBACK_THANKS_ZH).getAttribute("aria-live")).toBe(
+    const thanks = screen.getByText(FEEDBACK_THANKS_ZH);
+    expect(thanks.closest("[aria-live]")?.getAttribute("aria-live")).toBe(
       "polite",
     );
+    expect(document.activeElement).toBe(thanks);
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

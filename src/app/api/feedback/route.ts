@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import {
   DEVICE_COOKIE_MAX_AGE_SECONDS,
   DEVICE_COOKIE_NAME,
+  readDeviceIdFromCookieHeader,
 } from "@/lib/device-id";
 import { isFeedbackEnabled, quoteHashSecret } from "@/lib/feedback/config";
 import { logFeedback } from "@/lib/feedback/log";
 import { checkFeedbackRateLimit } from "@/lib/feedback/rate-limit";
 import { feedbackBodySchema } from "@/lib/feedback/schema";
 import { submitCompanyReportFeedback } from "@/lib/feedback/store";
+
+const MAX_BODY_BYTES = 4096;
 
 function clientIp(req: Request): string {
   return (
@@ -25,16 +28,66 @@ function withDeviceCookie(res: NextResponse, deviceId: string): NextResponse {
   return res;
 }
 
+function sameOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return false;
+  try {
+    return new URL(origin).host === new URL(req.url).host;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   try {
-    if (!checkFeedbackRateLimit(clientIp(req))) {
+    if (!isFeedbackEnabled()) {
+      return NextResponse.json({ error: "unavailable" }, { status: 503 });
+    }
+
+    const contentType = req.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().startsWith("application/json")) {
+      return NextResponse.json({ error: "invalid_input" }, { status: 415 });
+    }
+
+    if (!sameOrigin(req)) {
+      logFeedback({ event: "feedback_rejected", code: "bad_origin" });
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+
+    const declaredLength = Number(req.headers.get("content-length") ?? 0);
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "invalid_input" }, { status: 413 });
+    }
+
+    const ip = clientIp(req);
+    const now = Date.now();
+    if (!checkFeedbackRateLimit(ip, now)) {
       logFeedback({ event: "feedback_rejected", code: "rate_limited" });
       return NextResponse.json({ error: "rate_limited" }, { status: 429 });
     }
 
+    const cookieHeader = req.headers.get("cookie");
+    if (
+      !readDeviceIdFromCookieHeader(cookieHeader) &&
+      !checkFeedbackRateLimit(`new:${ip}`, now, 3)
+    ) {
+      logFeedback({ event: "feedback_rejected", code: "rate_limited" });
+      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    }
+
+    let raw: string;
+    try {
+      raw = await req.text();
+    } catch {
+      return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+    }
+    if (raw.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "invalid_input" }, { status: 413 });
+    }
+
     let body: unknown;
     try {
-      body = await req.json();
+      body = JSON.parse(raw);
     } catch {
       return NextResponse.json({ error: "invalid_input" }, { status: 400 });
     }
@@ -44,9 +97,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "invalid_input" }, { status: 400 });
     }
 
-    if (!isFeedbackEnabled()) {
-      logFeedback({ event: "feedback_unavailable", code: "disabled" });
-      return NextResponse.json({ error: "unavailable" }, { status: 503 });
+    if (!checkFeedbackRateLimit(`ref:${ip}:${parsed.data.reportRef}`, now, 3)) {
+      logFeedback({ event: "feedback_rejected", code: "rate_limited" });
+      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
     }
 
     if (!quoteHashSecret()) {
@@ -56,7 +109,7 @@ export async function POST(req: Request) {
 
     const result = await submitCompanyReportFeedback({
       ...parsed.data,
-      cookieHeader: req.headers.get("cookie"),
+      cookieHeader,
     });
 
     const response =

@@ -6,12 +6,12 @@ create table public.report_feedback (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   surface text not null check (surface in ('company_report','quote_analysis')),
-  report_ref text not null check (report_ref ~ '^[0-9a-f]{32}$' or report_ref ~ '^[0-9a-f-]{36}$'), -- fingerprint or quote analysis uuid
-  report_version text,                      -- REPORT_VERSION or QUOTE_ANALYSIS_VERSION at time of rating
+  report_ref text not null check (report_ref ~ '^[0-9a-f]{32}$' or report_ref ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'), -- fingerprint or quote analysis uuid
+  report_version text check (report_version is null or char_length(report_version) <= 32), -- REPORT_VERSION or QUOTE_ANALYSIS_VERSION at time of rating
   rating text not null check (rating in ('up','down')),
   comment text check (comment is null or char_length(comment) <= 500),  -- server-redacted; C0/C1 control + bidi chars stripped before insert [Rev3 L3]
   placement text not null check (placement in ('slide_in','inline')),
-  device_hash text not null,                -- HMAC(rc_did); never raw cookie
+  device_hash text not null check (device_hash ~ '^[0-9a-f]{64}$'), -- HMAC(rc_did); never raw cookie
   unique (surface, report_ref, device_hash) -- one vote per report per device; upsert allows changing vote
 );
 create index report_feedback_created_at_idx on public.report_feedback (created_at desc);

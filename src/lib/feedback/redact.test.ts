@@ -28,4 +28,36 @@ describe("feedback comment redaction", () => {
   it("keeps an ordinary company mention", () => {
     expect(redactFeedbackComment("合成測試有限公司")).toBe("合成測試有限公司");
   });
+
+  it.each([
+    ["打 ９１２３４５６７", "[電話]"],
+    ["打 9123.4567", "[電話]"],
+    ["打 9123  4567", "[電話]"],
+    ["a.b＠example.com", "[電郵]"],
+    ["a.b @ example.com", "[電郵]"],
+    ["Ａ１２３４５６(７)", "[身份證]"],
+    ["陳師傅好好", "[姓名]"],
+    ["Mr Chan good", "[姓名]"],
+    ["住 九龍某街1號3樓A室", "[地址]"],
+    ["Flat A, 3/F, Block 2", "[地址]"],
+    ["戶口 123-456789-001", "[戶口]"],
+    ["https://example.com/x", "[連結]"],
+  ])("redacts %s", (raw, tag) => {
+    const out = redactFeedbackComment(raw);
+    expect(out).toContain(tag);
+    expect(out.replace(/\[[^\]]+\]/g, "")).not.toMatch(/\d{4}|@|Chan|師傅|室/);
+  });
+
+  it("keeps ordinary text and Chinese punctuation", () => {
+    for (const s of [
+      "報告好有用，多謝！",
+      "3 年保養",
+      "第 2 項寫得唔清楚",
+      "太平洋工程",
+      "衛生間唔掂",
+      "BR 12345678",
+    ]) {
+      expect(redactFeedbackComment(s)).toBe(s);
+    }
+  });
 });
