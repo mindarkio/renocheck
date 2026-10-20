@@ -57,8 +57,9 @@ describe("feedback copy", () => {
     expect(FEEDBACK_PRIVACY_LINK_ZH).toBe("個人資料（私隱）");
     expect(FEEDBACK_PRIVACY_HREF).toBe("/legal/disclaimer#feedback-privacy");
     expect(FEEDBACK_PRIVACY_NOTICE_ZH).toBe(
-      "閣下於報告頁提交的評分（👍/👎）及文字意見，僅用於了解及改善 RenoCheck 的服務，不會公開顯示。我們不需要閣下的姓名、電話號碼或其他個人資料，請勿於意見中填寫；如有填寫，系統將自動遮蓋。為防止重複評分，我們會儲存一個經雜湊處理的裝置識別碼。上述資料由 MindArk IO Ltd（於英國註冊的公司，以 RenoCheck 名義營運，註冊地址：Office 18282, 182-184 High Street North, East Ham, London, E6 2JA, United Kingdom）基於合法權益處理，並於 12 個月後自動刪除。如有查詢，或欲查閱、更正或刪除有關資料，請電郵至 hello@renocheck.homes。閣下亦可向英國資訊專員辦公室（ICO）或香港個人資料私隱專員公署作出投訴。",
+      "閣下於報告頁提交的評分（👍/👎）及文字意見，僅用於了解及改善 RenoCheck 的服務，不會公開顯示。我們不需要閣下的姓名、電話號碼或其他個人資料，請勿於意見中填寫；系統會自動遮蓋常見格式的電話號碼、電郵地址等資料，但未必能全部識別。為防止重複評分，我們會於閣下的瀏覽器設置一個隨機產生的裝置識別 Cookie（有效期 12 個月），伺服器只儲存其經雜湊處理的數值。上述資料由 MindArk IO Ltd（於英國註冊的公司，以 RenoCheck 名義營運，註冊地址：Office 18282, 182-184 High Street North, East Ham, London, E6 2JA, United Kingdom）基於合法權益處理，並於 12 個月後自動刪除。如有查詢，或欲查閱、更正、刪除有關資料，或要求限制或反對有關處理，請電郵至 hello@renocheck.homes。閣下亦可向英國資訊專員辦公室（ICO）或香港個人資料私隱專員公署作出投訴。",
     );
+    expect(FEEDBACK_PRIVACY_NOTICE_ZH).not.toContain("將自動遮蓋");
     expect(FEEDBACK_SUBMIT_ZH).toBe("送出");
     expect(FEEDBACK_THANKS_ZH).toBe("多謝你嘅意見！");
     expect(FEEDBACK_DISMISS_ZH).toBe("唔使喇");

@@ -54,8 +54,7 @@ export function FeedbackSlideIn({
     if (!media?.matches) return;
     region.dataset.motion = "reduced";
     region.classList.remove(
-      "transition-transform",
-      "transition-opacity",
+      "transition-[transform,opacity]",
       "duration-200",
       "ease-out",
       "translate-y-4",
@@ -116,7 +115,7 @@ export function FeedbackSlideIn({
       aria-label={FEEDBACK_REGION_LABEL_ZH}
       ref={regionRef}
       data-motion="slide"
-      className={`${reportReadingColumnClass} fixed z-20 rounded-xl border border-border bg-card p-4 shadow transition-transform transition-opacity duration-200 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${
+      className={`${reportReadingColumnClass} fixed z-20 rounded-xl border border-border bg-card p-4 shadow transition-[transform,opacity] duration-200 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${
         entered ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
       }`}
       style={{

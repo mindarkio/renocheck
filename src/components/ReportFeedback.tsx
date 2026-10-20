@@ -62,6 +62,9 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
     readStorage(fingerprint) === "submitted" ? "done" : "editing",
   );
   const [error, setError] = useState<string | null>(null);
+  const [lastPlacement, setLastPlacement] = useState<"inline" | "slide_in">(
+    () => "inline",
+  );
   const [slideOpen, setSlideOpen] = useState(false);
   const [inlineUsed, setInlineUsed] = useState(false);
   const [storageBlock, setStorageBlock] = useState(() => {
@@ -162,6 +165,7 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
 
   async function submit(placement: "inline" | "slide_in") {
     if (!rating || phase !== "editing") return;
+    setLastPlacement(placement);
     setPhase("submitting");
     setError(null);
     try {
@@ -189,6 +193,7 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
               inlineSectionRef.current?.focus();
             }
             slideOpenRef.current = false;
+            setLastPlacement("inline");
             setSlideOpen(false);
           }, THANKS_MS);
         }
@@ -235,9 +240,9 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
           sectionRef={inlineSectionRef}
           rating={rating}
           comment={comment}
-          done={phase === "done"}
-          busy={phase === "submitting"}
-          error={error}
+          done={phase === "done" && lastPlacement === "inline"}
+          busy={phase === "submitting" && lastPlacement === "inline"}
+          error={lastPlacement === "inline" ? error : null}
           onRating={(next) => {
             setInlineUsed(true);
             if (slideOpenRef.current) {
@@ -255,9 +260,9 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
         open={slideOpen}
         rating={rating}
         comment={comment}
-        done={phase === "done"}
-        busy={phase === "submitting"}
-        error={error}
+        done={phase === "done" && lastPlacement === "slide_in"}
+        busy={phase === "submitting" && lastPlacement === "slide_in"}
+        error={lastPlacement === "slide_in" ? error : null}
         onRating={setRating}
         onComment={setComment}
         onSubmit={() => void submit("slide_in")}

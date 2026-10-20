@@ -88,9 +88,9 @@ function sentinel(): Element {
   return el;
 }
 
-function inlineBox(): Element {
+function inlineBox(): HTMLElement {
   const el = document.querySelector("[data-feedback-inline]");
-  if (!el) throw new Error("missing inline");
+  if (!(el instanceof HTMLElement)) throw new Error("missing inline");
   return el;
 }
 
@@ -331,6 +331,86 @@ describe("ReportFeedback slide-in", () => {
     expect(screen.getByRole("textbox")).toBeTruthy();
     expect(screen.getByRole("button", { name: FEEDBACK_SUBMIT_ZH })).toBeTruthy();
     expect(localStorage.getItem(`renocheck:fb:company_report:${FP}`)).toBeNull();
+  });
+
+  it("starts blank after a reload and a new save replaces the earlier rating", async () => {
+    const fetchMock = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    localStorage.setItem(`renocheck:fb:company_report:${FP}`, "submitted");
+
+    render(<ReportFeedback fingerprint={FP} />);
+    const inline = inlineBox();
+    expect(within(inline).getByText(FEEDBACK_THANKS_ZH)).toBeTruthy();
+    expect(within(inline).queryByRole("textbox")).toBeNull();
+
+    fireEvent.click(within(inline).getByRole("button", { name: FEEDBACK_CHANGE_ZH }));
+    expect(within(inline).queryByRole("textbox")).toBeNull();
+    expect(
+      within(inline).getByRole("button", { name: FEEDBACK_UP_ZH }).getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      within(inline).getByRole("button", { name: FEEDBACK_DOWN_ZH }).getAttribute("aria-pressed"),
+    ).toBe("false");
+
+    fireEvent.click(within(inline).getByRole("button", { name: FEEDBACK_DOWN_ZH }));
+    expect((within(inline).getByRole("textbox") as HTMLTextAreaElement).value).toBe("");
+    fireEvent.click(within(inline).getByRole("button", { name: FEEDBACK_SUBMIT_ZH }));
+    await screen.findByText(FEEDBACK_THANKS_ZH);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      rating?: string;
+      comment?: string;
+    };
+    expect(body.rating).toBe("down");
+    expect(body).not.toHaveProperty("comment");
+    expect(localStorage.getItem(`renocheck:fb:company_report:${FP}`)).toBe("submitted");
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i) ?? "";
+      expect(key).not.toContain("comment");
+      expect(localStorage.getItem(key)).toBe("submitted");
+    }
+  });
+
+  it("announces success and failure only on the composer that submitted", async () => {
+    render(<ReportFeedback fingerprint={FP} />);
+    showViaSentinel();
+    const region = screen.getByRole("region", { name: FEEDBACK_REGION_LABEL_ZH });
+    fireEvent.click(within(region).getByRole("button", { name: FEEDBACK_UP_ZH }));
+    fireEvent.click(within(region).getByRole("button", { name: FEEDBACK_SUBMIT_ZH }));
+    await waitFor(() => {
+      expect(within(region).getByText(FEEDBACK_THANKS_ZH)).toBeTruthy();
+    });
+    expect(within(inlineBox()).queryByText(FEEDBACK_THANKS_ZH)).toBeNull();
+    const thanksLives = [...document.querySelectorAll("[aria-live='polite']")].filter((el) =>
+      el.textContent?.includes(FEEDBACK_THANKS_ZH),
+    );
+    expect(thanksLives).toHaveLength(1);
+    expect(region.contains(thanksLives[0] ?? null)).toBe(true);
+
+    cleanup();
+    observers.length = 0;
+    localStorage.clear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ error: "unavailable" }), { status: 503 })),
+    );
+    render(<ReportFeedback fingerprint={FP} />);
+    showViaSentinel();
+    const failed = screen.getByRole("region", { name: FEEDBACK_REGION_LABEL_ZH });
+    fireEvent.click(within(failed).getByRole("button", { name: FEEDBACK_UP_ZH }));
+    fireEvent.click(within(failed).getByRole("button", { name: FEEDBACK_SUBMIT_ZH }));
+    await waitFor(() => {
+      expect(within(failed).getByText(FEEDBACK_ERROR_ZH)).toBeTruthy();
+    });
+    expect(within(inlineBox()).queryByText(FEEDBACK_ERROR_ZH)).toBeNull();
+    const errorLives = [...document.querySelectorAll("[aria-live='polite']")].filter((el) =>
+      el.textContent?.includes(FEEDBACK_ERROR_ZH),
+    );
+    expect(errorLives).toHaveLength(1);
+    expect(failed.contains(errorLives[0] ?? null)).toBe(true);
   });
 
   it("sends a changed rating through the same feedback endpoint", async () => {
