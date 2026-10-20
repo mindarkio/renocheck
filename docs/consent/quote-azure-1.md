@@ -2,7 +2,7 @@
 
 **DRAFT, needs Aaron's approval (D3a).** Not wired to any page or API. `QUOTE_CONSENT_VERSION` is not in code yet. If this text ships later unchanged, the id stays `quote-azure-1` because it has never been shown (D40). If a different text ships first, the corrected text becomes `quote-azure-2`.
 
-Sources for the claims (read 2026-10-20), from plan §8.4:
+Sources for the claims (read 2026-10-19/20), from plan §8.4:
 
 - https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/data-privacy
 - https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/abuse-monitoring

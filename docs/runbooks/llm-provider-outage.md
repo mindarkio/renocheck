@@ -10,9 +10,9 @@ Gemini returns **401** or **403**, or Google has suspended the prod key, and `/a
 
 ## Steps
 
-1. Aaron removes or rotates `GOOGLE_GENERATIVE_AI_API_KEY` in Vercel Production so `resolveRiskReportModel()` no longer takes the Gemini branch and falls back to AI Gateway. Pre-approved spend (D23). Do not paste the new or old key into chat, logs, or a PR.
+1. Aaron **removes** `GOOGLE_GENERATIVE_AI_API_KEY` from Vercel Production (rotating it does not trigger the fallback), then **redeploys Production** (Deployments → latest Production → Redeploy). Env changes apply only to new deployments. Pre-approved spend (D23). Do not paste any key into chat, logs or a PR.
 2. Check `GET /api/health`. `llmProvider` should leave `google/…` and show the Gateway label (`gateway/openai/gpt-4o-mini`) once the Google key is unset and a Gateway credential is present. Check **presence** of `AI_GATEWAY_API_KEY` or OIDC only. Do not read the value.
-3. When Gemini is usable again, Aaron restores `GOOGLE_GENERATIVE_AI_API_KEY` (and `GEMINI_MODEL` if Production relies on it). Confirm `/api/health` `llmProvider` is back on `google/…`.
+3. When Gemini is usable again, Aaron restores `GOOGLE_GENERATIVE_AI_API_KEY` (and `GEMINI_MODEL` if Production relies on it), then redeploys Production. Confirm `/api/health` `llmProvider` is back on `google/…`.
 
 ## Do not
 

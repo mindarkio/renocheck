@@ -107,7 +107,20 @@ RenoCheck cannot delete Microsoft's copy after send. The DRAFT consent says that
 
 ## 9. Feedback (Art 6(1)(f))
 
-Purpose: see whether a report helped, and optional free text, to improve the product. Interests: product quality. The person submits it themselves. Mitigations: flag off by default; not public; ≤500 characters; C0/C1 and bidi characters stripped; phone, email, HKID-like, and honorific-name redaction before insert; comments not logged; 12-month delete; service-role only (RLS on, no policies).
+Purpose: see whether a report helped, and optional free text, to improve the product. Interests: product quality. The person submits it themselves. Mitigations: flag off by default; not public; ≤500 characters; C0/C1 and bidi characters stripped; comments not logged; 12-month delete; service-role only (RLS on, no policies).
+
+Before insert, the F1 redactor (M1) folds full-width digits, Latin letters, `＠＋－．／` and the ideographic space to ASCII (Chinese punctuation `，。：？！` is left alone), then masks:
+
+- phone numbers, including dotted or double-spaced digits and an optional `852` → `[電話]`
+- email, including a spaced or full-width `@` → `[電郵]`
+- WhatsApp links → `[電話]`
+- HKID-like tokens, including full-width digits → `[身份證]` (a business-registration number such as `BR 12345678` is left unchanged)
+- URLs → `[連結]`
+- bank-account numbers → `[戶口]`
+- address fragments (`室` / `樓` / `座` / Flat / Rm / Floor / `/F`) → `[地址]`
+- honorific names (`先生` / `小姐` / `太太` / `女士` / `師傅` / `姑娘` / `經理` / `老闆`, `X sir`, and English `Mr` / `Mrs` / `Ms` / `Miss` / `Mdm` / `Dr` plus a surname) and labelled names → `[姓名]`
+
+**Residual:** numbers spelled in Chinese numerals (九一二三…) and free-form names without an honorific are not caught. The placeholder warning and the not-public rule cover that.
 
 The F1 privacy notice is drafted in that PR description for Aaron. It is **not** committed to `/legal` here. `DISCLAIMER_VERSION` stays `1.2.0` until he approves a follow-up (proposed patch `1.2.1`). `FEEDBACK_ENABLED` stays off until that notice ships and M1 is applied.
 
@@ -123,6 +136,19 @@ The F1 privacy notice is drafted in that PR description for Aaron. It is **not**
 Quote analysis is optional. Company search works without it. The file is not kept. The model is the cheapest Aaron chose, with a US$1/day cap. Feedback is optional, one row per device per report, and deleted after 12 months.
 
 Residual risks R2, R3, R5, R7–R12 are in DEC-0013. R6 is retired.
+
+## 11a. Risk assessment (draft)
+
+| Risk | Likelihood | Severity | Measures | Residual |
+|------|------------|----------|----------|----------|
+| Third-party data on quotes sent to Azure (R3) | Likely | Medium | Tip, crop/mask, no original kept, output redaction, `store:false` | Medium (accepted on signature) |
+| Microsoft human review or abuse storage with unstated retention (R7) | Possible | Medium | Disclosed; no MAM; minimise what is sent | Medium |
+| Processing in any Azure region (R10) | Certain | Low–Medium | Disclosed; DPA/IDTA (verify) | Low–Medium |
+| PII in feedback comments | Possible | Low | Redactor (PR-F1 M1 set), not public, 12-month purge, service-role only | Low |
+| Leaked key → spend | Unlikely | Low (financial) | TPM bound, metric alert, rotation | Low |
+| Device or IP hashing re-identification | Unlikely | Low | HMAC with secret, daily IP salt, no raw values | Low |
+
+If any residual stays **high** after measures, MindArk IO Ltd consults the ICO before processing (UK GDPR Art 36).
 
 ## 12. Sign-off
 

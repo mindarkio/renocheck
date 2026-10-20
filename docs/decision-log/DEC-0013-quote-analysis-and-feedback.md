@@ -68,7 +68,7 @@ Verbatim from the locked decision (plan §0 item 2b / §13 D31):
 
 ### Microsoft data facts
 
-Read **2026-10-20** from the official pages cited in plan §6.4 (notes in the plan; the working file `azure-openai-check.md` is not in this repo). Labels are **[Certain from those pages]** unless marked.
+Read **2026-10-19/20** from the official pages cited in plan §6.4 (notes in the plan; the working file `azure-openai-check.md` is not in this repo). Labels are **[Certain from those pages]** unless marked.
 
 | Fact | Source |
 |------|--------|

@@ -17,7 +17,7 @@ New feature: must be **MVP Must Have** in `docs/MVP.md` or backed by a **DEC**. 
 
 Single search (company / HK phone / BR) → A–F report, MWC lookup, public discussion aggregation, cache, progress UI, disclaimer.
 
-Also in scope via [DEC-0013](docs/decision-log/DEC-0013-quote-analysis-and-feedback.md) (not V2):
+Also in scope via [DEC-0013](../../docs/decision-log/DEC-0013-quote-analysis-and-feedback.md) (not V2):
 
 - AI quote analysis (photos/PDF). Implementation follows `docs/plans/PRF-quote-analysis-plan.md`; it does not change company-report grading.
 - Private report rating (👍/👎 and an optional comment). Not public, not UGC.

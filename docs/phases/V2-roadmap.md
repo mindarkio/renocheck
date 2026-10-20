@@ -5,7 +5,7 @@
 - **Governance:** `docs/MVP.md` + DEC for major forks; ~10 Cursor rules.
 - **Tech:** Next.js, Supabase, Serp/CSE, Gemini for company reports (prod `gemini-3.5-flash-lite`, Gateway `gpt-4o-mini` only if the Google key is absent), `search_cache`, `/api/search`. Quote analysis is Azure OpenAI, not this path (DEC-0013).
 - **Tests:** schema, phone normalize, search handler unit tests.
-- **Not yet:** paid snippet unlock, E2E suite, SBOM, MRL numbering, zip handoff packages. Quote-analysis credits, when built, use Airwallex Hosted Payment Page (DEC-0013), not Stripe.
+- **Not yet:** payments (quote credits via Airwallex HPP come with DEC-0013 F5), E2E suite, SBOM, MRL numbering, zip handoff packages.
 
 ## V2 triggers
 
