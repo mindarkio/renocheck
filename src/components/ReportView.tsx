@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { RiskReport } from "@/lib/report-schema";
 import { ReportCard } from "./ReportCard";
+import { ReportFeedback } from "./ReportFeedback";
 import {
   reportPageColumnClass,
   reportReadingColumnClass,
@@ -22,7 +23,13 @@ function readSessionReport(fingerprint: string): RiskReport | null {
   }
 }
 
-export function ReportView({ fingerprint }: { fingerprint: string }) {
+export function ReportView({
+  fingerprint,
+  feedbackEnabled = false,
+}: {
+  fingerprint: string;
+  feedbackEnabled?: boolean;
+}) {
   const [report, setReport] = useState<RiskReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,8 +114,15 @@ export function ReportView({ fingerprint }: { fingerprint: string }) {
 
         {report && <ReportCard report={report} />}
 
+        {report && feedbackEnabled ? (
+          <ReportFeedback key={fingerprint} fingerprint={fingerprint} />
+        ) : null}
+
         {(report || error) && (
-          <div className={`${reportReadingColumnClass} mt-8 sm:mt-10`}>
+          <div
+            id={feedbackEnabled ? "report-new-search" : undefined}
+            className={`${reportReadingColumnClass} mt-8 sm:mt-10`}
+          >
             <Link
               href="/"
               className="flex w-full min-h-12 items-center justify-center gap-2.5 rounded-xl border border-primary bg-transparent px-5 py-3 text-[15px] font-semibold tracking-wide text-primary transition-[transform,background-color] duration-200 hover:bg-primary/5 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"

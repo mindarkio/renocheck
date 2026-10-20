@@ -13,4 +13,4 @@
 
 - [DEC-0010](../decision-log/DEC-0010-risk-band-display-grading.md)
 - **DEC-0012 例外：** `boundHitCount === 0` 時，若對照到**被告**且類別為工程／合約／小額錢債等（見 DEC-0012 Appendix B），仍可按規則升至「風險中等」等；勞資被告等預設不強制升檔。
-- `/legal/disclaimer` v1.2.0
+- `/legal/disclaimer` v1.2.1

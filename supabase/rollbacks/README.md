@@ -4,6 +4,8 @@ Pair each file with the matching migration under `supabase/migrations/`. Run on 
 
 20261018140000 嘅 down 係完全還原，會重新公開 phone 同 signatory，只限緊急用；任何 down 檔都唔可以 revoke service_role。
 
+20261020180000 嘅 down 會刪走 `report_feedback` 全部列（EMERGENCY／資料損失），只限緊急用。
+
 | Rollback file | Up migration |
 |---------------|----------------|
 | `20261016120000_official_legal_events.down.sql` | `20261016120000_official_legal_events.sql` |
@@ -15,3 +17,4 @@ Pair each file with the matching migration under `supabase/migrations/`. Run on 
 | `20261017114049_official_legal_events_catalog_case_ref_and_hearing_guard.down.sql` | `20261017114049_official_legal_events_catalog_case_ref_and_hearing_guard.sql` |
 | `20261017145500_official_legal_events_hearing_guard_search_path.down.sql` | `20261017145500_official_legal_events_hearing_guard_search_path.sql` |
 | `20261018140000_mwc_contractors_service_role_only.down.sql` | `20261018140000_mwc_contractors_service_role_only.sql` |
+| `20261020180000_report_feedback.down.sql` | `20261020180000_report_feedback.sql` |
