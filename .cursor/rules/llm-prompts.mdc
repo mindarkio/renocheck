@@ -6,7 +6,7 @@ alwaysApply: false
 
 # LLM usage
 
-Model: **gpt-4o-mini** (AI Gateway). Use `generateObject` + Zod (`report-schema`).
+Model for **company reports:** Gemini when `GOOGLE_GENERATIVE_AI_API_KEY` is set (`GEMINI_MODEL`, code default `gemini-3.5-flash`). Production `/api/health` on 2026-10-20 reported `google/gemini-3.5-flash-lite`. If that Google key is absent, `src/lib/llm-model.ts` falls back to Vercel AI Gateway `openai/gpt-4o-mini` (company reports only; pre-approved, DEC-0013 D23, `docs/runbooks/llm-provider-outage.md`). Quote analysis does not use this resolver (Azure OpenAI `gpt-6-luna`, DEC-0013) and never falls back. Use `generateObject` + Zod (`report-schema`).
 
 ## Call pattern (anti-hype)
 
