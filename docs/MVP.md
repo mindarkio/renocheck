@@ -15,7 +15,7 @@
 | 配對平台靠廣告／佣金，難中立呈現負面 | 不靠裝修公司抽成；報告基於公開資料與算法摘要 |
 | 業主查證耗時、唔識睇 BR／牌照 | 單一搜尋框：公司名／電話／BR → 3–5 秒內出報告 |
 
-**非目標（MVP 不做）：** 配對師傅、代辦合約、論壇社群、B2B「優良徽章」訂閱、AI 報價單審查（V2）。
+**非目標（MVP 不做）：** 配對師傅、代辦合約、論壇社群、B2B「優良徽章」訂閱。AI 報價單分析同私人報告意見（唔公開顯示）已移入範圍，見 [DEC-0013](decision-log/DEC-0013-quote-analysis-and-feedback.md)，唔再列作 V2 非目標。
 
 **可信 SSOT（高於「能發布」）：** 搜尋結果須成為用戶可查證、前後一致的單一報告真相 — 實體範圍、證據與評級一致，唔只靠 LLM 敘述。詳見 [`design/pipeline-ssot.md`](design/pipeline-ssot.md)。
 
@@ -75,9 +75,9 @@ flowchart LR
                               │
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
-        [Supabase]     [Search API]    [AI Gateway]
-        mwc_contractors  Serp/GCS      gpt-4o-mini
-        search_cache
+        [Supabase]     [Search API]    [Gemini；無 Google key 先至 Gateway]
+        mwc_contractors  Serp/GCS      prod：gemini-3.5-flash-lite
+        search_cache                   fallback：gateway gpt-4o-mini
 ```
 
 | 層 | 選型 | 備註 |
@@ -85,7 +85,7 @@ flowchart LR
 | 前端 | Next.js + Tailwind | 單頁搜尋 + 報告；繁中（香港）為主 |
 | API | Next.js Route Handlers | 平行 `Promise.all` 抓牌照 + 網搜 |
 | DB | Supabase Postgres | RLS：公開讀牌照；search cache 僅 service role 寫 |
-| AI | Vercel AI Gateway / `ai` SDK | 結構化 JSON 輸出（Zod validate） |
+| AI | 公司報告：有 `GOOGLE_GENERATIVE_AI_API_KEY` 時用 Gemini（`GEMINI_MODEL`；程式預設 `gemini-3.5-flash`）。2026-10-20 prod `/api/health` 的 `llmProvider` 為 `google/gemini-3.5-flash-lite`。冇 Google key 時先回落到 Vercel AI Gateway `openai/gpt-4o-mini`（只限公司報告，DEC-0013 D23）。報價單分析唔用呢條路徑（Azure OpenAI，DEC-0013） | 結構化 JSON 輸出（Zod validate） |
 | 部署 | Vercel | 環境變數：`SERPER_API_KEY` / `SERPAPI_KEY` 等，禁止 commit |
 
 **快取策略：** 以 `query_fingerprint`（normalized phone > BR > company name）為 key；TTL 建議 7 天；命中則跳過外部 API。
@@ -262,9 +262,10 @@ interface RiskReport {
 
 ## 11. 明確 Out of Scope
 
-- 用戶發帖、評分、留言  
+- 用戶發帖、公開評分、公開留言（UGC）  
 - **公司主檔／持久風險評估與延伸歷史**（評分時間序列、官方延伸來源、網搜信號快照庫）——見 `docs/phases/V2-roadmap.md`；MVP 僅 **查詢時生成** `RiskReport` + `search_cache` TTL  
 - 裝修公司後台申述（V2+）  
-- AI 報價單 PDF 審查（V2）  
 - B2B 徽章訂閱（中期）  
-- 非香港市場
+- 非香港市場  
+
+**已移入範圍（DEC-0013，不再屬上面清單）：** AI 報價單分析；私人報告意見回饋（👍／👎 加可選文字，唔公開顯示，唔係 UGC）。見 [DEC-0013](decision-log/DEC-0013-quote-analysis-and-feedback.md) 同 [`plans/PRF-quote-analysis-plan.md`](plans/PRF-quote-analysis-plan.md)。唔改公司報告分檔。
