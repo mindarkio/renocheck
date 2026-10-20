@@ -10,6 +10,7 @@ import {
   ContentSection,
 } from "@/components/ContentPage";
 import { DISCLAIMER_VERSION } from "@/lib/constants";
+import { FEEDBACK_PRIVACY_NOTICE_ZH } from "@/lib/feedback-copy-zh";
 export const metadata: Metadata = pageMetadata({
   path: "/legal/disclaimer",
   title: "免責聲明與資料來源",
@@ -116,6 +117,11 @@ export default function DisclaimerPage() {
             </ul>
             <p className="text-xs">
               我們<strong>沒有</strong>設立「資料保護主任（DPO）」的法定義務，除非營運架構觸發私隱條例相關要求；上述聯絡渠道即一般查詢及更正途徑。
+            </p>
+            <p id="feedback-privacy">
+              {FEEDBACK_PRIVACY_NOTICE_ZH.split("hello@renocheck.homes")[0]}
+              <a href="mailto:hello@renocheck.homes">hello@renocheck.homes</a>
+              {FEEDBACK_PRIVACY_NOTICE_ZH.split("hello@renocheck.homes")[1]}
             </p>
           </ContentSection>
 

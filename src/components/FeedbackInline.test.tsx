@@ -5,11 +5,14 @@ import { useState } from "react";
 import { FeedbackInline } from "./FeedbackInline";
 import {
   FEEDBACK_CHANGE_ZH,
+  FEEDBACK_COMMENT_LABEL_ZH,
   FEEDBACK_COMMENT_MAX,
   FEEDBACK_COMPANY_HEADING_ZH,
   FEEDBACK_DOWN_ZH,
   FEEDBACK_ERROR_ZH,
   FEEDBACK_PLACEHOLDER_ZH,
+  FEEDBACK_PRIVACY_HREF,
+  FEEDBACK_PRIVACY_LINK_ZH,
   FEEDBACK_SUBMIT_ZH,
   FEEDBACK_THANKS_ZH,
   FEEDBACK_UP_ZH,
@@ -64,8 +67,11 @@ describe("FeedbackInline", () => {
     expect(up.getAttribute("aria-pressed")).toBe("true");
     expect(down.getAttribute("aria-pressed")).toBe("false");
 
-    const field = screen.getByRole("textbox");
+    const field = screen.getByRole("textbox", { name: FEEDBACK_COMMENT_LABEL_ZH });
     expect(field.tagName).toBe("TEXTAREA");
+    expect(screen.getByText(FEEDBACK_COMMENT_LABEL_ZH)).toBeTruthy();
+    const privacy = screen.getByRole("link", { name: FEEDBACK_PRIVACY_LINK_ZH });
+    expect(privacy.getAttribute("href")).toBe(FEEDBACK_PRIVACY_HREF);
     expect(document.querySelectorAll("input")).toHaveLength(0);
     expect(field.getAttribute("placeholder")).toBe(FEEDBACK_PLACEHOLDER_ZH);
     expect(field.getAttribute("placeholder")).toContain("唔好填姓名或電話");

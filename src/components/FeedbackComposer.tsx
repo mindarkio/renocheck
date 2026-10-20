@@ -1,11 +1,15 @@
 "use client";
 
 import { useId, useLayoutEffect, useRef } from "react";
+import Link from "next/link";
 import {
   FEEDBACK_CHANGE_ZH,
+  FEEDBACK_COMMENT_LABEL_ZH,
   FEEDBACK_COMMENT_MAX,
   FEEDBACK_DOWN_ZH,
   FEEDBACK_PLACEHOLDER_ZH,
+  FEEDBACK_PRIVACY_HREF,
+  FEEDBACK_PRIVACY_LINK_ZH,
   FEEDBACK_SUBMIT_ZH,
   FEEDBACK_THANKS_ZH,
   FEEDBACK_UP_ZH,
@@ -116,8 +120,8 @@ export function FeedbackComposer({
       </div>
       {rating ? (
         <div className="space-y-2">
-          <label className="block">
-            <span className="sr-only">{FEEDBACK_PLACEHOLDER_ZH}</span>
+          <label className="block space-y-2">
+            <span className="text-sm text-foreground">{FEEDBACK_COMMENT_LABEL_ZH}</span>
             <textarea
               value={comment}
               maxLength={FEEDBACK_COMMENT_MAX}
@@ -147,6 +151,12 @@ export function FeedbackComposer({
       ) : null}
         </>
       )}
+      <Link
+        href={FEEDBACK_PRIVACY_HREF}
+        className="inline-flex min-h-11 items-center text-xs text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      >
+        {FEEDBACK_PRIVACY_LINK_ZH}
+      </Link>
     </div>
   );
 }

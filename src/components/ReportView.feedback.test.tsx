@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { ReportView } from "./ReportView";
-import { REPORT_VERSION } from "@/lib/constants";
+import { DISCLAIMER_VERSION, REPORT_VERSION } from "@/lib/constants";
 import { buildEvaluationStub } from "@/lib/evaluation-stub";
 import type { RiskReport } from "@/lib/report-schema";
 import {
@@ -66,7 +66,7 @@ function report(): RiskReport {
       actionableClauses: [],
       contractChecklist: ["有無書面合約？"],
     },
-    disclaimerVersion: "1.2.0",
+    disclaimerVersion: DISCLAIMER_VERSION,
     generatedAt: "2026-10-20T02:00:00.000Z",
   };
 }
