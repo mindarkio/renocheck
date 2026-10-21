@@ -25,7 +25,7 @@ export default async function AdminLoginPage({ searchParams }: PageProps) {
   else if (error === "wrong") message = "PIN 唔啱，請再試";
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-12">
+    <div className="mx-auto flex min-h-screen w-full min-w-0 max-w-md flex-col justify-center px-4 py-12">
       <h1 className="mb-6 text-center text-xl font-semibold text-primary">
         管理員登入
       </h1>

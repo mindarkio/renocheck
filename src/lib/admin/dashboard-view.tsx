@@ -35,9 +35,9 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
   const maxDaily = Math.max(1, ...data.daily.map((d) => d.searches));
 
   return (
-    <div className="mx-auto min-h-screen max-w-5xl space-y-8 px-4 py-6 text-foreground">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-primary">搜尋數據</h1>
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col space-y-8 px-4 py-6 text-foreground">
+      <header className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <h1 className="min-w-0 shrink text-xl font-semibold text-primary">搜尋數據</h1>
         <form action={submitAdminLogout}>
           <button
             type="submit"
@@ -63,7 +63,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         </p>
       ) : null}
 
-      <nav className="flex flex-wrap gap-2" aria-label="日期範圍">
+      <nav className="flex min-w-0 flex-wrap gap-2" aria-label="日期範圍">
         {([7, 30, 90] as AnalyticsDays[]).map((d) => (
           <Link
             key={d}
@@ -77,7 +77,10 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         ))}
       </nav>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="KPI">
+      <section
+        className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4"
+        aria-label="KPI"
+      >
         <KpiCard title="總搜尋次數" pct={null} count={data.kpi.totalSearches} />
         <KpiCard
           title="快取命中"
@@ -96,7 +99,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         />
       </section>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="min-w-0 break-words text-xs text-muted-foreground">
         按類型：公司名 {data.kpi.byInputType.company_name}・電話{" "}
         {data.kpi.byInputType.phone}・BR {data.kpi.byInputType.br}
         {data.kpi.byInputType.unknown > 0
@@ -105,7 +108,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
       </p>
 
       <nav
-        className="flex flex-nowrap gap-2 overflow-x-auto"
+        className="flex w-full min-w-0 max-w-full flex-nowrap gap-2 overflow-x-auto"
         aria-label="視圖"
       >
         {VIEW_TABS.map((tab) => (
@@ -126,7 +129,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
       {errorMessage ? null : rows.length === 0 ? (
         <EmptyStateCard />
       ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
+        <div className="min-w-0 w-full max-w-full overflow-x-auto rounded-md border border-border">
           <table className="min-w-[36rem] w-full text-left text-sm">
             <thead className="bg-muted text-xs text-muted-foreground">
               <tr>
@@ -150,7 +153,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
       {errorMessage ? null : dailyTotal === 0 ? (
         <EmptyStateCard />
       ) : (
-        <section aria-label="每日搜尋量">
+        <section className="min-w-0" aria-label="每日搜尋量">
           <h2 className="mb-3 text-sm font-semibold text-primary">每日搜尋量</h2>
           <DailyBarChart daily={data.daily} max={maxDaily} />
           <table className="mt-4 w-full text-sm">
@@ -175,8 +178,10 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         </section>
       )}
 
-      <aside className="rounded-md border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-        <p>
+      <aside
+        className="min-w-0 break-words rounded-md border border-border bg-muted/50 p-4 text-sm text-muted-foreground"
+      >
+        <p className="break-words">
           每個唔同嘅搜尋詞只會出現一次（大細楷當同一個詞）。搜尋失敗嘅暫時未有紀錄，亦未計到每次有幾多個候選公司。電話同
           BR 只計次數，唔會顯示內容。
         </p>
