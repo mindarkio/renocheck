@@ -46,10 +46,9 @@ describe("admin pages feature flag", () => {
   });
 
   it("redirects login to /admin when session is valid", async () => {
-    const secret = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
-    // 4–32 chars: the env PIN length is now validated like the submitted PIN.
-    vi.stubEnv("ADMIN_DASHBOARD_PIN", `t-${randomUUID()}`.slice(0, 20));
-    vi.stubEnv("ADMIN_SESSION_SECRET", secret);
+    const { randomTestPin, randomTestSecret } = await import("@/lib/admin/test-helpers");
+    vi.stubEnv("ADMIN_DASHBOARD_PIN", randomTestPin(12));
+    vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
     const session = await import("@/lib/admin/session");
     vi.mocked(session.isAdminSessionValid).mockResolvedValue(true);
     vi.resetModules();

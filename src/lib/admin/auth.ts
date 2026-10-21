@@ -1,3 +1,5 @@
+import "server-only";
+
 import {
   createHmac,
   randomBytes,
@@ -40,13 +42,14 @@ export function resetAdminAuthStateForTests(): void {
   globalState = { failures: 0, windowStart: 0, lockedUntil: 0 };
 }
 
-const PIN_MIN_LENGTH = 4;
-const PIN_MAX_LENGTH = 32;
+export const PIN_MIN_LENGTH = 4;
+export const PIN_MAX_LENGTH = 32;
+const PIN_DIGITS_RE = /^\d{4,32}$/;
 
-/** Trimmed env PIN, or null when missing or outside the accepted 4–32 length. */
+/** Trimmed env PIN, or null when missing or not exactly 4–32 digits. */
 export function getAdminEnvPin(): string | null {
   const pin = process.env.ADMIN_DASHBOARD_PIN?.trim() ?? "";
-  if (pin.length < PIN_MIN_LENGTH || pin.length > PIN_MAX_LENGTH) return null;
+  if (!PIN_DIGITS_RE.test(pin)) return null;
   return pin;
 }
 
@@ -72,10 +75,10 @@ export function pinDigestHex(pin: string): string {
   return sha256Buffer(pin).toString("hex");
 }
 
-/** Accept 4–32 characters; compare SHA-256 digests with timingSafeEqual. */
+/** Submitted value must be 4–32 digits; compare SHA-256 digests with timingSafeEqual. */
 export function verifyAdminPin(submitted: string, config: AdminAuthConfig): boolean {
   const trimmed = submitted.trim();
-  if (trimmed.length < PIN_MIN_LENGTH || trimmed.length > PIN_MAX_LENGTH) return false;
+  if (!PIN_DIGITS_RE.test(trimmed)) return false;
   const digest = sha256Buffer(trimmed);
   if (digest.length !== config.pinSha256.length) return false;
   return timingSafeEqual(digest, config.pinSha256);

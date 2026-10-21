@@ -28,6 +28,8 @@ describe("admin term privacy (PR #32 review)", () => {
     }
     expect(maskAdminTerm("甲乙工程")).toBe("甲乙工程");
     expect(maskAdminTerm("AB 3D 設計")).toBe("AB 3D 設計");
+    expect(maskAdminTerm("陳師傅")).toBe("陳師傅");
+    expect(maskAdminTerm("李生")).toBe("李生");
   });
 
   it("render: phone/BR sentinel rows and digits typed into the name box never reach HTML", () => {

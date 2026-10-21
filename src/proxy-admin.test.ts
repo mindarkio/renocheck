@@ -1,7 +1,11 @@
-import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ADMIN_SESSION_COOKIE, buildSessionToken, getAdminAuthConfig } from "@/lib/admin/auth";
+import {
+  ADMIN_SESSION_COOKIE,
+  buildSessionToken,
+  getAdminAuthConfig,
+} from "@/lib/admin/auth";
+import { randomTestPin, randomTestSecret } from "@/lib/admin/test-helpers";
 import { config as proxyConfig, proxy } from "@/proxy";
 
 const req = (path: string, cookie?: string) =>
@@ -10,23 +14,27 @@ const req = (path: string, cookie?: string) =>
   });
 
 function enable() {
-  const pin = `t-${randomUUID()}`.slice(0, 20);
+  const pin = randomTestPin(12);
   vi.stubEnv("ADMIN_DASHBOARD_PIN", pin);
-  vi.stubEnv("ADMIN_SESSION_SECRET", randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, ""));
+  vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
   return pin;
 }
 
 describe("proxy /admin gate", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("matches /admin and /admin/*", () => {
-    expect(proxyConfig.matcher).toEqual(expect.arrayContaining(["/admin", "/admin/:path*"]));
+  it("matches /admin and /admin/* only (public routes use other matchers)", () => {
+    expect(proxyConfig.matcher).toEqual(
+      expect.arrayContaining(["/admin", "/admin/:path*"]),
+    );
+    expect(proxyConfig.matcher).not.toContain("/");
+    expect(proxyConfig.matcher).not.toContain("/faq");
   });
 
-  it("real 404 on /admin and /admin/login when env is missing", () => {
+  it("real 404 on /admin paths when env is missing", () => {
     vi.stubEnv("ADMIN_DASHBOARD_PIN", "");
     vi.stubEnv("ADMIN_SESSION_SECRET", "");
-    for (const p of ["/admin", "/admin/", "/admin/login"]) {
+    for (const p of ["/admin", "/admin/", "/admin/login", "/admin/xyz"]) {
       const res = proxy(req(p));
       expect(res.status).toBe(404);
       expect(res.headers.get("x-robots-tag")).toContain("noindex");
@@ -39,6 +47,8 @@ describe("proxy /admin gate", () => {
       const res = proxy(req("/admin?days=7", cookie));
       expect(res.status).toBe(307);
       expect(new URL(res.headers.get("location")!).pathname).toBe("/admin/login");
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(res.headers.get("x-robots-tag")).toContain("noindex");
     }
   });
 

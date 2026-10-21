@@ -1,12 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ADMIN_SESSION_COOKIE,
   buildSessionToken,
+  finishLoginAttempt,
   getAdminAuthConfig,
   getLoginBlockStatus,
   pinDigestHex,
   recordLoginAttempt,
+  reserveLoginAttempt,
   resetAdminAuthStateForTests,
   sessionCookieOptions,
   verifyAdminPin,
@@ -14,14 +15,7 @@ import {
   __testOnlySetGlobalState,
   __testOnlySetIpState,
 } from "@/lib/admin/auth";
-
-function testPin(): string {
-  return `p${randomUUID().replace(/-/g, "").slice(0, 8)}`;
-}
-
-function testSecret(): string {
-  return randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
-}
+import { randomTestPin, randomTestSecret } from "@/lib/admin/test-helpers";
 
 describe("admin auth", () => {
   beforeEach(() => {
@@ -35,13 +29,14 @@ describe("admin auth", () => {
   });
 
   it("rejects wrong PIN and accepts correct PIN via digest compare", () => {
-    const pin = testPin();
+    const pin = randomTestPin(8);
     const config = {
       pinSha256: Buffer.from(pinDigestHex(pin), "hex"),
-      sessionSecret: testSecret(),
+      sessionSecret: randomTestSecret(),
     };
-    expect(verifyAdminPin("wrong", config)).toBe(false);
+    expect(verifyAdminPin(randomTestPin(8), config)).toBe(false);
     expect(verifyAdminPin(pin, config)).toBe(true);
+    expect(verifyAdminPin("12ab", config)).toBe(false);
   });
 
   it("issues a session cookie with required flags", () => {
@@ -79,18 +74,18 @@ describe("admin auth", () => {
     expect(getLoginBlockStatus("203.0.113.99", now)).toBe("global");
   });
 
-  it("treats missing or short env as disabled", () => {
+  it("treats missing or short secret as disabled", () => {
     vi.stubEnv("ADMIN_DASHBOARD_PIN", "");
-    vi.stubEnv("ADMIN_SESSION_SECRET", testSecret());
+    vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
     expect(getAdminAuthConfig()).toBeNull();
-    vi.stubEnv("ADMIN_DASHBOARD_PIN", testPin());
+    vi.stubEnv("ADMIN_DASHBOARD_PIN", randomTestPin(8));
     vi.stubEnv("ADMIN_SESSION_SECRET", "short");
     expect(getAdminAuthConfig()).toBeNull();
   });
 
   it("rejects tampered, expired, and wrong-version cookies", () => {
-    const pin = testPin();
-    const secret = testSecret();
+    const pin = randomTestPin(8);
+    const secret = randomTestSecret();
     vi.stubEnv("ADMIN_DASHBOARD_PIN", pin);
     vi.stubEnv("ADMIN_SESSION_SECRET", secret);
     const config = getAdminAuthConfig()!;
@@ -115,9 +110,9 @@ describe("admin auth", () => {
   });
 
   it("invalidates session when PIN rotates", () => {
-    const pinA = testPin();
-    const pinB = testPin();
-    const secret = testSecret();
+    const pinA = randomTestPin(8);
+    const pinB = randomTestPin(8);
+    const secret = randomTestSecret();
     const config = {
       pinSha256: Buffer.from(pinDigestHex(pinA), "hex"),
       sessionSecret: secret,
@@ -127,13 +122,21 @@ describe("admin auth", () => {
     expect(verifySessionToken(token, config, pinB, now + 1)).toBe(false);
   });
 
-  it("never logs PIN or submitted input on failure", async () => {
-    const pin = testPin();
+  it("never logs PIN, submitted input, or IP on login failure flow", async () => {
+    const pin = randomTestPin(8);
+    const wrongPin = randomTestPin(8);
+    const sentinel = `SENTINEL_${Date.now()}`;
     vi.stubEnv("ADMIN_DASHBOARD_PIN", pin);
+    vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await recordLoginAttempt("203.0.113.5", false);
+    const ip = "203.0.113.99";
+    expect(reserveLoginAttempt(ip).status).toBe("reserved");
+    await finishLoginAttempt(ip, false);
     const payload = warn.mock.calls.map((c) => String(c[0])).join("\n");
     expect(payload).not.toContain(pin);
+    expect(payload).not.toContain(wrongPin);
+    expect(payload).not.toContain(sentinel);
+    expect(payload).not.toContain(ip);
     expect(payload).toContain("admin_login_failed");
     warn.mockRestore();
   });

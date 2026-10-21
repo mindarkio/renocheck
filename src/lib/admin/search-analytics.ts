@@ -1,3 +1,5 @@
+import "server-only";
+
 import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
 import { foldFullWidth, stripControlAndBidi } from "@/lib/feedback/redact";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";

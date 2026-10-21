@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { BrandMenuMark } from "@/components/BrandMenuMark";
@@ -98,8 +99,11 @@ function DesktopNavLinks() {
 }
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu();
   const menuId = "site-nav-menu";
+
+  if (pathname.startsWith("/admin")) return null;
 
   return (
     <>

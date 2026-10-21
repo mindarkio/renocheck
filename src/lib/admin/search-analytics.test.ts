@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { randomFakePhoneDigits } from "@/lib/admin/test-helpers";
 import { outcomeLabelZh } from "@/lib/admin/outcome-labels";
 import {
   aggregateSearchAnalytics,
@@ -10,7 +11,6 @@ import {
 } from "@/lib/admin/search-analytics";
 
 const SENTINEL = "SENTINEL_TERM_MUST_NOT_RENDER";
-const PHONE_DIGITS = "99990001";
 
 describe("search analytics aggregation", () => {
   it("maps outcome labels", () => {
@@ -49,6 +49,7 @@ describe("search analytics aggregation", () => {
         created_at: "2026-06-15T09:30:00.000Z",
       },
     ];
+    const PHONE_DIGITS = randomFakePhoneDigits();
     const cache: SearchCacheAnalyticsRow[] = [
       {
         fingerprint: "fp-a",

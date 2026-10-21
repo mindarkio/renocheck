@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildSessionToken,
@@ -11,14 +10,12 @@ import {
   SESSION_DURATION_MS,
   verifySessionToken,
 } from "@/lib/admin/auth";
+import { randomTestPin, randomTestSecret } from "@/lib/admin/test-helpers";
 
-const testPin = () => `t-${randomUUID()}`.slice(0, 20);
-const testSecret = () => randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
-
-function enable() {
-  const pin = testPin();
+function enable(pinLen = 12) {
+  const pin = randomTestPin(pinLen);
   vi.stubEnv("ADMIN_DASHBOARD_PIN", pin);
-  vi.stubEnv("ADMIN_SESSION_SECRET", testSecret());
+  vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
   return { pin, config: getAdminAuthConfig()! };
 }
 
@@ -95,15 +92,15 @@ describe("admin auth hardening (PR #32 review)", () => {
   it("rotating the secret invalidates sessions", () => {
     const { pin, config } = enable();
     const token = buildSessionToken(config, pin, Date.now());
-    vi.stubEnv("ADMIN_SESSION_SECRET", testSecret());
+    vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
     expect(verifySessionToken(token, getAdminAuthConfig()!, pin, Date.now())).toBe(false);
   });
 
-  it("an env PIN outside 4–32 chars disables the dashboard", () => {
-    vi.stubEnv("ADMIN_SESSION_SECRET", testSecret());
-    vi.stubEnv("ADMIN_DASHBOARD_PIN", "abc");
+  it("an env PIN outside 4–32 digits disables the dashboard", () => {
+    vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
+    vi.stubEnv("ADMIN_DASHBOARD_PIN", "12ab");
     expect(getAdminAuthConfig()).toBeNull();
-    vi.stubEnv("ADMIN_DASHBOARD_PIN", `x${"y".repeat(32)}`);
+    vi.stubEnv("ADMIN_DASHBOARD_PIN", `${"9".repeat(33)}`);
     expect(getAdminAuthConfig()).toBeNull();
   });
 });
