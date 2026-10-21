@@ -1,3 +1,4 @@
+import { isDisputeHighlight, parseHighlightYear } from "./dispute-signals";
 import { legalEventAffectsHeroDisputeWarning } from "./legal-event-calibration";
 import { dedupeByJudgment } from "./lookup-legal-judgments";
 import type { RiskReport } from "./report-schema";
@@ -20,20 +21,15 @@ export function hasMatchedLegalEvents(report: RiskReport): boolean {
   return (report.official.legalEvents?.length ?? 0) > 0;
 }
 
-/** Public discussion / dispute signal from Track 2 (not legal-only disputeLevel). */
+/** Public discussion / dispute signal from Track 2 (structured dispute highlights only). */
 export function hasForumDisputeSignal(report: RiskReport): boolean {
   const highlights = report.signals.highlights ?? [];
-  if (highlights.length > 0) return true;
+  if (highlights.some(isDisputeHighlight)) return true;
 
-  const bound = report.signals.boundHitCount ?? 0;
-  if (bound === 0) return false;
-
-  const level = report.evaluation.reputationTrack.disputeLevel;
-  return (
-    level === "active_concerning" ||
-    level === "severe" ||
-    level === "historical_isolated"
-  );
+  const { disputeLevel, recentDisputeCount } =
+    report.evaluation.reputationTrack;
+  if (recentDisputeCount > 0) return true;
+  return disputeLevel === "severe";
 }
 
 type HeroSummaryVariant = "neither" | "forum_only" | "legal_only" | "both";
@@ -91,13 +87,15 @@ export function forumDisputeChip(report: RiskReport): { label: string } {
   const { disputeLevel, recentDisputeCount } =
     report.evaluation.reputationTrack;
   switch (disputeLevel) {
-    case "historical_isolated":
-      return {
-        label:
-          recentDisputeCount > 0
-            ? `較早提及 · ${recentDisputeCount} 則`
-            : "較早公開提及",
-      };
+    case "historical_isolated": {
+      if (recentDisputeCount > 0) {
+        return { label: `較早提及 · ${recentDisputeCount} 則` };
+      }
+      const datedDispute = (report.signals.highlights ?? []).some(
+        (h) => isDisputeHighlight(h) && parseHighlightYear(h) != null,
+      );
+      return { label: datedDispute ? "較早公開提及" : "請核實來源" };
+    }
     case "active_concerning":
       return {
         label:

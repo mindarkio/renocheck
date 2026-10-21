@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { entityMatchTokens } from "./search-entity-labels";
 import {
   buildRetrievalEvidence,
+  countBoundDisputeSignals,
+  countBoundPraiseSignals,
   filterWebSearchHitsForLlm,
   matchesPhoneAnchor,
 } from "./search-evidence-filter";
 import type { WebSearchHit } from "./web-search";
+import { calibrateEvaluation } from "./risk-report-calibration-v2";
 
 describe("filterWebSearchHitsForLlm", () => {
   it("drops hits with no entity token", () => {
@@ -145,6 +148,111 @@ describe("filterWebSearchHitsForLlm", () => {
       normalizedPhone: "92805455",
     });
     expect(evidence[0].matchReason).toBe("entity_token");
+  });
+});
+
+describe("countBoundPraiseSignals", () => {
+  it("O6: counts traditional 推薦", () => {
+    const hits: WebSearchHit[] = [
+      {
+        title: "帖",
+        url: "https://www.facebook.com/1",
+        snippet: "十分推薦這間公司",
+      },
+    ];
+    expect(countBoundPraiseSignals(hits)).toBe(1);
+  });
+
+  it.each(["不推薦", "唔推薦", "唔係好推薦", "不太推薦", "唔好推薦"])(
+    "O6: negated praise form %s → 0",
+    (snippet) => {
+      const hits: WebSearchHit[] = [
+        { title: "帖", url: "https://www.facebook.com/1", snippet },
+      ];
+      expect(countBoundPraiseSignals(hits)).toBe(0);
+    },
+  );
+
+  it.each([
+    "十分推薦",
+    "非常推薦",
+    "好專業",
+    "唔錯，十分推薦",
+    "唔使諗，推薦",
+    "不錯，推薦",
+    "準時完工，好滿意",
+  ])("O6: still counts praise: %s", (snippet) => {
+    const hits: WebSearchHit[] = [
+      { title: "帖", url: "https://www.facebook.com/1", snippet },
+    ];
+    expect(countBoundPraiseSignals(hits)).toBe(1);
+  });
+
+  it.each([
+    "唔係好推薦，做嘢慢",
+    "不太推薦，態度差",
+    "唔好推薦俾人",
+  ])("R-R2-2: negated praise snippet %s → 中性 not 未見負面摘要", (snippet) => {
+    const hits: WebSearchHit[] = [
+      { title: "帖", url: "https://www.facebook.com/1", snippet },
+    ];
+    const out = calibrateEvaluation({
+      slice: {
+        grade: "C",
+        confidence: "low",
+        summaryZh: "x",
+        discussionCount: 0,
+        themes: [],
+        highlights: [],
+      },
+      evidence: {
+        llmHitCount: 1,
+        boundHitCount: 1,
+        serpHitCount: 5,
+        boundDisputeHitCount: 0,
+        boundPraiseHitCount: countBoundPraiseSignals(hits),
+      },
+      mwcMatched: false,
+      mwcAmbiguous: false,
+      generatedAt: "2026-06-01T00:00:00.000Z",
+    });
+    expect(out.evaluation.riskBandZh).toBe("中性");
+    expect(out.evaluation.riskBandZh).not.toBe("未見負面摘要");
+  });
+
+  it("O6: 唔專業 is not praise", () => {
+    const hits: WebSearchHit[] = [
+      {
+        title: "帖",
+        url: "https://www.lihkg.com/1",
+        snippet: "師傅好唔專業",
+      },
+    ];
+    expect(countBoundPraiseSignals(hits)).toBe(0);
+  });
+});
+
+describe("countBoundDisputeSignals", () => {
+  it("ignores negated 投訴 in praise snippets", () => {
+    const hits: WebSearchHit[] = [
+      {
+        title: "推薦",
+        url: "https://www.facebook.com/1",
+        snippet: "溝通順暢，完全冇投訴",
+      },
+    ];
+    expect(countBoundDisputeSignals(hits)).toBe(0);
+  });
+
+  it("still counts undisputed 投訴", () => {
+    const hits: WebSearchHit[] = [
+      {
+        title: "苦主",
+        url: "https://www.lihkg.com/1",
+        snippet: "多宗投訴",
+      },
+    ];
+    expect(countBoundDisputeSignals(hits)).toBe(1);
   });
 });
 

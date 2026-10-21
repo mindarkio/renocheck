@@ -25,6 +25,8 @@ export type RetrievalEvidence = {
   /** Bound hits whose title/snippet match dispute keywords */
   boundDisputeHitCount?: number;
   boundPraiseHitCount?: number;
+  /** url → source page title, for syndication dedupe (P0). */
+  sourceTitles?: Record<string, string>;
 };
 
 function gradeIndex(grade: string): number {
