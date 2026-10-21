@@ -133,6 +133,8 @@ describe("capRiskBandZh", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     process.env.RISK_BAND_MAX = "high";
     expect(capRiskBandZh("風險偏高")).toBe("風險偏高");
+    expect(capRiskBandZh("風險偏高")).toBe("風險偏高");
+    expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
       JSON.stringify({ event: "risk_band_max_invalid" }),
     );

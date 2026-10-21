@@ -1,4 +1,4 @@
-import { isDisputeHighlight } from "./dispute-signals";
+import { isDisputeHighlight, parseHighlightYear } from "./dispute-signals";
 import { legalEventAffectsHeroDisputeWarning } from "./legal-event-calibration";
 import { dedupeByJudgment } from "./lookup-legal-judgments";
 import type { RiskReport } from "./report-schema";
@@ -87,11 +87,15 @@ export function forumDisputeChip(report: RiskReport): { label: string } {
   const { disputeLevel, recentDisputeCount } =
     report.evaluation.reputationTrack;
   switch (disputeLevel) {
-    case "historical_isolated":
+    case "historical_isolated": {
       if (recentDisputeCount > 0) {
         return { label: `較早提及 · ${recentDisputeCount} 則` };
       }
-      return { label: "請核實來源" };
+      const datedDispute = (report.signals.highlights ?? []).some(
+        (h) => isDisputeHighlight(h) && parseHighlightYear(h) != null,
+      );
+      return { label: datedDispute ? "較早公開提及" : "請核實來源" };
+    }
     case "active_concerning":
       return {
         label:

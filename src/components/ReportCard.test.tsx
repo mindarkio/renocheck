@@ -59,6 +59,7 @@ function assertClean(text: string): void {
 
 afterEach(() => {
   cleanup();
+  delete process.env.RISK_BAND_MAX;
 });
 
 function degradedReport(): RiskReport {
@@ -828,6 +829,56 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(c2.textContent).not.toContain("依據：");
   });
 
+  it("依據 line hidden when N>0 but band is 中性", () => {
+    const report = minimalReport({
+      generatedAt: "2026-06-01T00:00:00.000Z",
+      evaluation: {
+        ...buildEvaluationStub({
+          overallGrade: "D",
+          confidence: "high",
+          mwcMatched: false,
+          boundHitCount: 3,
+          highlightCount: 3,
+        }),
+        riskBandZh: "中性",
+        reputationTrack: {
+          disputeLevel: "active_concerning",
+          recentDisputeCount: 3,
+        },
+      },
+      signals: {
+        discussionCount: 3,
+        themes: [],
+        boundHitCount: 3,
+        contractChecklist: ["佔位"],
+        actionableClauses: [],
+        retrievalEvidence: [],
+        highlights: [
+          {
+            summaryZh: "走數苦主帖一",
+            url: "https://www.facebook.com/a",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+          {
+            summaryZh: "走數苦主帖二",
+            url: "https://www.lihkg.com/b",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+          {
+            summaryZh: "走數苦主帖三",
+            url: "https://www.threads.net/c",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+        ],
+      },
+    });
+    const { container } = render(<ReportCard report={report} />);
+    expect(container.textContent).not.toContain("依據：");
+  });
+
   it("bound links render with highlights; no raw URL text", () => {
     const withHighlightsAndEvidence = minimalReport({
       signals: {
@@ -860,6 +911,36 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.querySelector("#retrieval-evidence-heading")).toBeTruthy();
     expect(container.textContent).not.toMatch(/https?:\/\//);
     expect(container.textContent).toContain("facebook.com");
+  });
+
+  it("bound links redact title and snippet when no highlights", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          signals: {
+            ...minimalReport().signals,
+            boundHitCount: 1,
+            highlights: [],
+            retrievalEvidence: [
+              {
+                url: "https://www.facebook.com/groups/x",
+                title: "陳師傅推介",
+                snippetExcerpt: "致電 9123 4567 搵陳師傅",
+                matchedToken: "陳師傅",
+                matchReason: "entity_token",
+              },
+            ],
+          },
+        })}
+      />,
+    );
+    expect(container.querySelector("#retrieval-evidence-heading")).toBeTruthy();
+    const evidenceBlock = container
+      .querySelector("#retrieval-evidence-heading")
+      ?.closest("section");
+    const text = evidenceBlock?.textContent ?? "";
+    expect(text).not.toMatch(/師傅|9123/);
+    expect(text).toContain("[姓名]");
   });
 
   it("RISK_BAND_MAX=中性 with judgment floor shows 風險中等 and no 依據 line", () => {
@@ -902,7 +983,6 @@ describe("ReportCard report trust (PR-BC)", () => {
     const { container } = render(<ReportCard report={report} />);
     expect(container.textContent).toContain("風險中等");
     expect(container.textContent).not.toContain("依據：");
-    delete process.env.RISK_BAND_MAX;
   });
 
   it("legal scope 關：冇判詞 chip", () => {

@@ -39,6 +39,8 @@ export type ResolvedRiskBand = {
 
 const RISK_BAND_MAX_VALUES = new Set<RiskBandZh>(["風險中等", "中性"]);
 
+let warnedInvalidCap = false;
+
 const BAND_SEVERITY: Record<RiskBandZh, number> = {
   風險偏高: 3,
   風險中等: 2,
@@ -50,7 +52,10 @@ const BAND_SEVERITY: Record<RiskBandZh, number> = {
 export function capRiskBandZh(band: RiskBandZh): RiskBandZh {
   const raw = process.env.RISK_BAND_MAX?.trim();
   if (raw && !RISK_BAND_MAX_VALUES.has(raw as RiskBandZh)) {
-    console.warn(JSON.stringify({ event: "risk_band_max_invalid" }));
+    if (!warnedInvalidCap) {
+      warnedInvalidCap = true;
+      console.warn(JSON.stringify({ event: "risk_band_max_invalid" }));
+    }
     return band;
   }
   if (!raw) return band;

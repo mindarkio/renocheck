@@ -469,6 +469,32 @@ describe("forumDisputeChip O4", () => {
     });
     expect(forumDisputeChip(r).label).toBe("請核實來源");
   });
+
+  it("historical_isolated with dated old dispute → 較早公開提及", () => {
+    const r = baseReport({
+      generatedAt: "2026-06-01T00:00:00.000Z",
+      signals: {
+        ...baseReport().signals,
+        boundHitCount: 1,
+        highlights: [
+          {
+            summaryZh: "舊帖",
+            url: "https://example.com/old",
+            incidentType: "payment_dispute",
+            approxYear: "2019",
+          },
+        ],
+      },
+      evaluation: {
+        ...baseReport().evaluation,
+        reputationTrack: {
+          disputeLevel: "historical_isolated",
+          recentDisputeCount: 0,
+        },
+      },
+    });
+    expect(forumDisputeChip(r).label).toBe("較早公開提及");
+  });
 });
 
 describe("legalRecordsChip dedupe count", () => {
