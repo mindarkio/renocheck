@@ -87,7 +87,7 @@ describe("calibrateEvaluation", () => {
     expect(out.summaryZh).toContain("未能形成可引用");
   });
 
-  it("bound≥3 dispute snippets, zero highlights → D / active_concerning", () => {
+  it("bound≥3 dispute snippets, zero highlights → C+ / none_detected (snippets not graded)", () => {
     const out = calibrateEvaluation({
       slice: emptySlice(),
       evidence: {
@@ -100,21 +100,14 @@ describe("calibrateEvaluation", () => {
       mwcAmbiguous: false,
       generatedAt: "2026-06-01T00:00:00.000Z",
     });
-    expect(out.grade).toBe("D");
-    expect(out.evaluation.reputationTrack.disputeLevel).toBe(
-      "active_concerning",
-    );
+    expect(out.grade).toBe("C");
+    expect(out.evaluation.displayGradeZh).toBe("C+");
+    expect(out.evaluation.reputationTrack.disputeLevel).toBe("none_detected");
     expect(out.summaryZh).toContain("糾紛");
-    expect(out.evaluation.riskBandZh).toBe("風險偏高");
+    expect(out.evaluation.riskBandZh).toBe("中性");
   });
 
-  it("two recent dispute highlights → D", () => {
-    const h = {
-      summaryZh: "超支糾紛",
-      url: "https://example.com/a",
-      incidentType: "payment_dispute" as const,
-      approxYear: "2025",
-    };
+  it("two recent dispute highlights on distinct hosts → D", () => {
     const out = calibrateEvaluation({
       slice: {
         grade: "F",
@@ -122,7 +115,20 @@ describe("calibrateEvaluation", () => {
         summaryZh: "多宗提及",
         discussionCount: 2,
         themes: ["超支"],
-        highlights: [h, { ...h, url: "https://example.com/b" }],
+        highlights: [
+          {
+            summaryZh: "超支糾紛甲",
+            url: "https://www.facebook.com/a",
+            incidentType: "payment_dispute" as const,
+            approxYear: "2025",
+          },
+          {
+            summaryZh: "超支糾紛乙",
+            url: "https://www.lihkg.com/b",
+            incidentType: "payment_dispute" as const,
+            approxYear: "2025",
+          },
+        ],
       },
       evidence: { llmHitCount: 5, boundHitCount: 5, serpHitCount: 20 },
       mwcMatched: false,
@@ -132,9 +138,10 @@ describe("calibrateEvaluation", () => {
     expect(out.grade).toBe("D");
     expect(out.evaluation.reputationTrack.disputeLevel).toBe("active_concerning");
     expect(out.evaluation.reputationTrack.recentDisputeCount).toBe(2);
+    expect(out.evaluation.riskBandZh).toBe("風險偏高");
   });
 
-  it("single highlight recent → C not D", () => {
+  it("single praise-like highlight → C / none_detected / not 風險中等", () => {
     const out = calibrateEvaluation({
       slice: {
         grade: "D",
@@ -147,6 +154,7 @@ describe("calibrateEvaluation", () => {
             summaryZh: "爛尾投訴",
             url: "https://example.com/a",
             approxYear: "2025",
+            incidentType: "other",
           },
         ],
       },
@@ -156,6 +164,33 @@ describe("calibrateEvaluation", () => {
       generatedAt: "2026-06-01T00:00:00.000Z",
     });
     expect(out.grade).toBe("C");
+    expect(out.evaluation.reputationTrack.disputeLevel).toBe("none_detected");
+    expect(out.evaluation.riskBandZh).not.toBe("風險中等");
+  });
+
+  it("single recent payment_dispute → 風險中等 not 偏高", () => {
+    const out = calibrateEvaluation({
+      slice: {
+        grade: "C",
+        confidence: "medium",
+        summaryZh: "一則",
+        discussionCount: 1,
+        themes: [],
+        highlights: [
+          {
+            summaryZh: "走數",
+            url: "https://www.facebook.com/a",
+            approxYear: "2025",
+            incidentType: "payment_dispute",
+          },
+        ],
+      },
+      evidence: { llmHitCount: 1, boundHitCount: 1, serpHitCount: 5 },
+      mwcMatched: false,
+      mwcAmbiguous: false,
+      generatedAt: "2026-06-01T00:00:00.000Z",
+    });
+    expect(out.evaluation.riskBandZh).toBe("風險中等");
   });
 
   it("ambiguous MWC does not get B row", () => {

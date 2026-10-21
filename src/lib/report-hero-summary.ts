@@ -1,3 +1,4 @@
+import { isDisputeHighlight } from "./dispute-signals";
 import { legalEventAffectsHeroDisputeWarning } from "./legal-event-calibration";
 import { dedupeByJudgment } from "./lookup-legal-judgments";
 import type { RiskReport } from "./report-schema";
@@ -20,20 +21,15 @@ export function hasMatchedLegalEvents(report: RiskReport): boolean {
   return (report.official.legalEvents?.length ?? 0) > 0;
 }
 
-/** Public discussion / dispute signal from Track 2 (not legal-only disputeLevel). */
+/** Public discussion / dispute signal from Track 2 (structured dispute highlights only). */
 export function hasForumDisputeSignal(report: RiskReport): boolean {
   const highlights = report.signals.highlights ?? [];
-  if (highlights.length > 0) return true;
+  if (highlights.some(isDisputeHighlight)) return true;
 
-  const bound = report.signals.boundHitCount ?? 0;
-  if (bound === 0) return false;
-
-  const level = report.evaluation.reputationTrack.disputeLevel;
-  return (
-    level === "active_concerning" ||
-    level === "severe" ||
-    level === "historical_isolated"
-  );
+  const { disputeLevel, recentDisputeCount } =
+    report.evaluation.reputationTrack;
+  if (recentDisputeCount > 0) return true;
+  return disputeLevel === "severe";
 }
 
 type HeroSummaryVariant = "neither" | "forum_only" | "legal_only" | "both";

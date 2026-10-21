@@ -124,7 +124,7 @@ describe("reportHeroSummaryZh", () => {
       evaluation: {
         ...baseReport().evaluation,
         reputationTrack: {
-          disputeLevel: "active_concerning",
+          disputeLevel: "none_detected",
           recentDisputeCount: 0,
         },
       },
@@ -144,6 +144,8 @@ describe("reportHeroSummaryZh", () => {
           {
             summaryZh: "糾紛提及",
             url: "https://example.com/post",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
           },
         ],
       },
@@ -172,8 +174,17 @@ describe("reportHeroSummaryZh", () => {
           {
             summaryZh: "投訴",
             url: "https://example.com/p",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
           },
         ],
+      },
+      evaluation: {
+        ...baseReport().evaluation,
+        reputationTrack: {
+          disputeLevel: "active_concerning",
+          recentDisputeCount: 1,
+        },
       },
     });
     expect(reportHeroSummaryZh(r)).toContain("同時檢出");
@@ -192,17 +203,24 @@ describe("hero chips — four quadrants (labels)", () => {
       signals: {
         ...baseReport().signals,
         boundHitCount: 1,
-        highlights: [{ summaryZh: "提及", url: "https://example.com/x" }],
+        highlights: [
+          {
+            summaryZh: "提及",
+            url: "https://example.com/x",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+        ],
       },
       evaluation: {
         ...baseReport().evaluation,
         reputationTrack: {
           disputeLevel: "active_concerning",
-          recentDisputeCount: 2,
+          recentDisputeCount: 1,
         },
       },
     });
-    expect(forumDisputeChip(r).label).toBe("近期糾紛提及 · 2 則");
+    expect(forumDisputeChip(r).label).toBe("近期糾紛提及 · 1 則");
     expect(legalRecordsChip(r)?.label).toBe("判詞庫未對照");
   });
 
@@ -227,7 +245,14 @@ describe("hero chips — four quadrants (labels)", () => {
       signals: {
         ...baseReport().signals,
         boundHitCount: 1,
-        highlights: [{ summaryZh: "投訴", url: "https://example.com/p" }],
+        highlights: [
+          {
+            summaryZh: "投訴",
+            url: "https://example.com/p",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+        ],
       },
       evaluation: {
         ...baseReport().evaluation,
@@ -249,7 +274,21 @@ describe("hero chip tones", () => {
     const loud = baseReport({
       signals: {
         ...baseReport().signals,
-        highlights: [{ summaryZh: "x", url: "https://example.com" }],
+        highlights: [
+          {
+            summaryZh: "x",
+            url: "https://example.com",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+        ],
+      },
+      evaluation: {
+        ...baseReport().evaluation,
+        reputationTrack: {
+          disputeLevel: "active_concerning",
+          recentDisputeCount: 1,
+        },
       },
     });
     expect(heroForumChipTone(loud, "warning")).toBe("warning");

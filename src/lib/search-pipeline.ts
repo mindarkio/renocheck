@@ -42,6 +42,7 @@ import {
   resolveAuthoritativeSearchLabel,
 } from "./entity-report-context";
 import { applyLegalEventFloors } from "./legal-event-calibration";
+import { applyRiskBandMaxCapToReport } from "./risk-band-calibration";
 import {
   isLegalLookupDegraded,
   startLegalLookupForSearch,
@@ -310,6 +311,7 @@ export async function runSearchPipeline(
     legalLookup.events,
     boundHitCount,
   );
+  fullReport = applyRiskBandMaxCapToReport(fullReport);
   const legalDegraded = isLegalLookupDegraded(legalLookup.status);
   fullReport = {
     ...fullReport,

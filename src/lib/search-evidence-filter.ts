@@ -53,13 +53,14 @@ function matchesToken(blob: string, token: string): boolean {
   return b.includes(t);
 }
 
-/** Snippets/titles from bound hits (pre-LLM dispute signal). */
-export const DISPUTE_SNIPPET_PATTERN =
-  /超支|爛尾|糾紛|投訴|苦主|溝通|工程質素|中伏|拖工|走數|爭議/;
+import { snippetHasDisputeKeyword } from "./dispute-signals";
 
+export { DISPUTE_SNIPPET_PATTERN } from "./dispute-signals";
+
+/** Snippets/titles from bound hits (display / telemetry only — not grading). */
 export function countBoundDisputeSignals(hits: WebSearchHit[]): number {
   return hits.filter((h) =>
-    DISPUTE_SNIPPET_PATTERN.test(`${h.title} ${h.snippet}`),
+    snippetHasDisputeKeyword(`${h.title} ${h.snippet}`),
   ).length;
 }
 

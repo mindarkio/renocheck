@@ -82,6 +82,10 @@ import {
   heroLegalChipTone,
   legalRecordsChip,
 } from "@/lib/report-hero-summary";
+import {
+  ratedDisputeHighlightCount,
+  riskBandRationaleLineZh,
+} from "@/lib/report-risk-band-rationale";
 import { RiskBandMeter } from "./RiskBandMeter";
 
 function confidenceLabelZh(confidence: RiskReport["confidence"]): string {
@@ -361,23 +365,26 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const showLegalLookupDegraded = !showLegalEvents && legalLookupDegraded;
   const headerRiskBandZh = reportCardHeaderRiskBandZh(report);
   const headerBandLabel = reportCardHeaderBandLabel(report);
+  const ratedDisputeN = ratedDisputeHighlightCount(report);
   const showArticleTail =
-    (evidenceCount > 0 && highlights.length === 0) ||
+    evidenceCount > 0 ||
     actionable.length > 0 ||
     showFooterNotes;
 
   function afterLegalEventsBody(): ReactNode {
     return (
       <>
-      {evidenceCount > 0 && highlights.length === 0 && (
+      {evidenceCount > 0 && (
         <ReportBlock
           id="retrieval-evidence-heading"
           icon={Link2}
           title={`相關公開連結（${evidenceCount} 條）`}
         >
-          <p className={`${reportMetaClass} -mt-1 mb-3`}>
-            本次未形成討論摘要，以下連結供自行閱讀核實。
-          </p>
+          {highlights.length === 0 ? (
+            <p className={`${reportMetaClass} -mt-1 mb-3`}>
+              本次未形成討論摘要，以下連結供自行閱讀核實。
+            </p>
+          ) : null}
           <ul className="list-none space-y-0 p-0">
             {report.signals.retrievalEvidence!.map((item) => (
               <li key={item.url} className={reportListRowClass}>
@@ -526,6 +533,16 @@ export function ReportCard({ report }: { report: RiskReport }) {
             bandZh={headerRiskBandZh}
             emphasized
           />
+          {ratedDisputeN > 0 ? (
+            <p className="mt-2 text-[11px] leading-snug text-primary-foreground/85 sm:text-xs">
+              <a
+                href="#highlights-heading"
+                className="underline underline-offset-2 hover:text-primary-foreground"
+              >
+                {riskBandRationaleLineZh(ratedDisputeN)}
+              </a>
+            </p>
+          ) : null}
           <p className="mt-3 flex items-start gap-2 text-[11px] leading-[1.6] text-primary-foreground/75 sm:text-xs">
             <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { entityMatchTokens } from "./search-entity-labels";
 import {
   buildRetrievalEvidence,
+  countBoundDisputeSignals,
   filterWebSearchHitsForLlm,
   matchesPhoneAnchor,
 } from "./search-evidence-filter";
@@ -145,6 +146,30 @@ describe("filterWebSearchHitsForLlm", () => {
       normalizedPhone: "92805455",
     });
     expect(evidence[0].matchReason).toBe("entity_token");
+  });
+});
+
+describe("countBoundDisputeSignals", () => {
+  it("ignores negated 投訴 in praise snippets", () => {
+    const hits: WebSearchHit[] = [
+      {
+        title: "推薦",
+        url: "https://www.facebook.com/1",
+        snippet: "溝通順暢，完全冇投訴",
+      },
+    ];
+    expect(countBoundDisputeSignals(hits)).toBe(0);
+  });
+
+  it("still counts undisputed 投訴", () => {
+    const hits: WebSearchHit[] = [
+      {
+        title: "苦主",
+        url: "https://www.lihkg.com/1",
+        snippet: "多宗投訴",
+      },
+    ];
+    expect(countBoundDisputeSignals(hits)).toBe(1);
   });
 });
 
