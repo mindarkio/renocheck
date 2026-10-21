@@ -283,6 +283,7 @@ export async function runSearchPipeline(
       serpHitCount: rawHits.length,
       boundDisputeHitCount: countBoundDisputeSignals(webHitsForLlm),
       boundPraiseHitCount: countBoundPraiseSignals(webHitsForLlm),
+      sourceTitles: Object.fromEntries(webHitsForLlm.map((h) => [h.url, h.title])),
     },
     mwcMatched: mwc != null,
     mwcAmbiguous: mwcLookup.ambiguous,
@@ -311,7 +312,6 @@ export async function runSearchPipeline(
     legalLookup.events,
     boundHitCount,
   );
-  fullReport = applyRiskBandMaxCapToReport(fullReport);
   const legalDegraded = isLegalLookupDegraded(legalLookup.status);
   fullReport = {
     ...fullReport,
@@ -358,7 +358,7 @@ export async function runSearchPipeline(
 
   return {
     fingerprint,
-    report: validated,
+    report: applyRiskBandMaxCapToReport(validated),
     cacheHit: false,
     meta: { serpConfigured, webHitCount: rawHits.length },
   };

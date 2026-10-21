@@ -87,6 +87,20 @@ import {
   riskBandRationaleLineZh,
 } from "@/lib/report-risk-band-rationale";
 import { RiskBandMeter } from "./RiskBandMeter";
+import { redactFeedbackComment } from "@/lib/feedback/redact";
+
+/** Third-party SERP text: strip phones, emails, HKID, addresses, honorific names before display. */
+function redactEvidenceText(text: string): string {
+  return redactFeedbackComment(text);
+}
+
+function siteLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "公開連結";
+  }
+}
 
 function confidenceLabelZh(confidence: RiskReport["confidence"]): string {
   if (confidence === "high") return "較高";
@@ -399,12 +413,12 @@ export function ReportCard({ report }: { report: RiskReport }) {
                     aria-hidden
                   />
                   <span className="text-sm leading-snug sm:text-[15px]">
-                    {item.title || item.url}
+                    {item.title ? redactEvidenceText(item.title) : siteLabel(item.url)}
                   </span>
                 </a>
-                {item.snippetExcerpt ? (
+                {item.snippetExcerpt && highlights.length === 0 ? (
                   <p className={`mt-2 ${reportMetaClass}`}>
-                    {item.snippetExcerpt}
+                    {redactEvidenceText(item.snippetExcerpt)}
                   </p>
                 ) : null}
               </li>
@@ -533,8 +547,9 @@ export function ReportCard({ report }: { report: RiskReport }) {
             bandZh={headerRiskBandZh}
             emphasized
           />
-          {ratedDisputeN > 0 ? (
-            <p className="mt-2 text-[11px] leading-snug text-primary-foreground/85 sm:text-xs">
+          {ratedDisputeN > 0 &&
+          (headerRiskBandZh === "風險偏高" || headerRiskBandZh === "風險中等") ? (
+            <p className="mt-2 text-xs leading-snug text-primary-foreground/85 sm:text-sm">
               <a
                 href="#highlights-heading"
                 className="underline underline-offset-2 hover:text-primary-foreground"

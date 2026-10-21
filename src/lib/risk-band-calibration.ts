@@ -11,7 +11,9 @@ import {
   highlightSuggestsDispute,
   meetsHighRiskDisputeEvidence,
   ratedDisputeHighlights,
+  type SourceTitleByUrl,
 } from "./dispute-signals";
+import { computeLegalFloors } from "./legal-event-calibration";
 
 type Grade = z.infer<typeof gradeSchema>;
 type Evaluation = z.infer<typeof evaluationSchema>;
@@ -27,6 +29,7 @@ export type ResolveRiskBandInput = {
   highlights: Highlight[];
   overallGrade: Grade;
   generatedAt: string;
+  sourceTitles?: SourceTitleByUrl;
 };
 
 export type ResolvedRiskBand = {
@@ -46,7 +49,11 @@ const BAND_SEVERITY: Record<RiskBandZh, number> = {
 /** Server env emergency cap (see `.env.example`). */
 export function capRiskBandZh(band: RiskBandZh): RiskBandZh {
   const raw = process.env.RISK_BAND_MAX?.trim();
-  if (!raw || !RISK_BAND_MAX_VALUES.has(raw as RiskBandZh)) return band;
+  if (raw && !RISK_BAND_MAX_VALUES.has(raw as RiskBandZh)) {
+    console.warn(JSON.stringify({ event: "risk_band_max_invalid" }));
+    return band;
+  }
+  if (!raw) return band;
   const cap = raw as RiskBandZh;
   return BAND_SEVERITY[band] > BAND_SEVERITY[cap] ? cap : band;
 }
@@ -55,18 +62,20 @@ export function capRiskBandZh(band: RiskBandZh): RiskBandZh {
 export function resolveRiskBandZh(input: ResolveRiskBandInput): ResolvedRiskBand {
   const {
     boundHitCount,
+    boundDisputeHitCount,
     boundPraiseHitCount,
     disputeLevel,
     highlights,
     overallGrade,
     generatedAt,
+    sourceTitles,
   } = input;
 
   if (boundHitCount === 0) {
     return { riskBandZh: "中性" };
   }
 
-  const ratedCount = ratedDisputeHighlights(highlights, generatedAt).length;
+  const ratedCount = ratedDisputeHighlights(highlights, generatedAt, sourceTitles).length;
   const highlightDispute = highlights.some(highlightSuggestsDispute);
   const hasDispute =
     highlightDispute ||
@@ -77,6 +86,7 @@ export function resolveRiskBandZh(input: ResolveRiskBandInput): ResolvedRiskBand
   if (ratedCount === 0 && disputeLevel === "none_detected") {
     if (
       boundPraiseHitCount >= 1 &&
+      boundDisputeHitCount === 0 &&
       !highlightDispute
     ) {
       return {
@@ -93,20 +103,20 @@ export function resolveRiskBandZh(input: ResolveRiskBandInput): ResolvedRiskBand
     disputeLevel === "severe" ||
     overallGrade === "F" ||
     overallGrade === "E" ||
-    meetsHighRiskDisputeEvidence(highlights, generatedAt)
+    meetsHighRiskDisputeEvidence(highlights, generatedAt, sourceTitles)
   ) {
-    return { riskBandZh: capRiskBandZh("風險偏高") };
+    return { riskBandZh: "風險偏高" };
   }
 
   if (overallGrade === "D" && hasDispute && ratedCount > 0) {
-    return { riskBandZh: capRiskBandZh("風險偏高") };
+    return { riskBandZh: "風險偏高" };
   }
 
   if (hasDispute && ratedCount > 0) {
-    return { riskBandZh: capRiskBandZh("風險中等") };
+    return { riskBandZh: "風險中等" };
   }
 
-  if (boundPraiseHitCount >= 1 && !highlightDispute) {
+  if (boundPraiseHitCount >= 1 && boundDisputeHitCount === 0 && !highlightDispute) {
     return {
       riskBandZh: "未見負面摘要",
       ...(boundPraiseHitCount === 1
@@ -118,8 +128,19 @@ export function resolveRiskBandZh(input: ResolveRiskBandInput): ResolvedRiskBand
   return { riskBandZh: "中性" };
 }
 
+/** Serve-time only (pipeline response + cache read); the cached report stays uncapped. */
 export function applyRiskBandMaxCapToReport(report: RiskReport): RiskReport {
-  const capped = capRiskBandZh(report.evaluation.riskBandZh);
+  let capped = capRiskBandZh(report.evaluation.riskBandZh);
+  if (capped === report.evaluation.riskBandZh) return report;
+  // Judgment floor: the cap may lower 偏高 → 中等, but never below 風險中等 when a judgment floor applies.
+  const floors = computeLegalFloors(
+    report.official.legalEvents ?? [],
+    report.signals.boundHitCount ?? 0,
+    report.generatedAt,
+  );
+  if (floors && BAND_SEVERITY[floors.riskBandZh] >= BAND_SEVERITY["風險中等"] && BAND_SEVERITY[capped] < BAND_SEVERITY["風險中等"]) {
+    capped = "風險中等";
+  }
   if (capped === report.evaluation.riskBandZh) return report;
   return {
     ...report,
@@ -139,11 +160,9 @@ export function applyRiskBandToEvaluation(
   if (band.riskBandZh === "未見負面摘要" && band.riskBandDetailZh) {
     confidence = "low";
   }
-  const riskBandZh = capRiskBandZh(band.riskBandZh);
   return {
     ...evaluation,
     ...band,
-    riskBandZh,
     confidence,
   };
 }

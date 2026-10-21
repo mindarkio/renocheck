@@ -30,6 +30,8 @@ import {
 } from "@/lib/report-trust-copy-zh";
 import type { CompaniesRegistryOfficial } from "@/lib/report-schema";
 import { summaryZhForLegalLookupDegraded } from "@/lib/search-pipeline-legal-summary";
+import { applyRiskBandMaxCapToReport } from "@/lib/risk-band-calibration";
+import { riskBandRationaleLineZh } from "@/lib/report-risk-band-rationale";
 
 const REPORT_TRUST_BANNED_SUBSTRINGS_ZH = [
   "刊憲",
@@ -750,6 +752,157 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(screen.getByText("公開判詞 · 1 宗").closest("span")?.className).toContain(
       "amber",
     );
+  });
+
+  it("依據 line: exact copy, N, link; hidden when N=0", () => {
+    const threeDisputeReport = minimalReport({
+      generatedAt: "2026-06-01T00:00:00.000Z",
+      evaluation: {
+        ...buildEvaluationStub({
+          overallGrade: "D",
+          confidence: "high",
+          mwcMatched: false,
+          boundHitCount: 3,
+          highlightCount: 3,
+        }),
+        riskBandZh: "風險偏高",
+        reputationTrack: {
+          disputeLevel: "active_concerning",
+          recentDisputeCount: 3,
+        },
+      },
+      signals: {
+        discussionCount: 3,
+        themes: [],
+        boundHitCount: 3,
+        contractChecklist: ["佔位"],
+        actionableClauses: [],
+        retrievalEvidence: [],
+        highlights: [
+          {
+            summaryZh: "走數苦主帖一",
+            url: "https://www.facebook.com/a",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+          {
+            summaryZh: "走數苦主帖二",
+            url: "https://www.lihkg.com/b",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+          {
+            summaryZh: "走數苦主帖三",
+            url: "https://www.threads.net/c",
+            incidentType: "payment_dispute",
+            approxYear: "2025",
+          },
+        ],
+      },
+    });
+    const { container } = render(<ReportCard report={threeDisputeReport} />);
+    const a = container.querySelector("a[href='#highlights-heading']");
+    expect(a?.textContent).toBe(riskBandRationaleLineZh(3));
+    expect(container.querySelector("#highlights-heading")).toBeTruthy();
+    assertClean(container.querySelector("header")?.textContent ?? "");
+    cleanup();
+    const praiseOnlyReport = minimalReport({
+      evaluation: {
+        ...minimalReport().evaluation,
+        riskBandZh: "未見負面摘要",
+        reputationTrack: { disputeLevel: "none_detected", recentDisputeCount: 0 },
+      },
+      signals: {
+        ...minimalReport().signals,
+        boundHitCount: 2,
+        highlights: [
+          {
+            summaryZh: "好評",
+            url: "https://www.facebook.com/p",
+            incidentType: "communication",
+          },
+        ],
+      },
+    });
+    const { container: c2 } = render(<ReportCard report={praiseOnlyReport} />);
+    expect(c2.textContent).not.toContain("依據：");
+  });
+
+  it("bound links render with highlights; no raw URL text", () => {
+    const withHighlightsAndEvidence = minimalReport({
+      signals: {
+        discussionCount: 1,
+        themes: [],
+        boundHitCount: 1,
+        contractChecklist: ["佔位"],
+        actionableClauses: [],
+        highlights: [
+          {
+            summaryZh: "討論",
+            url: "https://www.lihkg.com/thread/1",
+            incidentType: "other",
+          },
+        ],
+        retrievalEvidence: [
+          {
+            url: "https://www.facebook.com/groups/secret-path-12345",
+            title: "",
+            snippetExcerpt: "https://www.facebook.com/leak",
+            matchedToken: "陳師傅",
+            matchReason: "entity_token",
+          },
+        ],
+      },
+    });
+    const { container } = render(
+      <ReportCard report={withHighlightsAndEvidence} />,
+    );
+    expect(container.querySelector("#retrieval-evidence-heading")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/https?:\/\//);
+    expect(container.textContent).toContain("facebook.com");
+  });
+
+  it("RISK_BAND_MAX=中性 with judgment floor shows 風險中等 and no 依據 line", () => {
+    process.env.RISK_BAND_MAX = "中性";
+    let report = minimalReport({
+      generatedAt: "2026-06-01T00:00:00.000Z",
+      evaluation: {
+        ...minimalReport().evaluation,
+        riskBandZh: "風險偏高",
+        reputationTrack: {
+          disputeLevel: "active_concerning",
+          recentDisputeCount: 0,
+        },
+      },
+      signals: {
+        ...minimalReport().signals,
+        boundHitCount: 1,
+        highlights: [],
+      },
+      official: {
+        mwcMatched: false,
+        legalLookupStatus: "ok",
+        legalEvents: [
+          {
+            sourceType: "court_judgment",
+            caseRef: "HCLA 1/2024",
+            court: "高院",
+            eventDate: "2024-06-01",
+            judgmentCategory: "employment_renovation",
+            partyRole: "defendant",
+            outcomeHint: "defendant_liable",
+            hearingKeyPointsZh: ["合成"],
+            sourceUrl: "https://example.com/j",
+            matchReasonZh: "合成",
+          },
+        ],
+      },
+    });
+    report = applyRiskBandMaxCapToReport(report);
+    const { container } = render(<ReportCard report={report} />);
+    expect(container.textContent).toContain("風險中等");
+    expect(container.textContent).not.toContain("依據：");
+    delete process.env.RISK_BAND_MAX;
   });
 
   it("legal scope 關：冇判詞 chip", () => {

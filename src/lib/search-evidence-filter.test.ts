@@ -3,6 +3,7 @@ import { entityMatchTokens } from "./search-entity-labels";
 import {
   buildRetrievalEvidence,
   countBoundDisputeSignals,
+  countBoundPraiseSignals,
   filterWebSearchHitsForLlm,
   matchesPhoneAnchor,
 } from "./search-evidence-filter";
@@ -146,6 +147,30 @@ describe("filterWebSearchHitsForLlm", () => {
       normalizedPhone: "92805455",
     });
     expect(evidence[0].matchReason).toBe("entity_token");
+  });
+});
+
+describe("countBoundPraiseSignals", () => {
+  it("O6: counts traditional 推薦", () => {
+    const hits: WebSearchHit[] = [
+      {
+        title: "好評",
+        url: "https://www.facebook.com/1",
+        snippet: "十分推薦這間公司",
+      },
+    ];
+    expect(countBoundPraiseSignals(hits)).toBe(1);
+  });
+
+  it("O6: 唔專業 is not praise", () => {
+    const hits: WebSearchHit[] = [
+      {
+        title: "帖",
+        url: "https://www.lihkg.com/1",
+        snippet: "師傅好唔專業",
+      },
+    ];
+    expect(countBoundPraiseSignals(hits)).toBe(0);
   });
 });
 

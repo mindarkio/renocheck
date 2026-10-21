@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { calibrateEvaluation } from "./risk-report-calibration-v2";
+import { capRiskBandZh } from "./risk-band-calibration";
 import { forumDisputeChip } from "./report-hero-summary";
 import { countBoundDisputeSignals } from "./search-evidence-filter";
 import type { WebSearchHit } from "./web-search";
@@ -180,6 +181,8 @@ describe("P0 regression — real dispute highlights", () => {
       mwcAmbiguous: false,
       generatedAt,
     });
-    expect(out.evaluation.riskBandZh).toBe("風險中等");
+    // Cap is applied at serve time; the stored evaluation stays uncapped.
+    expect(out.evaluation.riskBandZh).toBe("風險偏高");
+    expect(capRiskBandZh(out.evaluation.riskBandZh)).toBe("風險中等");
   });
 });

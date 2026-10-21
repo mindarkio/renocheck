@@ -445,6 +445,32 @@ describe("hero chip amber invariant", () => {
   });
 });
 
+describe("forumDisputeChip O4", () => {
+  it("historical_isolated without rated count → 請核實來源", () => {
+    const r = baseReport({
+      signals: {
+        ...baseReport().signals,
+        boundHitCount: 1,
+        highlights: [
+          {
+            summaryZh: "舊帖",
+            url: "https://example.com/old",
+            incidentType: "payment_dispute",
+          },
+        ],
+      },
+      evaluation: {
+        ...baseReport().evaluation,
+        reputationTrack: {
+          disputeLevel: "historical_isolated",
+          recentDisputeCount: 0,
+        },
+      },
+    });
+    expect(forumDisputeChip(r).label).toBe("請核實來源");
+  });
+});
+
 describe("legalRecordsChip dedupe count", () => {
   it("two distinct neutral citations → 2 宗", () => {
     const events = [

@@ -12,6 +12,7 @@ import {
   meetsHighRiskDisputeEvidence,
   meetsSevereDisputeEvidence,
   ratedDisputeHighlights,
+  type SourceTitleByUrl,
 } from "./dispute-signals";
 import {
   type LlmRiskSlice,
@@ -74,8 +75,9 @@ function disputeHighlights(highlights: Highlight[]): Highlight[] {
 function allowsSevereGrade(
   highlights: Highlight[],
   generatedAt: string,
+  titles?: SourceTitleByUrl,
 ): boolean {
-  return meetsSevereDisputeEvidence(highlights, generatedAt);
+  return meetsSevereDisputeEvidence(highlights, generatedAt, titles);
 }
 
 type MatrixRow = {
@@ -131,10 +133,11 @@ function matrixForHighlights(
   highlights: Highlight[],
   generatedAt: string,
   boundHitCount: number,
+  titles?: SourceTitleByUrl,
 ): MatrixRow {
   const hl = highlights.length;
   const disputes = disputeHighlights(highlights);
-  const dedupedDisputes = dedupeDisputeHighlights(highlights);
+  const dedupedDisputes = dedupeDisputeHighlights(highlights, titles);
   const recentDispute = disputes.filter((h) =>
     isRecentHighlight(h, generatedAt),
   );
@@ -153,17 +156,18 @@ function matrixForHighlights(
     };
   }
 
-  if (hl >= 3 && allowsSevereGrade(highlights, generatedAt)) {
+  if (allowsSevereGrade(highlights, generatedAt, titles)) {
+    const rated = ratedDisputeHighlights(highlights, generatedAt, titles).length;
     return {
-      overallGrade: hl >= 4 ? "F" : "E",
-      displayGradeZh: hl >= 4 ? "F" : "E",
+      overallGrade: rated >= 4 ? "F" : "E",
+      displayGradeZh: rated >= 4 ? "F" : "E",
       confidence: "high",
       dataSaturation: "rich",
       disputeLevel: "severe",
     };
   }
 
-  if (meetsHighRiskDisputeEvidence(highlights, generatedAt)) {
+  if (meetsHighRiskDisputeEvidence(highlights, generatedAt, titles)) {
     return {
       overallGrade: "D",
       displayGradeZh: "D",
@@ -295,6 +299,7 @@ export function calibrateEvaluation(
           highlights,
           generatedAt,
           evidence.boundHitCount,
+          evidence.sourceTitles,
         );
 
   let confidence = row.confidence;
@@ -308,6 +313,7 @@ export function calibrateEvaluation(
   const recentDisputeCount = ratedDisputeHighlights(
     highlights,
     generatedAt,
+    evidence.sourceTitles,
   ).length;
 
   const summaryZh = buildSummary(slice, evidence, row, mwcActive);
@@ -336,6 +342,7 @@ export function calibrateEvaluation(
       highlights,
       overallGrade: row.overallGrade,
       generatedAt,
+      sourceTitles: evidence.sourceTitles,
     },
   );
 

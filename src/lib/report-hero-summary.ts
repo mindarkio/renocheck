@@ -88,12 +88,10 @@ export function forumDisputeChip(report: RiskReport): { label: string } {
     report.evaluation.reputationTrack;
   switch (disputeLevel) {
     case "historical_isolated":
-      return {
-        label:
-          recentDisputeCount > 0
-            ? `較早提及 · ${recentDisputeCount} 則`
-            : "較早公開提及",
-      };
+      if (recentDisputeCount > 0) {
+        return { label: `較早提及 · ${recentDisputeCount} 則` };
+      }
+      return { label: "請核實來源" };
     case "active_concerning":
       return {
         label:

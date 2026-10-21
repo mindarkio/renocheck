@@ -53,7 +53,7 @@ function matchesToken(blob: string, token: string): boolean {
   return b.includes(t);
 }
 
-import { snippetHasDisputeKeyword } from "./dispute-signals";
+import { hasUnnegatedMatch, snippetHasDisputeKeyword } from "./dispute-signals";
 
 export { DISPUTE_SNIPPET_PATTERN } from "./dispute-signals";
 
@@ -66,12 +66,14 @@ export function countBoundDisputeSignals(hits: WebSearchHit[]): number {
 
 /** DEC-0010 Appendix A — praise lexicon v0 (NFKC applied in match). */
 export const PRAISE_SNIPPET_PATTERN =
-  /推荐|讚|赞|好評|好评|滿意|满意|用心|準時|准时|手工好|做工仔細|信得过|信得過|靠谱|靠譜|專業|专业/;
+  /推荐|推薦|讚|赞|好評|好评|滿意|满意|用心|準時|准时|手工好|做工仔細|信得过|信得過|靠谱|靠譜|專業|专业/;
+
+/** Praise words with 唔／不／冇 directly before them (唔專業、不推荐) are not praise. */
+const PRAISE_NEGATABLE = new RegExp(`(?<![唔不冇無])(?:${PRAISE_SNIPPET_PATTERN.source})`, "u");
 
 export function countBoundPraiseSignals(hits: WebSearchHit[]): number {
   return hits.filter((h) => {
-    const blob = `${h.title} ${h.snippet}`.normalize("NFKC");
-    return PRAISE_SNIPPET_PATTERN.test(blob);
+    return hasUnnegatedMatch(`${h.title} ${h.snippet}`, PRAISE_NEGATABLE);
   }).length;
 }
 

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   capRiskBandZh,
   resolveRiskBandZh,
@@ -127,5 +127,15 @@ describe("capRiskBandZh", () => {
     process.env.RISK_BAND_MAX = "風險中等";
     expect(capRiskBandZh("風險偏高")).toBe("風險中等");
     expect(capRiskBandZh("風險中等")).toBe("風險中等");
+  });
+
+  it("O9: invalid RISK_BAND_MAX logs once and leaves band unchanged", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    process.env.RISK_BAND_MAX = "high";
+    expect(capRiskBandZh("風險偏高")).toBe("風險偏高");
+    expect(warn).toHaveBeenCalledWith(
+      JSON.stringify({ event: "risk_band_max_invalid" }),
+    );
+    warn.mockRestore();
   });
 });

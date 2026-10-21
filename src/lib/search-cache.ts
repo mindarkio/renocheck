@@ -3,6 +3,7 @@ import type { NormalizedSearchInput } from "./normalize-search-input";
 import { REPORT_VERSION } from "./constants";
 import type { RiskReport } from "./report-schema";
 import { riskReportSchema } from "./report-schema";
+import { applyRiskBandMaxCapToReport } from "./risk-band-calibration";
 
 export function isReportLegalLookupDegraded(report: RiskReport): boolean {
   const status = report.official.legalLookupStatus;
@@ -43,7 +44,7 @@ export async function getCachedReport(
   if (!parsed.success) return null;
   if (parsed.data.reportVersion !== REPORT_VERSION) return null;
 
-  return parsed.data;
+  return applyRiskBandMaxCapToReport(parsed.data);
 }
 
 export async function setCachedReport(
