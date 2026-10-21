@@ -1,4 +1,5 @@
 import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
+import { foldFullWidth, stripControlAndBidi } from "@/lib/feedback/redact";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const SEARCH_CACHE_ANALYTICS_SELECT =
@@ -101,6 +102,24 @@ export function formatHkDateTime(iso: string): string {
   }).format(d);
 }
 
+const TERM_EMAIL_RE = /[A-Z0-9._%+-]+\s?@\s?[A-Z0-9-]+(?:\s?\.\s?[A-Z0-9-]+)*\s?\.\s?[A-Z]{2,}/gi;
+const TERM_HKID_RE =
+  /(?<![A-Za-z0-9])[A-Za-z]{1,2}\s?\d{6}(?:\s?\(\s?[0-9A]\s?\)|[0-9A])?(?![0-9A-Za-z])/g;
+/** 7+ digits with up to 2 separators between them: phone numbers, BR numbers, account numbers. */
+const TERM_DIGIT_RUN_RE = /\+?\d(?:[\s.\-_/·()]{0,2}\d){6,}/g;
+
+/**
+ * Company-name terms are free text: people paste phone / BR numbers or e-mails next to a name
+ * (the search box only routes digit-only input to phone/BR). Mask those before anything reaches JSX.
+ */
+export function maskAdminTerm(raw: string): string {
+  return foldFullWidth(stripControlAndBidi(raw))
+    .replace(TERM_EMAIL_RE, "[電郵]")
+    .replace(TERM_HKID_RE, "[身份證]")
+    .replace(TERM_DIGIT_RUN_RE, "[號碼]")
+    .trim();
+}
+
 function codePointLength(term: string): number {
   return [...term].length;
 }
@@ -108,6 +127,12 @@ function codePointLength(term: string): number {
 function pct(numerator: number, denominator: number): number {
   if (denominator <= 0) return 0;
   return Math.round((numerator / denominator) * 1000) / 10;
+}
+
+/** Start of the oldest HK calendar day shown in `daily`, so KPI totals and the daily chart cover the same events. HK has no DST. */
+export function analyticsRangeStart(now: Date, days: AnalyticsDays): Date {
+  const oldestDay = hkDayKey(new Date(now.getTime() - (days - 1) * 24 * 60 * 60 * 1000));
+  return new Date(`${oldestDay}T00:00:00+08:00`);
 }
 
 function listDaysInRange(now: Date, days: AnalyticsDays): string[] {
@@ -199,15 +224,15 @@ export function aggregateSearchAnalytics(
     if (!row) continue;
     if (row.match_type === "phone" || row.match_type === "br") continue;
     if (row.match_type !== "company_name") continue;
-    const term = row.term?.trim() ?? "";
-    if (!term) continue;
+    const rawTerm = row.term?.trim() ?? "";
+    if (!rawTerm) continue;
     termsAll.push({
-      term,
-      length: codePointLength(term),
+      term: maskAdminTerm(rawTerm),
+      length: codePointLength(rawTerm),
       searches: agg.searches,
       cacheHits: agg.cacheHits,
       outcome: row.outcome,
-      matchedName: row.matched_name,
+      matchedName: row.matched_name ? maskAdminTerm(row.matched_name) : null,
       lastSeen: agg.lastSeen,
     });
   }
@@ -273,14 +298,18 @@ export async function fetchSearchAnalytics(
   try {
     assertNotProdDbOutsideProd();
   } catch {
+    console.warn(JSON.stringify({ event: "admin_analytics_error", code: "refusing_prod_db" }));
     return { ok: false, code: "refusing_prod_db" };
   }
 
   const supabase = getSupabaseAdmin();
-  if (!supabase) return { ok: false, code: "supabase_unconfigured" };
+  if (!supabase) {
+    console.warn(JSON.stringify({ event: "admin_analytics_error", code: "supabase_unconfigured" }));
+    return { ok: false, code: "supabase_unconfigured" };
+  }
 
-  const since = new Date();
-  since.setUTCDate(since.getUTCDate() - days);
+  const now = new Date();
+  const since = analyticsRangeStart(now, days);
 
   const events: SearchEventRow[] = [];
   let truncated = false;
@@ -320,7 +349,7 @@ export async function fetchSearchAnalytics(
     cacheRows.push(...((data ?? []) as SearchCacheAnalyticsRow[]));
   }
 
-  const aggregate = aggregateSearchAnalytics(events, cacheRows, new Date(), days);
+  const aggregate = aggregateSearchAnalytics(events, cacheRows, now, days);
   aggregate.truncated = truncated;
   return { ok: true, data: aggregate };
 }

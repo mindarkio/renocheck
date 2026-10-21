@@ -15,7 +15,11 @@ const MAX_IP_FAILURES = 5;
 const MAX_GLOBAL_FAILURES = 30;
 const FAILED_DELAY_BASE_MS = 800;
 
-/** In-memory only; per serverless instance — IP rotation can bypass per-IP limits. */
+/**
+ * In-memory only; per serverless instance — IP rotation, scale-out and cold starts reset these counters.
+ * Attempts are reserved synchronously *before* the PIN is checked, so concurrent requests cannot
+ * all pass the lock check while earlier failures are still waiting out the delay.
+ */
 type IpState = { failures: number; windowStart: number; lockedUntil: number };
 type GlobalState = { failures: number; windowStart: number; lockedUntil: number };
 
@@ -36,8 +40,18 @@ export function resetAdminAuthStateForTests(): void {
   globalState = { failures: 0, windowStart: 0, lockedUntil: 0 };
 }
 
-export function getAdminAuthConfig(): AdminAuthConfig | null {
+const PIN_MIN_LENGTH = 4;
+const PIN_MAX_LENGTH = 32;
+
+/** Trimmed env PIN, or null when missing or outside the accepted 4–32 length. */
+export function getAdminEnvPin(): string | null {
   const pin = process.env.ADMIN_DASHBOARD_PIN?.trim() ?? "";
+  if (pin.length < PIN_MIN_LENGTH || pin.length > PIN_MAX_LENGTH) return null;
+  return pin;
+}
+
+export function getAdminAuthConfig(): AdminAuthConfig | null {
+  const pin = getAdminEnvPin();
   const secret = process.env.ADMIN_SESSION_SECRET?.trim() ?? "";
   if (!pin || !secret || secret.length < 32) return null;
   return {
@@ -61,7 +75,7 @@ export function pinDigestHex(pin: string): string {
 /** Accept 4–32 characters; compare SHA-256 digests with timingSafeEqual. */
 export function verifyAdminPin(submitted: string, config: AdminAuthConfig): boolean {
   const trimmed = submitted.trim();
-  if (trimmed.length < 4 || trimmed.length > 32) return false;
+  if (trimmed.length < PIN_MIN_LENGTH || trimmed.length > PIN_MAX_LENGTH) return false;
   const digest = sha256Buffer(trimmed);
   if (digest.length !== config.pinSha256.length) return false;
   return timingSafeEqual(digest, config.pinSha256);
@@ -103,13 +117,27 @@ export function getLoginBlockStatus(
   return null;
 }
 
-export async function recordLoginAttempt(
-  ip: string,
-  success: boolean,
-  now = Date.now(),
-): Promise<LoginAttemptResult> {
-  pruneAttemptStores(now);
+function rollWindows(ip: string, now: number): IpState {
+  let ipState = ipAttempts.get(ip);
+  if (!ipState || (now - ipState.windowStart > LOCKOUT_WINDOW_MS && now >= ipState.lockedUntil)) {
+    ipState = { failures: 0, windowStart: now, lockedUntil: 0 };
+    ipAttempts.set(ip, ipState);
+  }
+  if (now - globalState.windowStart > LOCKOUT_WINDOW_MS && now >= globalState.lockedUntil) {
+    globalState = { failures: 0, windowStart: now, lockedUntil: 0 };
+  }
+  return ipState;
+}
 
+/**
+ * Synchronously reserve one attempt (counted as a failure until proven otherwise).
+ * Call before checking the PIN; call `finishLoginAttempt` afterwards.
+ */
+export function reserveLoginAttempt(
+  ip: string,
+  now = Date.now(),
+): { status: "reserved" } | { status: "locked"; scope: "ip" | "global" } {
+  pruneAttemptStores(now);
   if (isGlobalLocked(now)) {
     console.warn(JSON.stringify({ event: "admin_login_locked", scope: "global" }));
     return { status: "locked", scope: "global" };
@@ -118,38 +146,58 @@ export async function recordLoginAttempt(
     console.warn(JSON.stringify({ event: "admin_login_locked", scope: "ip" }));
     return { status: "locked", scope: "ip" };
   }
+  const ipState = rollWindows(ip, now);
+  if (globalState.failures >= MAX_GLOBAL_FAILURES) {
+    console.warn(JSON.stringify({ event: "admin_login_locked", scope: "global" }));
+    return { status: "locked", scope: "global" };
+  }
+  if (ipState.failures >= MAX_IP_FAILURES) {
+    console.warn(JSON.stringify({ event: "admin_login_locked", scope: "ip" }));
+    return { status: "locked", scope: "ip" };
+  }
+  ipState.failures += 1;
+  globalState.failures += 1;
+  return { status: "reserved" };
+}
 
+/** Settle a reserved attempt. Success refunds the reservation and clears that IP's counter. */
+export async function finishLoginAttempt(
+  ip: string,
+  success: boolean,
+  now = Date.now(),
+): Promise<LoginAttemptResult> {
   if (success) {
     ipAttempts.delete(ip);
+    globalState.failures = Math.max(0, globalState.failures - 1);
     return { status: "ok" };
   }
 
-  await delayWithJitter(FAILED_DELAY_BASE_MS);
   console.warn(JSON.stringify({ event: "admin_login_failed" }));
-
-  let ipState = ipAttempts.get(ip);
-  if (!ipState || now - ipState.windowStart > LOCKOUT_WINDOW_MS) {
-    ipState = { failures: 0, windowStart: now, lockedUntil: 0 };
-  }
-  ipState.failures += 1;
-  if (ipState.failures >= MAX_IP_FAILURES) {
+  const ipState = ipAttempts.get(ip);
+  if (ipState && ipState.failures >= MAX_IP_FAILURES && ipState.lockedUntil <= now) {
     ipState.lockedUntil = now + LOCKOUT_WINDOW_MS;
     console.warn(JSON.stringify({ event: "admin_login_locked", scope: "ip" }));
   }
-  ipAttempts.set(ip, ipState);
-
-  if (now - globalState.windowStart > LOCKOUT_WINDOW_MS) {
-    globalState = { failures: 0, windowStart: now, lockedUntil: 0 };
-  }
-  globalState.failures += 1;
-  if (globalState.failures >= MAX_GLOBAL_FAILURES) {
+  if (globalState.failures >= MAX_GLOBAL_FAILURES && globalState.lockedUntil <= now) {
     globalState.lockedUntil = now + LOCKOUT_WINDOW_MS;
     console.warn(JSON.stringify({ event: "admin_login_locked", scope: "global" }));
   }
+  await delayWithJitter(FAILED_DELAY_BASE_MS);
 
   if (isGlobalLocked(now)) return { status: "locked", scope: "global" };
   if (isIpLocked(ip, now)) return { status: "locked", scope: "ip" };
   return { status: "wrong" };
+}
+
+/** Reserve + settle in one call (tests and simple callers). */
+export async function recordLoginAttempt(
+  ip: string,
+  success: boolean,
+  now = Date.now(),
+): Promise<LoginAttemptResult> {
+  const reserved = reserveLoginAttempt(ip, now);
+  if (reserved.status === "locked") return reserved;
+  return finishLoginAttempt(ip, success, now);
 }
 
 function delayWithJitter(baseMs: number): Promise<void> {
@@ -164,6 +212,19 @@ export function pinHashSliceForSession(pin: string): string {
   return pinDigestHex(pin).slice(0, 16);
 }
 
+function sessionSignature(
+  config: AdminAuthConfig,
+  expiresAtMs: number,
+  nonce: string,
+  pin: string,
+): string {
+  // The PIN binding is part of the HMAC input only; it is never written into the cookie.
+  return createHmac("sha256", config.sessionSecret)
+    .update(`v1.${expiresAtMs}.${nonce}.${pinHashSliceForSession(pin)}`)
+    .digest("hex");
+}
+
+/** Cookie value `v1.<expiresAtMs>.<nonce>.<sig>`; changing the PIN or the secret invalidates it. */
 export function buildSessionToken(
   config: AdminAuthConfig,
   pin: string,
@@ -171,12 +232,7 @@ export function buildSessionToken(
   nonce = randomBytes(16).toString("hex"),
 ): string {
   const expiresAtMs = nowMs + SESSION_DURATION_MS;
-  const pinSlice = pinHashSliceForSession(pin);
-  const payload = `v1.${expiresAtMs}.${nonce}.${pinSlice}`;
-  const sig = createHmac("sha256", config.sessionSecret)
-    .update(payload)
-    .digest("hex");
-  return `${payload}.${sig}`;
+  return `v1.${expiresAtMs}.${nonce}.${sessionSignature(config, expiresAtMs, nonce, pin)}`;
 }
 
 export function verifySessionToken(
@@ -187,20 +243,16 @@ export function verifySessionToken(
 ): boolean {
   if (!token) return false;
   const parts = token.split(".");
-  if (parts.length !== 5) return false;
-  const [version, expiresRaw, nonce, pinSlice, sig] = parts;
-  if (version !== "v1" || !expiresRaw || !nonce || !pinSlice || !sig) return false;
+  if (parts.length !== 4) return false;
+  const [version, expiresRaw, nonce, sig] = parts;
+  if (version !== "v1" || !/^\d{13,16}$/.test(expiresRaw) || !/^[0-9a-f]{32}$/.test(nonce)) {
+    return false;
+  }
+  if (!/^[0-9a-f]{64}$/.test(sig)) return false;
   const expiresAtMs = Number(expiresRaw);
-  if (!Number.isFinite(expiresAtMs) || nowMs >= expiresAtMs) return false;
-  if (pinSlice !== pinHashSliceForSession(envPin)) return false;
-  const payload = `v1.${expiresAtMs}.${nonce}.${pinSlice}`;
-  const expected = createHmac("sha256", config.sessionSecret)
-    .update(payload)
-    .digest("hex");
-  const actualBuf = Buffer.from(sig, "utf8");
-  const expectedBuf = Buffer.from(expected, "utf8");
-  if (actualBuf.length !== expectedBuf.length) return false;
-  return timingSafeEqual(actualBuf, expectedBuf);
+  if (nowMs >= expiresAtMs || expiresAtMs - nowMs > SESSION_DURATION_MS) return false;
+  const expected = Buffer.from(sessionSignature(config, expiresAtMs, nonce, envPin), "hex");
+  return timingSafeEqual(Buffer.from(sig, "hex"), expected);
 }
 
 export function sessionCookieOptions(maxAgeSec: number): {

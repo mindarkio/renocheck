@@ -8,9 +8,9 @@ import {
   ADMIN_SESSION_COOKIE,
   buildSessionToken,
   clientIpFromForwarded,
+  finishLoginAttempt,
   getAdminAuthConfig,
-  getLoginBlockStatus,
-  recordLoginAttempt,
+  reserveLoginAttempt,
   SESSION_MAX_AGE_SEC,
   sessionCookieOptions,
   verifyAdminPin,
@@ -24,20 +24,19 @@ export async function submitAdminLogin(formData: FormData): Promise<void> {
   if (!config || !pin) notFound();
 
   const h = await headers();
+  // Vercel overwrites x-forwarded-for with the real client IP, so the first hop is not client-controlled there.
   const ip = clientIpFromForwarded(h.get("x-forwarded-for"));
-  const blocked = getLoginBlockStatus(ip);
-  if (blocked) redirect("/admin/login?error=locked");
+  // Reserve synchronously before checking the PIN, so concurrent requests can't all slip past the lock.
+  const reserved = reserveLoginAttempt(ip);
+  if (reserved.status === "locked") redirect("/admin/login?error=locked");
 
   const submitted = String(formData.get("pin") ?? "");
-
-  if (!verifyAdminPin(submitted, config)) {
-    const attempt = await recordLoginAttempt(ip, false);
+  const ok = verifyAdminPin(submitted, config);
+  const attempt = await finishLoginAttempt(ip, ok);
+  if (!ok) {
     if (attempt.status === "locked") redirect("/admin/login?error=locked");
     redirect("/admin/login?error=wrong");
   }
-
-  const attempt = await recordLoginAttempt(ip, true);
-  if (attempt.status === "locked") redirect("/admin/login?error=locked");
 
   const token = buildSessionToken(config, pin, Date.now());
   const jar = await cookies();

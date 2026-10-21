@@ -61,6 +61,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         {([7, 30, 90] as AnalyticsDays[]).map((d) => (
           <Link
             key={d}
+            prefetch={false}
             href={`/admin?days=${d}&view=${view}`}
             className={`rounded-full px-3 py-1 text-sm ${
               d === days
@@ -107,6 +108,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         {VIEW_TABS.map((tab) => (
           <Link
             key={tab.id}
+            prefetch={false}
             href={`/admin?days=${days}&view=${tab.id}`}
             className={`rounded-md px-2 py-1 text-sm ${
               tab.id === view
@@ -119,7 +121,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         ))}
       </nav>
 
-      {rows.length === 0 ? (
+      {errorMessage ? null : rows.length === 0 ? (
         <p className="rounded-md border border-border bg-card p-6 text-center text-sm text-muted-foreground">
           呢段時間未有搜尋紀錄
         </p>
@@ -137,8 +139,8 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <TermTableRow key={`${row.term}-${row.lastSeen}`} row={row} />
+              {rows.map((row, i) => (
+                <TermTableRow key={`${i}-${row.lastSeen}`} row={row} />
               ))}
             </tbody>
           </table>

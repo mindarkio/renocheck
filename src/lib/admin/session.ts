@@ -2,12 +2,12 @@ import { cookies } from "next/headers";
 import {
   ADMIN_SESSION_COOKIE,
   getAdminAuthConfig,
+  getAdminEnvPin,
   verifySessionToken,
 } from "@/lib/admin/auth";
 
 export function adminEnvPin(): string | null {
-  const pin = process.env.ADMIN_DASHBOARD_PIN?.trim();
-  return pin && pin.length > 0 ? pin : null;
+  return getAdminEnvPin();
 }
 
 export async function isAdminSessionValid(nowMs = Date.now()): Promise<boolean> {
