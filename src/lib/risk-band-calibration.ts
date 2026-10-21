@@ -48,6 +48,11 @@ const BAND_SEVERITY: Record<RiskBandZh, number> = {
   未見負面摘要: 0,
 };
 
+/** Reset module warn latch (vitest only). */
+export function resetWarnedInvalidCapForTests(): void {
+  warnedInvalidCap = false;
+}
+
 /** Server env emergency cap (see `.env.example`). */
 export function capRiskBandZh(band: RiskBandZh): RiskBandZh {
   const raw = process.env.RISK_BAND_MAX?.trim();

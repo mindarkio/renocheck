@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   capRiskBandZh,
+  resetWarnedInvalidCapForTests,
   resolveRiskBandZh,
 } from "./risk-band-calibration";
 
@@ -121,6 +122,7 @@ describe("resolveRiskBandZh", () => {
 describe("capRiskBandZh", () => {
   afterEach(() => {
     delete process.env.RISK_BAND_MAX;
+    resetWarnedInvalidCapForTests();
   });
 
   it("caps 風險偏高 to 風險中等 when env set", () => {

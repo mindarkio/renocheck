@@ -68,8 +68,11 @@ export function countBoundDisputeSignals(hits: WebSearchHit[]): number {
 export const PRAISE_SNIPPET_PATTERN =
   /推荐|推薦|讚|赞|好評|好评|滿意|满意|用心|準時|准时|手工好|做工仔細|信得过|信得過|靠谱|靠譜|專業|专业/;
 
-/** Praise words with 唔／不／冇 directly before them (唔專業、不推荐) are not praise. */
-const PRAISE_NEGATABLE = new RegExp(`(?<![唔不冇無])(?:${PRAISE_SNIPPET_PATTERN.source})`, "u");
+/** A negator up to 3 chars before the praise word, in the same clause, cancels it (唔係好推薦、不太推薦、唔值得讚). Conservative: a miss only yields 中性. */
+const PRAISE_NEGATABLE = new RegExp(
+  `(?<![唔不冇無无未別别莫勿][^，。！？、,.!?\\s]{0,3})(?:${PRAISE_SNIPPET_PATTERN.source})`,
+  "u",
+);
 
 export function countBoundPraiseSignals(hits: WebSearchHit[]): number {
   return hits.filter((h) => {
