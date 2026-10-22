@@ -97,7 +97,25 @@ import {
   heroLegalChipTone,
   legalRecordsChip,
 } from "@/lib/report-hero-summary";
+import {
+  ratedDisputeHighlightCount,
+  riskBandRationaleLineZh,
+} from "@/lib/report-risk-band-rationale";
 import { RiskBandMeter } from "./RiskBandMeter";
+import { redactFeedbackComment } from "@/lib/feedback/redact";
+
+/** Third-party SERP text: strip phones, emails, HKID, addresses, honorific names before display. */
+function redactEvidenceText(text: string): string {
+  return redactFeedbackComment(text);
+}
+
+function siteLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "公開連結";
+  }
+}
 
 function confidenceLabelZh(confidence: RiskReport["confidence"]): string {
   if (confidence === "high") return "較高";
@@ -375,23 +393,26 @@ export function ReportCard({ report }: { report: RiskReport }) {
   const showLegalLookupDegraded = !showLegalEvents && legalLookupDegraded;
   const headerRiskBandZh = reportCardHeaderRiskBandZh(report);
   const headerBandLabel = reportCardHeaderBandLabel(report);
+  const ratedDisputeN = ratedDisputeHighlightCount(report);
   const showArticleTail =
-    (evidenceCount > 0 && highlights.length === 0) ||
+    evidenceCount > 0 ||
     actionable.length > 0 ||
     showFooterNotes;
 
   function afterLegalEventsBody(): ReactNode {
     return (
       <>
-      {evidenceCount > 0 && highlights.length === 0 && (
+      {evidenceCount > 0 && (
         <ReportBlock
           id="retrieval-evidence-heading"
           icon={Link2}
           title={`相關公開連結（${evidenceCount} 條）`}
         >
-          <p className={`${reportMetaClass} -mt-1 mb-3`}>
-            本次未形成討論摘要，以下連結供自行閱讀核實。
-          </p>
+          {highlights.length === 0 ? (
+            <p className={`${reportMetaClass} -mt-1 mb-3`}>
+              本次未形成討論摘要，以下連結供自行閱讀核實。
+            </p>
+          ) : null}
           <ul className="list-none space-y-0 p-0">
             {report.signals.retrievalEvidence!.map((item) => (
               <li key={item.url} className={reportListRowClass}>
@@ -406,12 +427,12 @@ export function ReportCard({ report }: { report: RiskReport }) {
                     aria-hidden
                   />
                   <span className="text-sm leading-snug sm:text-[15px]">
-                    {item.title || item.url}
+                    {item.title ? redactEvidenceText(item.title) : siteLabel(item.url)}
                   </span>
                 </a>
-                {item.snippetExcerpt ? (
+                {item.snippetExcerpt && highlights.length === 0 ? (
                   <p className={`mt-2 ${reportMetaClass}`}>
-                    {item.snippetExcerpt}
+                    {redactEvidenceText(item.snippetExcerpt)}
                   </p>
                 ) : null}
               </li>
@@ -540,6 +561,17 @@ export function ReportCard({ report }: { report: RiskReport }) {
             bandZh={headerRiskBandZh}
             emphasized
           />
+          {ratedDisputeN > 0 &&
+          (headerRiskBandZh === "風險偏高" || headerRiskBandZh === "風險中等") ? (
+            <p className="mt-2 text-xs leading-snug text-primary-foreground/85 sm:text-sm">
+              <a
+                href="#highlights-heading"
+                className="underline underline-offset-2 hover:text-primary-foreground"
+              >
+                {riskBandRationaleLineZh(ratedDisputeN)}
+              </a>
+            </p>
+          ) : null}
           <p className={`mt-3 flex items-start gap-2 ${reportHeroMetaClass}`}>
             <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span>

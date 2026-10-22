@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   parseUnifiedSearchQuery,
   parsedSearchQueryLabel,
@@ -10,19 +10,23 @@ import {
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
 import { SearchProgressModal } from "./SearchProgress";
 
+const REPORT_RETRY_ZH = "報告未能顯示，請稍後再試。";
+const SERVICE_PAUSED_ZH = "用戶擁擠，系統暫停服務，請稍後再試";
+
 const PIPELINE_ERROR_ZH: Record<string, string> = {
-  supabase_unavailable:
-    "報告未能顯示：資料庫未設定或無法連線，請檢查 Supabase 環境變數。",
-  serp_unavailable:
-    "報告未能顯示：未設定網搜 API（SERPER_API_KEY 或 SERPAPI_KEY），無法搜尋公開討論。",
+  supabase_unavailable: REPORT_RETRY_ZH,
+  serp_unavailable: REPORT_RETRY_ZH,
   serp_failed: "報告未能顯示：公開搜尋暫時失敗，請稍後再試。",
-  llm_unavailable: "報告未能顯示：未設定 AI（Gemini 或 AI Gateway）。",
+  llm_unavailable: REPORT_RETRY_ZH,
   llm_failed: "報告未能顯示：AI 摘要暫時失敗，請稍後再試。",
-  search_failed: "報告未能顯示，請稍後再試。",
+  llm_busy: SERVICE_PAUSED_ZH,
+  service_paused: SERVICE_PAUSED_ZH,
+  search_failed: REPORT_RETRY_ZH,
 };
 
 type SearchFormProps = {
   variant?: "card" | "landing";
+  paused?: boolean;
 };
 
 const inputBase =
@@ -33,13 +37,14 @@ const inputCard =
 
 const inputLanding = "px-1 py-2.5 focus:ring-0";
 
-export function SearchForm({ variant = "card" }: SearchFormProps) {
+export function SearchForm({ variant = "card", paused = false }: SearchFormProps) {
   const router = useRouter();
   const [unifiedQuery, setUnifiedQuery] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [br, setBr] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [pausedByApi, setPausedByApi] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progressStartedAt, setProgressStartedAt] = useState<number | null>(
     null,
@@ -47,14 +52,23 @@ export function SearchForm({ variant = "card" }: SearchFormProps) {
 
   const isLanding = variant === "landing";
 
+  useEffect(() => {
+    if (!pausedByApi) return;
+    const t = setTimeout(() => setPausedByApi(false), 120_000);
+    return () => clearTimeout(t);
+  }, [pausedByApi]);
+
   const parsedUnified = useMemo(
     () => parseUnifiedSearchQuery(unifiedQuery),
     [unifiedQuery],
   );
   const detectLabel = parsedSearchQueryLabel(parsedUnified);
 
+  const inputsDisabled = loading || pausedByApi;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (pausedByApi) return;
     const body = isLanding
       ? toSearchInputBody(parseUnifiedSearchQuery(unifiedQuery))
       : {
@@ -90,6 +104,10 @@ export function SearchForm({ variant = "card" }: SearchFormProps) {
           if (errBody.error) code = errBody.error;
         } catch {
           // ignore
+        }
+        // service_paused: cached reports are still served, so keep the box usable.
+        if (res.status === 503 && code === "llm_busy") {
+          setPausedByApi(true);
         }
         setMessage(
           PIPELINE_ERROR_ZH[code] ?? PIPELINE_ERROR_ZH.search_failed,
@@ -136,7 +154,7 @@ export function SearchForm({ variant = "card" }: SearchFormProps) {
           >
             <button
               type="submit"
-              disabled={loading}
+              disabled={inputsDisabled}
               aria-label={loading ? "查閱中" : "查閱公開資料摘要"}
               className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
             >
@@ -153,7 +171,8 @@ export function SearchForm({ variant = "card" }: SearchFormProps) {
               autoComplete="off"
               value={unifiedQuery}
               onChange={(e) => setUnifiedQuery(e.target.value)}
-              disabled={loading}
+              disabled={inputsDisabled}
+              aria-describedby={paused ? "service-paused-banner" : undefined}
               className={`${fieldClass} min-h-12`}
               placeholder="輸入裝修公司名稱、電話或 BR 號碼"
             />
@@ -184,7 +203,7 @@ export function SearchForm({ variant = "card" }: SearchFormProps) {
               autoComplete="organization"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              disabled={loading}
+              disabled={inputsDisabled}
               className={fieldClass}
               placeholder="例：某某裝修工程有限公司"
             />
@@ -201,7 +220,7 @@ export function SearchForm({ variant = "card" }: SearchFormProps) {
               autoComplete="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              disabled={loading}
+              disabled={inputsDisabled}
               className={fieldClass}
               placeholder="例：9123 4567"
             />
@@ -216,7 +235,7 @@ export function SearchForm({ variant = "card" }: SearchFormProps) {
               type="text"
               value={br}
               onChange={(e) => setBr(e.target.value)}
-              disabled={loading}
+              disabled={inputsDisabled}
               className={fieldClass}
               placeholder="例：12345678"
             />
@@ -227,7 +246,7 @@ export function SearchForm({ variant = "card" }: SearchFormProps) {
       {!isLanding && (
         <button
           type="submit"
-          disabled={loading}
+          disabled={inputsDisabled}
           className="w-full min-h-11 rounded-lg bg-primary px-4 py-2 text-base font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
         >
           {loading ? "查閱中…" : "查閱公開資料摘要"}

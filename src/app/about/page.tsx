@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { pageMetadata } from "@/lib/site-metadata";
+import { pageMetadata, SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
 import {
   ContentCard,
   ContentPage,
@@ -8,13 +8,15 @@ import {
   ContentPageTitle,
   ContentSections,
 } from "@/components/ContentPage";
-import { SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
+import { JsonLd } from "@/components/JsonLd";
+import { buildSiteJsonLd } from "@/lib/site-jsonld";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const metadata: Metadata = pageMetadata({
   path: "/about",
   title: "關於我們",
   description:
-    "Renocheck 裝修點評的使命：為香港業主提供裝修承辦商公開資料風險參考，非政府機構、非信貸報告。",
+    "Renocheck 裝修點評的使命：為香港業主提供裝修承辦商公開資料風險參考，非政府機構、非信貸報告。只服務香港。",
 });
 
 const NAV_LINKS = [
@@ -25,8 +27,21 @@ const NAV_LINKS = [
 ] as const;
 
 export default function AboutPage() {
+  const organization = buildSiteJsonLd(getSiteUrl())["@graph"].find(
+    (node) => node["@type"] === "Organization",
+  );
+  if (!organization) {
+    throw new Error("Organization JSON-LD node missing");
+  }
+
   return (
     <ContentPage>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          ...organization,
+        }}
+      />
       <ContentCard>
         <ContentPageTitle>關於 Renocheck</ContentPageTitle>
         <ContentSections className="space-y-4">
@@ -42,6 +57,9 @@ export default function AboutPage() {
           <h2 className="text-sm font-semibold text-primary">誰營運本網站</h2>
           <p>
             本網站由 <strong>Renocheck</strong> 營運，與任何裝修公司、政府部門或信貸資料機構均無從屬關係，亦不向裝修公司收取刊登或排名費用。
+          </p>
+          <p>
+            Renocheck（renocheck.homes）只服務香港，提供香港裝修承辦商的公開資料風險參考。我們不提供專家諮詢或裝修估價服務；本網站與英國的 renocheck.co.uk 或其他名稱相近的網站及公司均無任何關係。
           </p>
           <h2 className="text-sm font-semibold text-primary">資料點嚟</h2>
           <p>

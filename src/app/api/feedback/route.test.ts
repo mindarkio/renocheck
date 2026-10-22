@@ -99,7 +99,7 @@ describe("POST /api/feedback", () => {
     expect(row.placement).toBe("inline");
     expect(row.comment).toBeNull();
     expect(row.report_version).toBe(REPORT_VERSION);
-    expect(REPORT_VERSION).toBe("2.6.0");
+    expect(REPORT_VERSION).toBe("2.7.0");
     expect(row.device_hash).toMatch(/^[0-9a-f]{64}$/);
 
     const setCookie = res.headers.get("set-cookie") ?? "";

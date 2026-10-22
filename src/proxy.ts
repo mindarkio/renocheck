@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { GUIDES } from "@/lib/guides";
+import {
+  ADMIN_SESSION_COOKIE,
+  getAdminAuthConfig,
+  getAdminEnvPin,
+  verifySessionToken,
+} from "@/lib/admin/auth";
 
 const GUIDE_PATHS = new Set(GUIDES.map((g) => `/guides/${g.slug}`));
 
@@ -17,8 +23,27 @@ function notFoundResponse() {
   });
 }
 
+/** /admin is streamed too, so notFound()/redirect() in the page would still answer 200. Gate it here. */
+function adminGate(request: NextRequest, path: string): NextResponse {
+  const config = getAdminAuthConfig();
+  const pin = getAdminEnvPin();
+  if (!config || !pin) return notFoundResponse();
+  if (path === "/admin/login") return NextResponse.next();
+  const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+  if (!verifySessionToken(token, config, pin, Date.now())) {
+    const res = NextResponse.redirect(new URL("/admin/login", request.url), 307);
+    res.headers.set("cache-control", "no-store");
+    res.headers.set("x-robots-tag", "noindex, nofollow");
+    return res;
+  }
+  return NextResponse.next();
+}
+
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname.replace(/\/$/, "");
+  if (path === "/admin" || path.startsWith("/admin/")) {
+    return adminGate(request, path);
+  }
   if (path.startsWith("/guides/")) {
     return GUIDE_PATHS.has(path) ? NextResponse.next() : notFoundResponse();
   }
@@ -29,5 +54,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/report/:path*", "/guides/:path+"],
+  matcher: ["/report/:path*", "/guides/:path+", "/admin", "/admin/:path*"],
 };

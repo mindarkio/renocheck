@@ -3,7 +3,9 @@ export type SearchPipelineErrorCode =
   | "serp_unavailable"
   | "serp_failed"
   | "llm_unavailable"
-  | "llm_failed";
+  | "llm_failed"
+  | "llm_busy"
+  | "service_paused";
 
 export class SearchPipelineError extends Error {
   readonly code: SearchPipelineErrorCode;

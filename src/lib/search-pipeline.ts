@@ -35,6 +35,7 @@ import {
 } from "./search-cache";
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from "./supabase/admin";
 import { SearchPipelineError } from "./search-pipeline-error";
+import { getServiceStatus } from "./service-status";
 import { isLlmConfigured } from "./llm-model";
 import {
   buildQueryEcho,
@@ -42,6 +43,7 @@ import {
   resolveAuthoritativeSearchLabel,
 } from "./entity-report-context";
 import { applyLegalEventFloors } from "./legal-event-calibration";
+import { applyRiskBandMaxCapToReport } from "./risk-band-calibration";
 import {
   isLegalLookupDegraded,
   startLegalLookupForSearch,
@@ -115,6 +117,10 @@ export async function runSearchPipeline(
     }
   }
 
+  if (getServiceStatus().paused) {
+    throw new SearchPipelineError("service_paused");
+  }
+
   const pipelineStart = performance.now();
   const mwcStart = performance.now();
   const mwcLookup = await lookupMwcWithMeta(supabase, input);
@@ -146,10 +152,14 @@ export async function runSearchPipeline(
   );
 
   const serpStart = performance.now();
-  const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, {
-    ...mwcOpts,
-    deadlineMs: serpDeadlineMs,
-  });
+  const { hits: serpHits, queriesCompleted } = await fetchWebSearchHitsForEntity(
+    input,
+    {
+      ...mwcOpts,
+      deadlineMs: serpDeadlineMs,
+    },
+  );
+  let anySearchSourceOk = queriesCompleted > 0;
 
   const tokens = entityMatchTokens(input, {
     mwcCompanyName: mwc?.company_name,
@@ -180,6 +190,7 @@ export async function runSearchPipeline(
           merged_organic: rawHits.length,
         }),
       );
+      anySearchSourceOk = true;
     } catch (e) {
       console.warn(
         JSON.stringify({
@@ -193,6 +204,10 @@ export async function runSearchPipeline(
   }
 
   const serpMs = Math.round(performance.now() - serpStart);
+  if (!anySearchSourceOk) {
+    console.warn(JSON.stringify({ event: "serp_all_sources_failed" }));
+    throw new SearchPipelineError("serp_failed");
+  }
   const [legalLookup, companiesRegistry] = await Promise.all([
     legalLookupPromise,
     companiesRegistryPromise,
@@ -282,6 +297,7 @@ export async function runSearchPipeline(
       serpHitCount: rawHits.length,
       boundDisputeHitCount: countBoundDisputeSignals(webHitsForLlm),
       boundPraiseHitCount: countBoundPraiseSignals(webHitsForLlm),
+      sourceTitles: Object.fromEntries(webHitsForLlm.map((h) => [h.url, h.title])),
     },
     mwcMatched: mwc != null,
     mwcAmbiguous: mwcLookup.ambiguous,
@@ -356,7 +372,7 @@ export async function runSearchPipeline(
 
   return {
     fingerprint,
-    report: validated,
+    report: applyRiskBandMaxCapToReport(validated),
     cacheHit: false,
     meta: { serpConfigured, webHitCount: rawHits.length },
   };

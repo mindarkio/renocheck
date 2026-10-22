@@ -36,7 +36,7 @@ function assertClean(text: string): void {
 describe("disclaimer page feedback notice", () => {
   it("publishes the approved §七 notice at 1.2.1 without changing the report version", () => {
     expect(DISCLAIMER_VERSION).toBe("1.2.1");
-    expect(REPORT_VERSION).toBe("2.6.0");
+    expect(REPORT_VERSION).toBe("2.7.0");
     render(<DisclaimerPage />);
     expect(screen.getByText("版本 1.2.1")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "七、個人資料（私隱）" })).toBeTruthy();

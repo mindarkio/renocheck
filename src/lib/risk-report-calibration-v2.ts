@@ -6,6 +6,15 @@ import type {
   gradeSchema,
 } from "./report-schema";
 import {
+  dedupeDisputeHighlights,
+  isDisputeHighlight,
+  isRecentHighlight,
+  meetsHighRiskDisputeEvidence,
+  meetsSevereDisputeEvidence,
+  ratedDisputeHighlights,
+  type SourceTitleByUrl,
+} from "./dispute-signals";
+import {
   type LlmRiskSlice,
   type RetrievalEvidence,
   stripNoDiscussionTheme,
@@ -16,8 +25,6 @@ type Grade = z.infer<typeof gradeSchema>;
 type Confidence = z.infer<typeof confidenceSchema>;
 type Evaluation = z.infer<typeof evaluationSchema>;
 type Highlight = z.infer<typeof discussionHighlightSchema>;
-
-const DISPUTE_THEME_PATTERN = /超支|爛尾|糾紛|投訴|苦主|溝通|工程質素/;
 
 const MWC_SPARSE_SUMMARY =
   "屋宇署小型工程承辦商名冊有登記；本次未檢出公開糾紛討論摘要，請自行核實牌照與合約條款。";
@@ -61,48 +68,16 @@ function trimSummaryToMax(text: string, max = 120): string {
   return text.length <= max ? text : text.slice(0, max);
 }
 
-function reportAnchorYear(generatedAt: string): number {
-  const y = new Date(generatedAt).getFullYear();
-  return Number.isFinite(y) ? y : new Date().getFullYear();
+function disputeHighlights(highlights: Highlight[]): Highlight[] {
+  return highlights.filter(isDisputeHighlight);
 }
 
-function parseHighlightYear(h: Highlight): number | null {
-  const raw = h.approxYear?.trim();
-  if (raw && /^\d{4}$/.test(raw)) {
-    const y = Number.parseInt(raw, 10);
-    return Number.isFinite(y) ? y : null;
-  }
-  const fromHint = h.dateHint?.match(/20\d{2}/);
-  if (fromHint) return Number.parseInt(fromHint[0], 10);
-  return null;
-}
-
-function isRecentHighlight(h: Highlight, generatedAt: string): boolean {
-  const y = parseHighlightYear(h);
-  if (y == null) return false;
-  return y >= reportAnchorYear(generatedAt) - 2;
-}
-
-function highlightHasDisputeSignal(
-  h: Highlight,
-  themes: string[],
+function allowsSevereGrade(
+  highlights: Highlight[],
+  generatedAt: string,
+  titles?: SourceTitleByUrl,
 ): boolean {
-  if (
-    h.incidentType &&
-    h.incidentType !== "other"
-  ) {
-    return true;
-  }
-  const blob = `${h.summaryZh} ${h.factSummary ?? ""}`;
-  return DISPUTE_THEME_PATTERN.test(blob) || themes.some((t) => DISPUTE_THEME_PATTERN.test(t));
-}
-
-function allowsSevereGrade(highlights: Highlight[], themes: string[]): boolean {
-  if (highlights.length < 2) return false;
-  const disputeHighlights = highlights.filter((h) =>
-    highlightHasDisputeSignal(h, themes),
-  );
-  return disputeHighlights.length >= 2 || themes.some((t) => DISPUTE_THEME_PATTERN.test(t));
+  return meetsSevereDisputeEvidence(highlights, generatedAt, titles);
 }
 
 type MatrixRow = {
@@ -117,7 +92,6 @@ function matrixForZeroHighlights(
   mwcActive: boolean,
   boundHitCount: number,
   serpHitCount: number,
-  boundDisputeHitCount: number,
 ): MatrixRow {
   if (mwcActive && boundHitCount === 0) {
     if (serpHitCount >= SERP_BIND_FAILURE_THRESHOLD) {
@@ -129,7 +103,6 @@ function matrixForZeroHighlights(
         disputeLevel: "none_detected",
       };
     }
-    // Quiet / MWC + no bound discussion: neutral C (not B+). Display naming TBD in grading scope DEC.
     return {
       overallGrade: "C",
       displayGradeZh: "C",
@@ -139,24 +112,6 @@ function matrixForZeroHighlights(
     };
   }
   if (boundHitCount > 0) {
-    if (boundDisputeHitCount >= 3) {
-      return {
-        overallGrade: "D",
-        displayGradeZh: "D",
-        confidence: "medium",
-        dataSaturation: "moderate",
-        disputeLevel: "active_concerning",
-      };
-    }
-    if (boundDisputeHitCount >= 1) {
-      return {
-        overallGrade: "C",
-        displayGradeZh: "C",
-        confidence: "medium",
-        dataSaturation: "moderate",
-        disputeLevel: "active_concerning",
-      };
-    }
     return {
       overallGrade: "C",
       displayGradeZh: "C+",
@@ -176,35 +131,43 @@ function matrixForZeroHighlights(
 
 function matrixForHighlights(
   highlights: Highlight[],
-  themes: string[],
   generatedAt: string,
   boundHitCount: number,
+  titles?: SourceTitleByUrl,
 ): MatrixRow {
   const hl = highlights.length;
-  const recent = highlights.filter((h) => isRecentHighlight(h, generatedAt));
-  const recentDispute = highlights.filter(
-    (h) => isRecentHighlight(h, generatedAt) && highlightHasDisputeSignal(h, themes),
+  const disputes = disputeHighlights(highlights);
+  const dedupedDisputes = dedupeDisputeHighlights(highlights, titles);
+  const recentDispute = disputes.filter((h) =>
+    isRecentHighlight(h, generatedAt),
   );
 
   let dataSaturation: Evaluation["dataSaturation"] = "moderate";
   if (hl >= 2) dataSaturation = "rich";
   else if (boundHitCount === 0) dataSaturation = "moderate";
 
-  if (hl >= 3 && allowsSevereGrade(highlights, themes)) {
+  if (dedupedDisputes.length === 0) {
     return {
-      overallGrade: hl >= 4 ? "F" : "E",
-      displayGradeZh: hl >= 4 ? "F" : "E",
+      overallGrade: "C",
+      displayGradeZh: "C",
+      confidence: hl >= 2 ? "medium" : "low",
+      dataSaturation,
+      disputeLevel: "none_detected",
+    };
+  }
+
+  if (allowsSevereGrade(highlights, generatedAt, titles)) {
+    const rated = ratedDisputeHighlights(highlights, generatedAt, titles).length;
+    return {
+      overallGrade: rated >= 4 ? "F" : "E",
+      displayGradeZh: rated >= 4 ? "F" : "E",
       confidence: "high",
       dataSaturation: "rich",
       disputeLevel: "severe",
     };
   }
 
-  if (
-    hl >= 2 &&
-    recentDispute.length >= 2 &&
-    allowsSevereGrade(highlights, themes)
-  ) {
+  if (meetsHighRiskDisputeEvidence(highlights, generatedAt, titles)) {
     return {
       overallGrade: "D",
       displayGradeZh: "D",
@@ -214,9 +177,11 @@ function matrixForHighlights(
     };
   }
 
-  if (hl === 1) {
-    const disputeLevel =
-      recent.length > 0 ? "active_concerning" : "historical_isolated";
+  if (dedupedDisputes.length === 1) {
+    const only = dedupedDisputes[0];
+    const disputeLevel = isRecentHighlight(only, generatedAt)
+      ? "active_concerning"
+      : "historical_isolated";
     return {
       overallGrade: "C",
       displayGradeZh: "C",
@@ -226,14 +191,22 @@ function matrixForHighlights(
     };
   }
 
-  const disputeLevel =
-    recentDispute.length > 0 ? "active_concerning" : "historical_isolated";
+  if (recentDispute.length > 0) {
+    return {
+      overallGrade: "C",
+      displayGradeZh: "C",
+      confidence: "medium",
+      dataSaturation,
+      disputeLevel: "active_concerning",
+    };
+  }
+
   return {
     overallGrade: "C",
     displayGradeZh: "C",
     confidence: "medium",
     dataSaturation,
-    disputeLevel,
+    disputeLevel: "historical_isolated",
   };
 }
 
@@ -321,13 +294,12 @@ export function calibrateEvaluation(
           mwcActive,
           evidence.boundHitCount,
           evidence.serpHitCount,
-          boundDispute,
         )
       : matrixForHighlights(
           highlights,
-          themes,
           generatedAt,
           evidence.boundHitCount,
+          evidence.sourceTitles,
         );
 
   let confidence = row.confidence;
@@ -338,8 +310,10 @@ export function calibrateEvaluation(
     confidence = "low";
   }
 
-  const recentDisputeCount = highlights.filter(
-    (h) => isRecentHighlight(h, generatedAt) && highlightHasDisputeSignal(h, themes),
+  const recentDisputeCount = ratedDisputeHighlights(
+    highlights,
+    generatedAt,
+    evidence.sourceTitles,
   ).length;
 
   const summaryZh = buildSummary(slice, evidence, row, mwcActive);
@@ -367,6 +341,8 @@ export function calibrateEvaluation(
       disputeLevel: row.disputeLevel,
       highlights,
       overallGrade: row.overallGrade,
+      generatedAt,
+      sourceTitles: evidence.sourceTitles,
     },
   );
 

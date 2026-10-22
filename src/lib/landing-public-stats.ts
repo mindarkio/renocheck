@@ -37,11 +37,29 @@ async function fetchLandingPublicStats(): Promise<LandingPublicStats | null> {
 }
 
 /** Cached public registry stats for landing (revalidate hourly). */
-export const getLandingPublicStats = unstable_cache(
+const getCachedLandingPublicStats = unstable_cache(
   fetchLandingPublicStats,
   ["landing-public-stats"],
   { revalidate: 3600 },
 );
+
+/**
+ * `OVERFLOW_CHECK_STATS=1` returns synthetic counts so the local overflow
+ * script (`next dev`) can render the stats bar without a database. Ignored in
+ * production builds, so a stray env var can never publish made-up figures.
+ */
+export async function getLandingPublicStats(): Promise<LandingPublicStats | null> {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.OVERFLOW_CHECK_STATS === "1"
+  ) {
+    return {
+      mwcContractorCount: 8123,
+      mwcSourceUpdatedAt: "2026-01-15T00:00:00.000Z",
+    };
+  }
+  return getCachedLandingPublicStats();
+}
 
 export function formatMwcRegistryUpdatedAt(iso: string): string {
   return new Date(iso).toLocaleDateString("zh-HK", {
