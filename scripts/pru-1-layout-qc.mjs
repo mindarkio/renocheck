@@ -60,6 +60,7 @@ const STATIC_PAGES = [
   { name: "home", path: "/" },
   { name: "faq", path: "/faq" },
   { name: "about", path: "/about" },
+  { name: "quote", path: "/quote" },
 ];
 
 const CORAL = [255, 143, 125];
