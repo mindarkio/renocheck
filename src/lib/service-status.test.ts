@@ -116,11 +116,11 @@ describe("service status breaker", () => {
   it("uses retryDelay when it is longer than 120 seconds", async () => {
     const t0 = Date.parse("2026-06-01T00:00:00.000Z");
     for (let i = 0; i < 3; i++) {
-      vi.setSystemTime(t0 + i * 1000);
+      vi.setSystemTime(t0 + i * 30_000);
       await hit(429, minuteBody("180s"));
     }
-    expect(getServiceStatus(t0 + 2000 + 179_000).paused).toBe(true);
-    expect(getServiceStatus(t0 + 2000 + 180_000).paused).toBe(false);
+    expect(getServiceStatus(t0 + 60_000 + 179_000).paused).toBe(true);
+    expect(getServiceStatus(t0 + 60_000 + 180_000).paused).toBe(false);
   });
 
   it("lets an ok response reset the error streak", async () => {
@@ -145,6 +145,66 @@ describe("service status breaker", () => {
       await hit(429, JSON.stringify({ error: { code: 429 } }));
     }
     expect(getServiceStatus(t0).paused).toBe(false);
+  });
+
+  it("counts one search's SDK retries as a single failure", async () => {
+    const t0 = Date.parse("2026-06-01T00:00:00.000Z");
+    for (const offset of [0, 2_000, 6_000]) {
+      vi.setSystemTime(t0 + offset);
+      await hit(503);
+    }
+    expect(getServiceStatus(t0 + 6_000).paused).toBe(false);
+    for (const offset of [30_000, 60_000]) {
+      vi.setSystemTime(t0 + offset);
+      await hit(503);
+    }
+    expect(getServiceStatus(t0 + 60_000)).toEqual({
+      paused: true,
+      reason: "gemini_errors",
+    });
+  });
+
+  it("caps a huge retryDelay at 15 minutes", async () => {
+    const t0 = Date.parse("2026-06-01T00:00:00.000Z");
+    for (let i = 0; i < 3; i++) {
+      vi.setSystemTime(t0 + i * 30_000);
+      await hit(429, minuteBody("315360000s"));
+    }
+    expect(getServiceStatus(t0 + 60_000 + 899_000).paused).toBe(true);
+    expect(getServiceStatus(t0 + 60_000 + 900_000).paused).toBe(false);
+  });
+
+  it("ignores requests cancelled by our own deadline", async () => {
+    const t0 = Date.parse("2026-06-01T00:00:00.000Z");
+    const controller = new AbortController();
+    controller.abort();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new DOMException("aborted", "AbortError");
+      }),
+    );
+    for (let i = 0; i < 3; i++) {
+      vi.setSystemTime(t0 + i * 30_000);
+      await expect(
+        geminiCountingFetch(URL_NO_QUERY, { signal: controller.signal }),
+      ).rejects.toThrow("aborted");
+    }
+    expect(getServiceStatus(t0 + 60_000).paused).toBe(false);
+  });
+
+  it("shares breaker state across separately loaded module copies", async () => {
+    vi.setSystemTime(new Date("2026-10-31T18:00:00.000Z"));
+    vi.resetModules();
+    const usageCopy = await import("./gemini-usage");
+    const statusCopy = await import("./service-status");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(dayBody(), { status: 429 })),
+    );
+    await usageCopy.geminiCountingFetch(URL_NO_QUERY);
+    expect(getServiceStatus(Date.now()).reason).toBe("gemini_quota_day");
+    expect(statusCopy.getServiceStatus(Date.now()).reason).toBe("gemini_quota_day");
   });
 
   it("pauses when SERVICE_PAUSED=1", () => {

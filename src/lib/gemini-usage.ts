@@ -24,6 +24,8 @@ export type GeminiAttempt = {
   quotaId?: string;
   quotaValue?: number;
   retryDelayS?: number;
+  /** The request was cancelled by our own AbortSignal (deadline), not by Gemini. */
+  aborted?: true;
 };
 
 export type GeminiUsageSnapshot = {
@@ -38,15 +40,31 @@ const CAP = 500;
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const PACIFIC = "America/Los_Angeles";
 
-const attempts: GeminiAttempt[] = [];
-let fixtureSeeded = false;
-
 type GeminiAttemptListener = (attempt: GeminiAttempt) => void;
-let listener: GeminiAttemptListener | null = null;
+
+type GeminiUsageState = {
+  attempts: GeminiAttempt[];
+  fixtureSeeded: boolean;
+  listener: GeminiAttemptListener | null;
+};
+
+/**
+ * Next.js bundles route handlers and pages into separate module graphs, so a
+ * plain module-level variable is a different copy in /api/search, `/` and
+ * /admin. Keep one copy per process on globalThis.
+ */
+const STATE_KEY = Symbol.for("renocheck.geminiUsage.v1");
+const globalStore = globalThis as unknown as Record<symbol, GeminiUsageState | undefined>;
+const state: GeminiUsageState = (globalStore[STATE_KEY] ??= {
+  attempts: [],
+  fixtureSeeded: false,
+  listener: null,
+});
+const attempts = state.attempts;
 
 /** Registered by the service-status breaker. Must not throw into fetch. */
 export function onGeminiAttempt(fn: GeminiAttemptListener): void {
-  listener = fn;
+  state.listener = fn;
 }
 
 function emptyCounts(): Record<GeminiOutcome, number> {
@@ -63,7 +81,7 @@ function emptyCounts(): Record<GeminiOutcome, number> {
 
 export function resetGeminiUsageForTests(): void {
   attempts.length = 0;
-  fixtureSeeded = false;
+  state.fixtureSeeded = false;
 }
 
 type PacificParts = {
@@ -166,7 +184,7 @@ function pushAttempt(attempt: GeminiAttempt, log: boolean): void {
     );
   }
   try {
-    listener?.(attempt);
+    state.listener?.(attempt);
   } catch {
     // The breaker must not break the Gemini call.
   }
@@ -179,8 +197,8 @@ function pushAttempt(attempt: GeminiAttempt, log: boolean): void {
 function maybeSeedDevFixture(now: number): void {
   if (process.env.NODE_ENV === "production") return;
   if (process.env.OVERFLOW_CHECK_GEMINI !== "1") return;
-  if (fixtureSeeded) return;
-  fixtureSeeded = true;
+  if (state.fixtureSeeded) return;
+  state.fixtureSeeded = true;
   pushAttempt(
     {
       at: now,
@@ -355,7 +373,13 @@ export const geminiCountingFetch: typeof fetch = async (input, init) => {
   try {
     res = await globalThis.fetch(input, init);
   } catch (err) {
-    pushAttempt({ at, model, outcome: "network" }, true);
+    const aborted =
+      init?.signal?.aborted === true ||
+      (input instanceof Request && input.signal.aborted);
+    pushAttempt(
+      { at, model, outcome: "network", ...(aborted ? { aborted: true as const } : {}) },
+      true,
+    );
     throw err;
   }
   const classified = await classifyResponse(res);
