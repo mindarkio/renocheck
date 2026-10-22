@@ -136,3 +136,74 @@ describe("name-variant redaction", () => {
     );
   });
 });
+
+const NAME_CATCHES_R2: Array<[string, string]> = [
+  ["陳生成日遲到", "[姓名]成日遲到"],
+  ["黃生意見好多", "[姓名]意見好多"],
+  ["李生手腳快", "[姓名]手腳快"],
+  ["陳生果然準時", "[姓名]果然準時"],
+  ["陳生生意好好", "[姓名]生意好好"],
+  ["陳生日日都嚟", "[姓名]日日都嚟"],
+  ["何生前日嚟過", "[姓名]前日嚟過"],
+  ["黃醫生。", "[姓名]。"],
+  ["陳醫生話", "[姓名]話"],
+  ["陳生同李師傅", "[姓名]同[姓名]"],
+  ["問過陳師傅", "問過[姓名]"],
+  ["陳  師傅", "[姓名]"],
+  ["黃  生", "[姓名]"],
+  ["陳\u2060師傅", "[姓名]"],
+  ["陳\u00ad師傅", "[姓名]"],
+  ["Ken師傅好好", "[姓名]好好"],
+  ["阿Ken 師父", "阿[姓名]"],
+  ["陈师傅", "[姓名]"],
+  ["陈生话", "[姓名]话"],
+  ["师傅陈仔", "师傅[姓名]"],
+  ["\uF9E1生話", "[姓名]話"],
+  ["\u2FC8生好好", "[姓名]好好"],
+  ["多謝強生。", "多謝[姓名]。"],
+  ["Mr Wong 強仔好好", "[姓名]好好"],
+];
+
+const NAME_KEEPS_R2 = [
+  "我問過師父",
+  "佢話師父教落",
+  "我覺得師傅好好",
+  "今日師傅冇嚟",
+  "第二個師傅",
+  "其他師傅",
+  "另一位師傅",
+  "新嚟嘅師傅",
+  "我師傅話",
+  "所有師傅都好",
+  "師傅生日",
+  "師傅細仔",
+  "師傅叫仔仔幫手",
+  "師傅非常仔細",
+  "睇醫生",
+  "家庭醫生",
+  "学生",
+  "医生",
+  "发生",
+  "周生生珠寶",
+  "生意額",
+] as const;
+
+describe("name-variant redaction, round 2", () => {
+  it.each(NAME_CATCHES_R2)("masks %s", (raw, expected) => {
+    expect(redactFeedbackComment(raw)).toBe(expected);
+  });
+
+  it.each(NAME_KEEPS_R2)("keeps %s", (raw) => {
+    expect(redactFeedbackComment(raw)).toBe(raw);
+  });
+
+  it("stays linear on 50k-char adversarial input", () => {
+    const n = 50_000;
+    for (const unit of ["9", "９", "a", "陳", "師傅", "陳生", "陳 師傅 ", "師傅陳仔"]) {
+      const raw = unit.repeat(Math.ceil(n / unit.length)).slice(0, n);
+      const t = performance.now();
+      redactFeedbackComment(raw);
+      expect(performance.now() - t).toBeLessThan(1_000);
+    }
+  });
+});
