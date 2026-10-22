@@ -1,5 +1,6 @@
+/** In-memory, per server instance. Not shared across processes. */
 const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 30;
+const MAX_PER_WINDOW = 5;
 
 type Entry = { count: number; resetAt: number };
 
@@ -17,4 +18,8 @@ export function checkRateLimit(key: string): boolean {
   if (entry.count >= MAX_PER_WINDOW) return false;
   entry.count += 1;
   return true;
+}
+
+export function resetRateLimitForTests(): void {
+  buckets.clear();
 }

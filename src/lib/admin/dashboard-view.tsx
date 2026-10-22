@@ -286,7 +286,7 @@ function GeminiUsageSection({ gemini }: { gemini: GeminiUsageCardResult }) {
       </dl>
       <div className="mt-3 min-w-0 space-y-2 text-[13px] text-muted-foreground">
         <p className="break-words">
-          Google 每日上限喺美國太平洋時間半夜 12 點重置（香港時間下午 3 點；11 月 1 日之後係下午 4 點）。
+          Google 每日上限喺美國太平洋時間半夜 12 點重置，實際時間睇上面『下次重置』。
         </p>
         <p className="break-words">
           次數只計到呢部伺服器，重新部署會清零；『今日已用』最少有呢個數。

@@ -35,6 +35,7 @@ import {
 } from "./search-cache";
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from "./supabase/admin";
 import { SearchPipelineError } from "./search-pipeline-error";
+import { getServiceStatus } from "./service-status";
 import { isLlmConfigured } from "./llm-model";
 import {
   buildQueryEcho,
@@ -114,6 +115,10 @@ export async function runSearchPipeline(
         },
       };
     }
+  }
+
+  if (getServiceStatus().paused) {
+    throw new SearchPipelineError("service_paused");
   }
 
   const pipelineStart = performance.now();

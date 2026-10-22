@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   parseUnifiedSearchQuery,
   parsedSearchQueryLabel,
@@ -52,17 +52,23 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
 
   const isLanding = variant === "landing";
 
+  useEffect(() => {
+    if (!pausedByApi) return;
+    const t = setTimeout(() => setPausedByApi(false), 120_000);
+    return () => clearTimeout(t);
+  }, [pausedByApi]);
+
   const parsedUnified = useMemo(
     () => parseUnifiedSearchQuery(unifiedQuery),
     [unifiedQuery],
   );
   const detectLabel = parsedSearchQueryLabel(parsedUnified);
 
-  const inputsDisabled = loading || paused || pausedByApi;
+  const inputsDisabled = loading || pausedByApi;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (paused || pausedByApi) return;
+    if (pausedByApi) return;
     const body = isLanding
       ? toSearchInputBody(parseUnifiedSearchQuery(unifiedQuery))
       : {
@@ -168,6 +174,7 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
               value={unifiedQuery}
               onChange={(e) => setUnifiedQuery(e.target.value)}
               disabled={inputsDisabled}
+              aria-describedby={paused ? "service-paused-banner" : undefined}
               className={`${fieldClass} min-h-12`}
               placeholder="輸入裝修公司名稱、電話或 BR 號碼"
             />

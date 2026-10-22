@@ -6,6 +6,8 @@ import type { GeminiUsageCardData } from "@/lib/admin/gemini-usage-view";
 import type { SearchAnalyticsAggregate } from "@/lib/admin/search-analytics";
 
 const B4 = "過去 24 小時撞過 Gemini 上限，用戶可能搜唔到";
+const RESET_NOTE =
+  "Google 每日上限喺美國太平洋時間半夜 12 點重置，實際時間睇上面『下次重置』。";
 const GATEWAY = "而家用緊 AI Gateway，唔係 Gemini。";
 
 function emptyData(): SearchAnalyticsAggregate {
@@ -70,6 +72,8 @@ describe("AI 用量（Gemini） card", () => {
     expect(view.getByText("2 / 未設定")).toBeTruthy();
     expect(view.getAllByText("未設定").length).toBeGreaterThanOrEqual(2);
     expect(view.queryByText(GATEWAY)).toBeNull();
+    expect(view.getByText(RESET_NOTE)).toBeTruthy();
+    expect(view.queryByText(/11 月 1 日之後/)).toBeNull();
     expect(view.getByText("google/gemini-3.5-flash")).toBeTruthy();
     expect(document.body.textContent).not.toContain("2 / 20");
   });

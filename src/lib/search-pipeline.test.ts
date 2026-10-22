@@ -68,6 +68,10 @@ vi.mock("./llm-model", () => ({
   isLlmConfigured: () => true,
 }));
 
+vi.mock("./service-status", () => ({
+  getServiceStatus: vi.fn(() => ({ paused: false, reason: null })),
+}));
+
 vi.mock("./mwc-lookup", () => ({
   lookupMwcWithMeta: vi.fn().mockResolvedValue({
     row: null,
@@ -124,7 +128,13 @@ import {
   runSearchPipeline,
 } from "./search-pipeline";
 import { SearchPipelineError } from "./search-pipeline-error";
-import { fetchWebSearchHitsForEntity } from "./web-search";
+import { getServiceStatus } from "./service-status";
+import {
+  buildBrandHostForumQuery,
+  fetchSerpOrganicHits,
+  fetchWebSearchHitsForEntity,
+  mergeWebSearchHits,
+} from "./web-search";
 
 describe("runSearchPipeline cache + legal degraded", () => {
   beforeEach(() => {
@@ -137,6 +147,7 @@ describe("runSearchPipeline cache + legal degraded", () => {
     });
     getCachedReport.mockResolvedValue(null);
     setCachedReport.mockResolvedValue(undefined);
+    vi.mocked(getServiceStatus).mockReturnValue({ paused: false, reason: null });
   });
 
   it("ignores non-expired degraded cache and re-runs legal lookup", async () => {
@@ -289,6 +300,79 @@ describe("runSearchPipeline cache + legal degraded", () => {
     expect(synthesizeRiskReport).not.toHaveBeenCalled();
     expect(setCachedReport).not.toHaveBeenCalled();
     expect(logSearchEvent).not.toHaveBeenCalled();
+  });
+
+  it("serves a cached report while the service is paused", async () => {
+    getCachedReport.mockResolvedValueOnce(baseLlmReport());
+    vi.mocked(getServiceStatus).mockReturnValue({
+      paused: true,
+      reason: "gemini_quota_day",
+    });
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "示例裝修有限公司",
+    });
+
+    expect(result.cacheHit).toBe(true);
+    expect(fetchWebSearchHitsForEntity).not.toHaveBeenCalled();
+    expect(synthesizeRiskReport).not.toHaveBeenCalled();
+  });
+
+  it("returns service_paused on a cache miss without calling search or the LLM", async () => {
+    vi.mocked(getServiceStatus).mockReturnValue({
+      paused: true,
+      reason: "manual",
+    });
+
+    let caught: unknown;
+    try {
+      await runSearchPipeline({
+        matchType: "company_name",
+        companyName: "示例裝修有限公司",
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(SearchPipelineError);
+    expect(caught).toMatchObject({ code: "service_paused" });
+    expect(fetchWebSearchHitsForEntity).not.toHaveBeenCalled();
+    expect(synthesizeRiskReport).not.toHaveBeenCalled();
+    expect(setCachedReport).not.toHaveBeenCalled();
+  });
+
+  it("caches a report when every query fails but the brand retry succeeds", async () => {
+    vi.mocked(fetchWebSearchHitsForEntity).mockResolvedValueOnce({
+      hits: [],
+      queriesCompleted: 0,
+    });
+    vi.mocked(buildBrandHostForumQuery).mockReturnValueOnce('site "源始"');
+    vi.mocked(fetchSerpOrganicHits).mockResolvedValueOnce([
+      {
+        title: "討論",
+        url: "https://lihkg.com/thread/1",
+        snippet: "裝修討論",
+      },
+    ]);
+    vi.mocked(mergeWebSearchHits).mockReturnValueOnce([
+      {
+        title: "討論",
+        url: "https://lihkg.com/thread/1",
+        snippet: "裝修討論",
+      },
+    ]);
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "源始（國際）設計及裝修公司",
+    });
+
+    expect(buildBrandHostForumQuery).toHaveBeenCalled();
+    expect(fetchSerpOrganicHits).toHaveBeenCalled();
+    expect(synthesizeRiskReport).toHaveBeenCalled();
+    expect(setCachedReport).toHaveBeenCalled();
+    expect(result.cacheHit).toBe(false);
   });
 
   it("resolves when cache upsert fails", async () => {

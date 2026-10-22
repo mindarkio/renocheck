@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getServiceStatus: vi.fn(),
   runSearchPipeline: vi.fn(),
-}));
-
-vi.mock("@/lib/service-status", () => ({
-  getServiceStatus: mocks.getServiceStatus,
 }));
 
 vi.mock("@/lib/search-pipeline", () => ({
@@ -17,6 +12,7 @@ vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: () => true,
 }));
 
+import { SearchPipelineError } from "@/lib/search-pipeline-error";
 import { POST } from "./route";
 
 function request() {
@@ -33,7 +29,6 @@ function request() {
 describe("POST /api/search service pause", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getServiceStatus.mockReturnValue({ paused: false, reason: null });
     mocks.runSearchPipeline.mockResolvedValue({
       fingerprint: "abc",
       cacheHit: false,
@@ -42,12 +37,14 @@ describe("POST /api/search service pause", () => {
     });
   });
 
-  it("returns 503 service_paused without calling the pipeline", async () => {
-    mocks.getServiceStatus.mockReturnValue({ paused: true, reason: "manual" });
+  it("returns 503 service_paused when the pipeline throws after a cache miss", async () => {
+    mocks.runSearchPipeline.mockRejectedValue(
+      new SearchPipelineError("service_paused"),
+    );
     const res = await POST(request());
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: "service_paused" });
-    expect(mocks.runSearchPipeline).not.toHaveBeenCalled();
+    expect(mocks.runSearchPipeline).toHaveBeenCalledTimes(1);
   });
 
   it("runs the pipeline when the service is not paused", async () => {
