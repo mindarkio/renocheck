@@ -59,7 +59,8 @@ export default async function Home() {
       </div>
       {landingStats ? (
         <div
-          className="absolute inset-x-4 bottom-2 mx-auto w-full max-w-[584px] sm:bottom-3"
+          // Width comes from left/right. `w-full` plus `inset-x-4` overflows the viewport by 1rem.
+          className="absolute inset-x-4 bottom-2 mx-auto min-w-0 max-w-[584px] sm:bottom-3"
         >
           <LandingStats stats={landingStats} />
         </div>
