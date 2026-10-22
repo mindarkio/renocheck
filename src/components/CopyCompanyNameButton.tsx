@@ -28,31 +28,35 @@ export function CopyCompanyNameButton({
   }, []);
 
   return (
-    <button
-      type="button"
-      aria-label={COPY_COMPANY_NAME_BUTTON_ZH}
-      title={COPY_COMPANY_NAME_BUTTON_ZH}
-      className={className ?? defaultButtonClass}
-      onClick={async () => {
-        try {
-          if (!navigator.clipboard?.writeText) return;
-          await navigator.clipboard.writeText(text);
-          setLabel(COPY_COMPANY_NAME_DONE_ZH);
-          if (resetTimer.current) clearTimeout(resetTimer.current);
-          resetTimer.current = setTimeout(() => {
-            setLabel(COPY_COMPANY_NAME_BUTTON_ZH);
-          }, 2000);
-        } catch {
-          // keep default label
-        }
-      }}
-    >
-      {done ? (
-        <Check className="size-4 shrink-0" aria-hidden />
-      ) : (
-        <Copy className="size-4 shrink-0" aria-hidden />
-      )}
-      <span className="sr-only">{label}</span>
-    </button>
+    <>
+      <button
+        type="button"
+        title={COPY_COMPANY_NAME_BUTTON_ZH}
+        className={className ?? defaultButtonClass}
+        onClick={async () => {
+          try {
+            if (!navigator.clipboard?.writeText) return;
+            await navigator.clipboard.writeText(text);
+            setLabel(COPY_COMPANY_NAME_DONE_ZH);
+            if (resetTimer.current) clearTimeout(resetTimer.current);
+            resetTimer.current = setTimeout(() => {
+              setLabel(COPY_COMPANY_NAME_BUTTON_ZH);
+            }, 2000);
+          } catch {
+            // keep default label
+          }
+        }}
+      >
+        {done ? (
+          <Check className="size-4 shrink-0" aria-hidden />
+        ) : (
+          <Copy className="size-4 shrink-0" aria-hidden />
+        )}
+        <span className="sr-only">{label}</span>
+      </button>
+      <span className="sr-only" role="status">
+        {done ? COPY_COMPANY_NAME_DONE_ZH : ""}
+      </span>
+    </>
   );
 }

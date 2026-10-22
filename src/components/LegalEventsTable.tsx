@@ -228,10 +228,8 @@ export function LegalEventsTable({
                     {/[\u3400-\u9fff]/u.test(ev.court)
                       ? withCjkSoftBreaks(ev.court)
                       : ev.court}
+                    <span className="hidden lg:inline" aria-hidden>·</span>
                   </dd>
-                  <span className="hidden lg:inline" aria-hidden>
-                    {" · "}
-                  </span>
                   <dt className={`${reportMetaTextClass} lg:sr-only`}>
                     {FIELD_LABELS[3]}
                   </dt>
@@ -239,17 +237,15 @@ export function LegalEventsTable({
                     <time className="tabular-nums" dateTime={ev.eventDate}>
                       {ev.eventDate}
                     </time>
+                    <span className="hidden lg:inline" aria-hidden>·</span>
                   </dd>
-                  <span className="hidden lg:inline" aria-hidden>
-                    {" · "}
-                  </span>
                   <dt className={`${reportMetaTextClass} lg:sr-only`}>
                     {FIELD_LABELS[4]}
                   </dt>
-                  <dd>{partyRoleLabelZh(ev.partyRole)}</dd>
-                  <span className="hidden lg:inline" aria-hidden>
-                    {" · "}
-                  </span>
+                  <dd>
+                    {partyRoleLabelZh(ev.partyRole)}
+                    <span className="hidden lg:inline" aria-hidden>·</span>
+                  </dd>
                   <dt className={`${reportMetaTextClass} lg:sr-only`}>
                     {FIELD_LABELS[5]}
                   </dt>
@@ -257,10 +253,8 @@ export function LegalEventsTable({
                     {withCjkSoftBreaks(
                       judgmentCategoryLabelZh(ev.judgmentCategory),
                     )}
+                    <span className="hidden lg:inline" aria-hidden>·</span>
                   </dd>
-                  <span className="hidden lg:inline" aria-hidden>
-                    {" · "}
-                  </span>
                   <dt className={`${reportMetaTextClass} lg:sr-only`}>
                     {FIELD_LABELS[6]}
                   </dt>

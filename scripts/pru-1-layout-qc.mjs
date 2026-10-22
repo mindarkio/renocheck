@@ -7,6 +7,7 @@
  */
 import { execSync, spawn } from "node:child_process";
 import {
+  existsSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -125,6 +126,15 @@ function clearOutDir() {
   }
 }
 
+function stopServer(child) {
+  // pnpm does not forward SIGTERM to next-server; kill the whole group.
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch {
+    child.kill("SIGTERM");
+  }
+}
+
 async function ensureServer(baseUrl, port) {
   try {
     const res = await fetch(`${baseUrl}/api/health`);
@@ -132,10 +142,19 @@ async function ensureServer(baseUrl, port) {
   } catch {
     // start below
   }
+  const envFiles = [".env", ".env.local", ".env.production", ".env.production.local"]
+    .filter((name) => existsSync(path.join(repoRoot, name)));
+  if (envFiles.length) {
+    // next start loads these itself, bypassing qcEnv(); never boot QC on real credentials.
+    throw new Error(
+      `refusing to start QC server: ${envFiles.join(", ")} present in ${repoRoot}`,
+    );
+  }
   const child = spawn("pnpm", ["start"], {
     cwd: repoRoot,
     stdio: "inherit",
     env: qcEnv(port),
+    detached: true,
   });
   const deadline = Date.now() + 45000;
   while (Date.now() < deadline) {
@@ -147,7 +166,7 @@ async function ensureServer(baseUrl, port) {
     }
     await new Promise((r) => setTimeout(r, 500));
   }
-  child.kill("SIGTERM");
+  stopServer(child);
   throw new Error(`server did not become ready at ${baseUrl}`);
 }
 
@@ -466,6 +485,9 @@ async function collectPage(page) {
       lastHighlightSpansTwoCols: lastSpanTwo,
       lastHighlightWidth: lastHighlight?.getBoundingClientRect().width ?? null,
       lastHighlightInnerWidth: lastInner?.getBoundingClientRect().width ?? null,
+      lastHighlightInnerFontPx: lastInner
+        ? Number.parseFloat(getComputedStyle(lastInner).fontSize)
+        : null,
       legalFieldCounts,
       legalCardHeights,
       identityHeight,
@@ -705,12 +727,16 @@ function applyLayoutCriteria(criteria, metrics, vp, fp) {
     const widthDiff = Math.abs((metrics.lastHighlightWidth ?? 0) - (metrics.mainWidth ?? 0));
     record(criteria, "highlightLastFullWidth", metrics.lastHighlightSpansTwoCols && widthDiff <= 1, { card: round2(metrics.lastHighlightWidth), main: round2(metrics.mainWidth), span: metrics.lastHighlightSpansTwoCols }, "width = main ±1");
     const innerW = metrics.lastHighlightInnerWidth;
+    const em40 =
+      metrics.lastHighlightInnerFontPx == null
+        ? null
+        : metrics.lastHighlightInnerFontPx * 40;
     record(
       criteria,
       "highlightInnerMax",
-      innerW == null || innerW <= 640,
-      innerW == null ? "none" : round2(innerW),
-      "≤640",
+      innerW != null && em40 != null && innerW <= em40 + 0.5,
+      innerW == null ? "none" : { width: round2(innerW), em40: round2(em40) },
+      "body present and ≤40em",
     );
     void maxH;
   }
@@ -945,7 +971,7 @@ async function main() {
   }
 
   await browser.close();
-  if (child) child.kill("SIGTERM");
+  if (child) stopServer(child);
 
   const classCheck = feedbackClassCriterion();
   runs.push({
@@ -965,11 +991,17 @@ async function main() {
   );
 
   let gitHead = "";
+  let gitDirty = null;
   try {
     gitHead = execSync("git rev-parse HEAD", {
       cwd: repoRoot,
       encoding: "utf8",
     }).trim();
+    gitDirty =
+      execSync("git status --porcelain --untracked-files=no", {
+        cwd: repoRoot,
+        encoding: "utf8",
+      }).trim() !== "";
   } catch {
     gitHead = "unknown";
   }
@@ -977,6 +1009,7 @@ async function main() {
   const summary = {
     generatedAt: new Date().toISOString(),
     gitHead,
+    gitDirty,
     totalCriteria: runs.reduce((n, r) => n + (r.criteria?.length ?? 0), 0),
     failed: failures.length,
     failures,
