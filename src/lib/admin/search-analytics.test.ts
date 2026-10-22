@@ -255,6 +255,70 @@ describe("search analytics aggregation", () => {
     ]);
   });
 
+  it("keeps the latest instant per fingerprint when formats differ", () => {
+    const now = new Date("2026-06-15T12:00:00.000Z");
+    const events: SearchEventRow[] = [
+      {
+        fingerprint: "fp-a",
+        cache_hit: false,
+        created_at: "2026-06-15T09:00:00.5Z",
+      },
+      {
+        fingerprint: "fp-a",
+        cache_hit: false,
+        created_at: "2026-06-15T09:00:00Z",
+      },
+      {
+        fingerprint: "fp-b",
+        cache_hit: false,
+        created_at: "2026-06-15T09:00:00.250Z",
+      },
+    ];
+    const cache: SearchCacheAnalyticsRow[] = [
+      {
+        fingerprint: "fp-a",
+        term: "較新",
+        match_type: "company_name",
+        outcome: "match",
+        matched_name: null,
+      },
+      {
+        fingerprint: "fp-b",
+        term: "較舊",
+        match_type: "company_name",
+        outcome: "match",
+        matched_name: null,
+      },
+    ];
+    const result = aggregateSearchAnalytics(events, cache, now, 7);
+    expect(result.terms.map((t) => t.term)).toEqual(["較新", "較舊"]);
+    expect(result.terms[0]?.lastSeen).toBe("2026-06-15T09:00:00.5Z");
+  });
+
+  it("sorts unparseable lastSeen last and breaks full ties by term", () => {
+    const now = new Date("2026-06-15T12:00:00.000Z");
+    const seen = "2026-06-15T09:00:00.000Z";
+    const cache: SearchCacheAnalyticsRow[] = ["fp-bad", "fp-x", "fp-y"].map(
+      (fingerprint, i) => ({
+        fingerprint,
+        term: ["壞", "乙", "甲"][i] ?? "",
+        match_type: "company_name",
+        outcome: "match",
+        matched_name: null,
+      }),
+    );
+    const forward: SearchEventRow[] = [
+      { fingerprint: "fp-bad", cache_hit: false, created_at: "not-a-time" },
+      { fingerprint: "fp-x", cache_hit: false, created_at: seen },
+      { fingerprint: "fp-y", cache_hit: false, created_at: seen },
+    ];
+    const a = aggregateSearchAnalytics(forward, cache, now, 7);
+    const b = aggregateSearchAnalytics([...forward].reverse(), cache, now, 7);
+    const expected = ["乙", "甲", "壞"];
+    expect(a.terms.map((t) => t.term)).toEqual(expected);
+    expect(b.terms.map((t) => t.term)).toEqual(expected);
+  });
+
   it("keeps the 100 newest terms when 101 fingerprints exist", () => {
     const now = new Date("2026-06-15T12:00:00.000Z");
     const events: SearchEventRow[] = [];

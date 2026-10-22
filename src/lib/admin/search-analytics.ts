@@ -12,6 +12,12 @@ const EVENT_ROW_CAP = 50_000;
 const CACHE_CHUNK_SIZE = 200;
 const TERMS_ROW_CAP = 100;
 
+/** Epoch ms for a timestamp; unparseable values sort as oldest. */
+function seenMs(value: string | null | undefined): number {
+  const ms = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(ms) ? ms : Number.NEGATIVE_INFINITY;
+}
+
 export type AnalyticsDays = 7 | 30 | 90;
 
 export function parseAnalyticsDays(raw: string | undefined): AnalyticsDays {
@@ -202,8 +208,10 @@ export function aggregateSearchAnalytics(
       }
     }
 
-    const day = hkDayKey(ev.created_at);
-    const bucket = dailyMap.get(day);
+    const bucket =
+      seenMs(ev.created_at) > Number.NEGATIVE_INFINITY
+        ? dailyMap.get(hkDayKey(ev.created_at))
+        : undefined;
     if (bucket) {
       bucket.searches += 1;
       if (ev.cache_hit) bucket.cacheHits += 1;
@@ -216,7 +224,7 @@ export function aggregateSearchAnalytics(
     }
     agg.searches += 1;
     if (ev.cache_hit) agg.cacheHits += 1;
-    if (ev.created_at > agg.lastSeen) agg.lastSeen = ev.created_at;
+    if (seenMs(ev.created_at) > seenMs(agg.lastSeen)) agg.lastSeen = ev.created_at;
     if (!agg.cache && cache) agg.cache = cache;
   }
 
@@ -240,9 +248,12 @@ export function aggregateSearchAnalytics(
   }
 
   termsAll.sort((a, b) => {
-    const bySeen = Date.parse(b.lastSeen) - Date.parse(a.lastSeen);
-    if (bySeen !== 0) return bySeen;
-    return b.searches - a.searches;
+    const aSeen = seenMs(a.lastSeen);
+    const bSeen = seenMs(b.lastSeen);
+    if (aSeen !== bSeen) return bSeen > aSeen ? 1 : -1;
+    if (a.searches !== b.searches) return b.searches - a.searches;
+    if (a.term !== b.term) return a.term < b.term ? -1 : 1;
+    return 0;
   });
 
   const terms = termsAll.slice(0, TERMS_ROW_CAP);

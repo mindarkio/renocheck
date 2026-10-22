@@ -18,6 +18,7 @@ export function buildSiteJsonLd(siteUrl: string) {
     "@graph": [
       {
         "@type": "WebSite" as const,
+        "@id": `${siteUrl}/#website`,
         name: "Renocheck 裝修點評",
         alternateName: ["裝修點評"],
         url: siteUrl,
@@ -39,6 +40,7 @@ export function buildSiteJsonLd(siteUrl: string) {
       },
       {
         "@type": "WebApplication" as const,
+        "@id": `${siteUrl}/#webapp`,
         name: "Renocheck 裝修點評",
         url: siteUrl,
         applicationCategory: "UtilitiesApplication",

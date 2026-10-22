@@ -60,3 +60,12 @@ describe("llms.txt disambiguation", () => {
     expect(text).not.toMatch(/quote review/i);
   });
 });
+
+describe("site JSON-LD node ids", () => {
+  it("gives every node a unique @id and links to existing nodes", () => {
+    const graph = buildSiteJsonLd(SITE)["@graph"];
+    const ids = graph.map((node) => node["@id"]);
+    expect(ids).toEqual([`${SITE}/#website`, `${SITE}/#org`, `${SITE}/#webapp`]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
