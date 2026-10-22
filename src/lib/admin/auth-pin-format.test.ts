@@ -16,7 +16,7 @@ describe("admin PIN format (digits only)", () => {
     expect(getAdminAuthConfig()).toBeNull();
     vi.stubEnv("ADMIN_DASHBOARD_PIN", `${"1".repeat(33)}`);
     expect(getAdminAuthConfig()).toBeNull();
-    vi.stubEnv("ADMIN_DASHBOARD_PIN", "1234 5678");
+    vi.stubEnv("ADMIN_DASHBOARD_PIN", `${randomTestPin(4)} ${randomTestPin(4)}`);
     expect(getAdminAuthConfig()).toBeNull();
   });
 

@@ -103,7 +103,8 @@ export function SiteHeader() {
   const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu();
   const menuId = "site-nav-menu";
 
-  if (pathname.startsWith("/admin")) return null;
+  // Segment match only: /administrator or /admin-foo are public (404) paths and keep the header.
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return null;
 
   return (
     <>

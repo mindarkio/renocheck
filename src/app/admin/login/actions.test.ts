@@ -86,6 +86,32 @@ describe("submitAdminLogin", () => {
     expect(value).not.toContain(digest.slice(0, 16));
   });
 
+  it("never logs the PIN, the submitted value or the IP across the failure flow", async () => {
+    const pin = randomTestPin(8);
+    vi.stubEnv("ADMIN_DASHBOARD_PIN", pin);
+    vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
+    const spies = (["log", "info", "warn", "error", "debug"] as const).map((m) =>
+      vi.spyOn(console, m).mockImplementation(() => {}),
+    );
+    const { submitAdminLogin } = await import("@/app/admin/login/actions");
+    const wrongDigits = randomTestPin(8);
+    const sentinel = `SENTINEL_${randomTestPin(10)}`;
+    for (const value of [wrongDigits, sentinel, wrongDigits, sentinel, wrongDigits, sentinel]) {
+      const fd = new FormData();
+      fd.set("pin", value);
+      await expect(submitAdminLogin(fd)).rejects.toThrow(/error=wrong|error=locked/);
+    }
+    const payload = spies
+      .flatMap((s) => s.mock.calls.map((c) => c.map(String).join(" ")))
+      .join("\n");
+    expect(payload).toContain("admin_login_failed");
+    expect(payload).toContain("admin_login_locked");
+    for (const secret of [pin, wrongDigits, sentinel, "203.0.113.50"]) {
+      expect(payload).not.toContain(secret);
+    }
+    for (const s of spies) s.mockRestore();
+  });
+
   it("calls notFound when env is missing", async () => {
     vi.stubEnv("ADMIN_DASHBOARD_PIN", "");
     vi.stubEnv("ADMIN_SESSION_SECRET", "");

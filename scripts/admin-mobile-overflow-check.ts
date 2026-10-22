@@ -1,9 +1,13 @@
 /**
  * Local check: admin routes must not overflow the viewport horizontally.
  * Usage: pnpm exec tsx scripts/admin-mobile-overflow-check.ts
+ * Local only (never CI/prod). Supabase env is blanked so `next dev` can't pick up a DB from .env*;
+ * the dashboard renders its error state, which is what this layout check needs. The PIN and
+ * secret are generated per run and never printed or written.
  */
 import { randomInt, randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
+import path from "node:path";
 import { chromium } from "playwright";
 
 const PORT = 3456;
@@ -82,10 +86,37 @@ async function measureAdminDashboard(pin: string): Promise<Record<number, Measur
 async function main(): Promise<void> {
   const pin = randomTestPin(8);
   const secret = randomSecret();
-  const proc = spawn("pnpm", ["exec", "next", "dev", "-p", String(PORT)], {
+  const nextBin = path.join(process.cwd(), "node_modules", ".bin", "next");
+  const proc = spawn(nextBin, ["dev", "-p", String(PORT), "-H", "127.0.0.1"], {
     cwd: process.cwd(),
-    env: { ...process.env, ADMIN_DASHBOARD_PIN: pin, ADMIN_SESSION_SECRET: secret },
+    env: {
+      PATH: process.env.PATH ?? "",
+      HOME: process.env.HOME ?? "",
+      NODE_ENV: "development",
+      NEXT_TELEMETRY_DISABLED: "1",
+      // Explicit empty values win over .env* files in @next/env, so no DB is reachable.
+      NEXT_PUBLIC_SUPABASE_URL: "",
+      SUPABASE_URL: "",
+      SUPABASE_SERVICE_ROLE_KEY: "",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+      ADMIN_DASHBOARD_PIN: pin,
+      ADMIN_SESSION_SECRET: secret,
+    },
     stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
+  });
+  const stop = () => {
+    if (proc.pid && proc.exitCode === null) {
+      try {
+        process.kill(-proc.pid, "SIGTERM");
+      } catch {
+        /* already gone */
+      }
+    }
+  };
+  process.once("SIGINT", () => {
+    stop();
+    process.exit(130);
   });
 
   try {
@@ -97,13 +128,13 @@ async function main(): Promise<void> {
 
     console.log(JSON.stringify({ login, admin }, null, 2));
     const bad = [...Object.values(login), ...Object.values(admin)].filter((r) => !r.ok);
-    if (bad.length > 0) process.exit(1);
+    if (bad.length > 0) process.exitCode = 1;
   } finally {
-    proc.kill("SIGTERM");
+    stop();
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
+main().catch((e: unknown) => {
+  console.error(e instanceof Error ? e.message.split("\n")[0] : "overflow check failed");
+  process.exitCode = 1;
 });
