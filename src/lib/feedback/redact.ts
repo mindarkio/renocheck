@@ -43,7 +43,7 @@ const DOUBLE_SURNAMES =
  */
 const SANG_WORD_NEXT =
   "活命產效存長物態病氣硬疏動菜鏽銹鐵涯計還育殖理火肖字機財根疑色怕記號";
-const SANG_PAIR_KEEP = new Set(["衛生", "衞生", "花生", "招生"]);
+const SANG_PAIR_KEEP = new Set(["衛生", "衞生", "卫生", "花生", "招生"]);
 /** 生意 is a word unless it is 生意見; 生生 is kept (周生生) unless it starts 生意/生日/生活. */
 const SURNAME_SANG_RE = new RegExp(
   `(?<![師师])(${DOUBLE_SURNAMES}|[${HK_SURNAMES}])\\s{0,2}生(?![${SANG_WORD_NEXT}]|意(?!見)|生(?![意日活]))`,

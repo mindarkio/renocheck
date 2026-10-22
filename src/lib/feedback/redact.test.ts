@@ -187,6 +187,9 @@ const NAME_KEEPS_R2 = [
   "发生",
   "周生生珠寶",
   "生意額",
+  "卫生",
+  "卫生间",
+  "注意卫生",
 ] as const;
 
 describe("name-variant redaction, round 2", () => {
