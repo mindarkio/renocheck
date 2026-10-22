@@ -8,7 +8,7 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync } from "node:fs";
-import path from "node:path";
+import path, { join as pathJoin } from "node:path";
 import { chromium } from "playwright";
 
 const PORT = 3456;
@@ -64,10 +64,11 @@ async function measureAtWidths(
       clientWidth: document.documentElement.clientWidth,
     }));
     out[width] = { scrollWidth, clientWidth, ok: scrollWidth <= clientWidth };
-    if (path === "/" && width === 390) {
-      mkdirSync("/opt/cursor/artifacts", { recursive: true });
+    const shotDir = process.env.OVERFLOW_SCREENSHOT_DIR;
+    if (shotDir && path === "/" && width === 390) {
+      mkdirSync(shotDir, { recursive: true });
       await page.screenshot({
-        path: "/opt/cursor/artifacts/landing-390.png",
+        path: pathJoin(shotDir, "landing-390.png"),
         fullPage: true,
       });
     }

@@ -45,10 +45,14 @@ const getCachedLandingPublicStats = unstable_cache(
 
 /**
  * `OVERFLOW_CHECK_STATS=1` returns synthetic counts so the local overflow
- * script can render the stats bar without a database. Unset everywhere else.
+ * script (`next dev`) can render the stats bar without a database. Ignored in
+ * production builds, so a stray env var can never publish made-up figures.
  */
 export async function getLandingPublicStats(): Promise<LandingPublicStats | null> {
-  if (process.env.OVERFLOW_CHECK_STATS === "1") {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.OVERFLOW_CHECK_STATS === "1"
+  ) {
     return {
       mwcContractorCount: 8123,
       mwcSourceUpdatedAt: "2026-01-15T00:00:00.000Z",
