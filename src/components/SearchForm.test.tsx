@@ -62,7 +62,32 @@ describe("SearchForm pause and errors", () => {
     ).toBe(false);
   });
 
-  it.each(["service_paused", "llm_busy"] as const)(
+  it("has no aria-describedby on the search box when not paused", () => {
+    render(<SearchForm variant="landing" />);
+    expect(screen.getByRole("searchbox").hasAttribute("aria-describedby")).toBe(false);
+  });
+
+  it("shows B1 but keeps the search box enabled after 503 service_paused", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse(503, "service_paused")),
+    );
+    render(<SearchForm variant="landing" />);
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "示例裝修有限公司" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "查閱公開資料摘要" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toBe(B1);
+    });
+    expect((screen.getByRole("searchbox") as HTMLInputElement).disabled).toBe(false);
+    expect(
+      (screen.getByRole("button", { name: "查閱公開資料摘要" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+
+  it.each(["llm_busy"] as const)(
     "shows B1 and disables input after 503 %s",
     async (code) => {
       vi.stubGlobal(
@@ -81,7 +106,7 @@ describe("SearchForm pause and errors", () => {
     },
   );
 
-  it.each(["service_paused", "llm_busy"] as const)(
+  it.each(["llm_busy"] as const)(
     "re-enables the search box 120 seconds after 503 %s",
     async (code) => {
       vi.useFakeTimers();

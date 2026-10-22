@@ -340,6 +340,8 @@ describe("runSearchPipeline cache + legal degraded", () => {
     expect(fetchWebSearchHitsForEntity).not.toHaveBeenCalled();
     expect(synthesizeRiskReport).not.toHaveBeenCalled();
     expect(setCachedReport).not.toHaveBeenCalled();
+    expect(lookupMwcWithMeta).not.toHaveBeenCalled();
+    expect(logSearchEvent).not.toHaveBeenCalled();
   });
 
   it("caches a report when every query fails but the brand retry succeeds", async () => {

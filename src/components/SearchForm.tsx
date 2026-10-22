@@ -105,10 +105,8 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
         } catch {
           // ignore
         }
-        if (
-          res.status === 503 &&
-          (code === "service_paused" || code === "llm_busy")
-        ) {
+        // service_paused: cached reports are still served, so keep the box usable.
+        if (res.status === 503 && code === "llm_busy") {
           setPausedByApi(true);
         }
         setMessage(
