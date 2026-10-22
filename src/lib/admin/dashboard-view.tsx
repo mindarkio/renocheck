@@ -109,9 +109,9 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
       </section>
 
       <p className="min-w-0 break-words text-xs text-muted-foreground">
-        按類型：公司名 {errored ? "—" : data.kpi.byInputType.company_name}・電話{" "}
-        {errored ? "—" : data.kpi.byInputType.phone}・BR{" "}
-        {errored ? "—" : data.kpi.byInputType.br}
+        按類型：公司名 {errored ? <Unavailable /> : data.kpi.byInputType.company_name}・電話{" "}
+        {errored ? <Unavailable /> : data.kpi.byInputType.phone}・BR{" "}
+        {errored ? <Unavailable /> : data.kpi.byInputType.br}
         {!errored && data.kpi.byInputType.unknown > 0
           ? `・未知 ${data.kpi.byInputType.unknown}`
           : ""}
@@ -119,7 +119,7 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
 
       <div className="relative min-w-0 w-full max-w-full">
         <nav
-          className="flex w-full min-w-0 max-w-full flex-nowrap gap-2 overflow-x-auto pr-4"
+          className="flex w-full min-w-0 max-w-full flex-nowrap gap-2 overflow-x-auto pr-6 scroll-pe-6"
           aria-label="視圖"
         >
           {VIEW_TABS.map((tab) => (
@@ -222,6 +222,16 @@ function EmptyStateCard() {
   );
 }
 
+/** Visible em dash; screen readers hear 「未能讀取」 instead of "dash". Never a 0. */
+function Unavailable() {
+  return (
+    <>
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">未能讀取</span>
+    </>
+  );
+}
+
 function KpiCard({
   title,
   pct,
@@ -233,8 +243,7 @@ function KpiCard({
   count: number | null;
   unavailable?: boolean;
 }) {
-  const main =
-    unavailable ? "—" : pct != null ? `${pct}%` : count;
+  const main = unavailable ? <Unavailable /> : pct != null ? `${pct}%` : count;
   return (
     <div className="rounded-md border border-border bg-card p-3">
       <p className="text-xs text-muted-foreground">{title}</p>

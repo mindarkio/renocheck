@@ -51,7 +51,7 @@ describe("AdminDashboardView UI (YUI)", () => {
     expect(screen.getByRole("heading", { name: "每日搜尋量" })).toBeTruthy();
     expect(container.textContent?.match(/呢段時間未有搜尋紀錄/g)?.length).toBe(2);
     expect(container.textContent).toContain("總搜尋次數");
-    expect(container.textContent).toMatch(/總搜尋次數[\s\S]*?0/);
+    expect(container.textContent).toMatch(/總搜尋次數0快取命中/);
     expect(container.textContent).toMatch(/快取命中0%/);
   });
 
@@ -67,8 +67,40 @@ describe("AdminDashboardView UI (YUI)", () => {
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/0%/);
     expect(text).not.toContain("0 次");
-    expect(text).toContain("按類型：公司名 —・電話 —・BR —");
-    expect(text.match(/—/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(text).toContain("按類型：公司名 —未能讀取・電話 —未能讀取・BR —未能讀取");
+    // 4 KPI cards + 3 input types; each dash is aria-hidden with an sr-only label.
+    expect(screen.getAllByText("未能讀取")).toHaveLength(7);
+    const dashes = [...container.querySelectorAll("span")].filter((s) => s.textContent === "—");
+    expect(dashes).toHaveLength(7);
+    for (const d of dashes) expect(d.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("never shows stale or partial numbers when analytics failed", () => {
+    const data = emptyData();
+    data.kpi = {
+      ...data.kpi,
+      totalSearches: 987,
+      cacheHitPct: 12.5,
+      cacheHitCount: 123,
+      noMatchPct: 25,
+      noMatchCount: 246,
+      ambiguousPct: 5,
+      ambiguousCount: 49,
+      byInputType: { company_name: 700, phone: 200, br: 87, unknown: 3 },
+      missingCacheRow: 4,
+    };
+    const { container } = render(
+      <AdminDashboardView
+        data={data}
+        days={30}
+        view="all"
+        errorMessage="讀取數據出錯，請遲啲再試"
+      />,
+    );
+    const text = container.textContent ?? "";
+    for (const n of ["987", "12.5", "123", "246", "49", "700", "200", "87", "未知", "搵唔返報告紀錄"]) {
+      expect(text).not.toContain(n);
+    }
   });
 
   it("hides daily section entirely on error", () => {
