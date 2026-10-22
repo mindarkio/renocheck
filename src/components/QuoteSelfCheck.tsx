@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
 import {
   QUOTE_CHECK_ITEMS,
   QUOTE_CHECKLIST_HEADING_ZH,
   QUOTE_CLEAR_BUTTON_ZH,
   QUOTE_CLEAR_HEADING_ZH,
+  QUOTE_CLEARED_STATUS_ZH,
   QUOTE_CONDITIONAL_NOTE_ZH,
   QUOTE_COPIED_STATUS_ZH,
   QUOTE_COPY_BUTTON_ZH,
+  QUOTE_COPY_FAILED_STATUS_ZH,
   QUOTE_REPLY_EMPTY_ZH,
   QUOTE_REPLY_HEADING_ZH,
   QUOTE_REPLY_NOTE_ZH,
@@ -26,12 +28,41 @@ import {
   type QuoteCheckStatus,
 } from "@/lib/quote-selfcheck";
 
+const focusRingClass =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
 const optionClass = (checked: boolean) =>
-  `flex min-h-11 min-w-0 cursor-pointer items-center gap-2 break-words rounded-lg border px-2.5 text-sm text-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40 ${
+  `flex min-h-11 min-w-0 cursor-pointer items-center gap-1.5 break-words rounded-lg border px-2 text-sm text-foreground min-[360px]:gap-2 min-[360px]:px-2.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background ${
     checked
       ? "border-primary bg-primary/5 font-medium"
       : "border-border bg-background"
   }`;
+
+type QuoteNotice = "idle" | "copied" | "failed" | "cleared";
+
+const NOTICE_TEXT: Record<QuoteNotice, string> = {
+  idle: "",
+  copied: QUOTE_COPIED_STATUS_ZH,
+  failed: QUOTE_COPY_FAILED_STATUS_ZH,
+  cleared: QUOTE_CLEARED_STATUS_ZH,
+};
+
+/** Fallback for browsers without async clipboard: copies the textarea's plain text. */
+function copyBySelection(field: HTMLTextAreaElement | null): boolean {
+  if (!field) return false;
+  const previous = document.activeElement;
+  field.focus();
+  field.select();
+  let ok = false;
+  try {
+    ok = typeof document.execCommand === "function" && document.execCommand("copy");
+  } catch {
+    ok = false;
+  }
+  // Keep the text selected on failure so the user can copy it by hand.
+  if (ok && previous instanceof HTMLElement) previous.focus();
+  return ok;
+}
 
 export function QuoteSelfCheck() {
   const selections = useSyncExternalStore(
@@ -39,24 +70,27 @@ export function QuoteSelfCheck() {
     getQuoteCheckSelectionsSnapshot,
     getQuoteCheckSelectionsServerSnapshot,
   );
-  const [copied, setCopied] = useState(false);
+  const [notice, setNotice] = useState<QuoteNotice>("idle");
+  const replyRef = useRef<HTMLTextAreaElement>(null);
+  const checklistHeadingRef = useRef<HTMLHeadingElement>(null);
 
   const message = buildQuoteReplyMessage(selections);
   const selectedCount = QUOTE_CHECK_ITEMS.filter((item) => selections[item.id]).length;
 
   function choose(id: QuoteCheckItemId, status: QuoteCheckStatus) {
-    setCopied(false);
+    setNotice("idle");
     updateQuoteCheckSelection(id, status);
   }
 
   async function copyMessage() {
-    if (!message || !navigator.clipboard?.writeText) return;
+    if (!message) return;
+    setNotice("idle");
     try {
-      setCopied(false);
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
       await navigator.clipboard.writeText(message);
-      setCopied(true);
+      setNotice("copied");
     } catch {
-      setCopied(false);
+      setNotice(copyBySelection(replyRef.current) ? "copied" : "failed");
     }
   }
 
@@ -64,7 +98,12 @@ export function QuoteSelfCheck() {
     <div className="mt-6 min-w-0">
       <section aria-labelledby="quote-checklist-heading">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <h2 id="quote-checklist-heading" className={brandSectionTitleClass}>
+          <h2
+            id="quote-checklist-heading"
+            ref={checklistHeadingRef}
+            tabIndex={-1}
+            className={`${brandSectionTitleClass} focus:outline-none`}
+          >
             {QUOTE_CHECKLIST_HEADING_ZH}
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -74,10 +113,12 @@ export function QuoteSelfCheck() {
         {selectedCount > 0 ? (
           <button
             type="button"
-            className="mt-2 inline-flex min-h-11 items-center text-sm text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className={`mt-2 inline-flex min-h-11 items-center rounded-sm text-sm text-foreground underline-offset-2 hover:underline ${focusRingClass}`}
             onClick={() => {
-              setCopied(false);
               clearQuoteCheckSelections();
+              setNotice("cleared");
+              // The button unmounts once nothing is selected; keep focus in the checklist.
+              checklistHeadingRef.current?.focus();
             }}
           >
             {QUOTE_CLEAR_BUTTON_ZH}
@@ -146,6 +187,7 @@ export function QuoteSelfCheck() {
         {message ? (
           <>
             <textarea
+              ref={replyRef}
               readOnly
               value={message}
               rows={10}
@@ -155,7 +197,7 @@ export function QuoteSelfCheck() {
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:w-auto"
+                className={`inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 sm:w-auto ${focusRingClass}`}
                 onClick={() => {
                   void copyMessage();
                 }}
@@ -164,15 +206,19 @@ export function QuoteSelfCheck() {
               </button>
               <p className="text-sm text-muted-foreground">{QUOTE_REPLY_NOTE_ZH}</p>
             </div>
-            <p className="sr-only" role="status">
-              {copied ? QUOTE_COPIED_STATUS_ZH : ""}
-            </p>
           </>
         ) : (
           <p className="mt-2 text-sm leading-[1.7] text-muted-foreground">
             {QUOTE_REPLY_EMPTY_ZH}
           </p>
         )}
+        {/* Always mounted so the first message is announced; visible for sighted users too. */}
+        <p
+          role="status"
+          className={`mt-2 min-h-5 text-sm ${notice === "failed" ? "text-foreground" : "text-muted-foreground"}`}
+        >
+          {NOTICE_TEXT[notice]}
+        </p>
       </section>
     </div>
   );

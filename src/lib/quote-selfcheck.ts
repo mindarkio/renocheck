@@ -22,6 +22,9 @@ export const QUOTE_REPLY_EMPTY_ZH =
   "揀咗「冇提及」或者「寫得含糊」之後，呢度會砌一段你可以複製去問對方嘅訊息。";
 export const QUOTE_COPY_BUTTON_ZH = "複製訊息";
 export const QUOTE_COPIED_STATUS_ZH = "已複製";
+export const QUOTE_COPY_FAILED_STATUS_ZH =
+  "複製唔到，已經幫你揀好上面成段文字，請自己複製。";
+export const QUOTE_CLEARED_STATUS_ZH = "已清除選擇";
 export const QUOTE_REPLY_NOTE_ZH = "發送前可以按自己情況改";
 export const QUOTE_CLEAR_BUTTON_ZH = "清除選擇";
 
@@ -61,6 +64,9 @@ export const QUOTE_PAGE_NAV = [
 
 /** Browser-only persistence. Not sent to the server. */
 export const QUOTE_SELF_CHECK_STORAGE_KEY = "renocheck-quote-selfcheck-v1";
+
+/** 20 ids x 4 statuses fit in well under 1 KB; anything larger is ignored. */
+export const QUOTE_SELF_CHECK_MAX_RAW_LENGTH = 2048;
 
 export const QUOTE_STATUS_OPTIONS = [
   { id: "clear", label: "有寫清楚", mark: "✅" },
@@ -198,7 +204,7 @@ export const QUOTE_CHECK_ITEMS = [
     label: "牌照／註冊",
     conditional: true,
     clearExample:
-      "如果有小型工程（例如拆非結構牆、冷氣機支架、簷篷），寫明註冊編號或者級別；如果涉及結構，寫明邊個處理屋宇署申請。",
+      "如果有小型工程（例如加建間隔牆、冷氣機支架、簷篷），寫明註冊編號或者級別；如果涉及結構，寫明邊個處理屋宇署申請。",
     vagueExample: "有列呢類工程，但冇提註冊資料。",
     question: "呢類小型工程由邊個註冊承建商做？註冊編號係？",
   },
@@ -208,7 +214,7 @@ export const QUOTE_CHECK_ITEMS = [
     conditional: false,
     clearExample: "寫明有冇第三者責任保險同僱員補償保險。",
     vagueExample: "冇提保險。",
-    question: "工程有冇買第三者責任保險同勞工保險？",
+    question: "工程有冇買第三者責任保險同僱員補償保險（勞保）？",
   },
   {
     id: "site_protection_cleanup",
@@ -266,7 +272,7 @@ export function readQuoteCheckSelections(
 ): QuoteCheckSelections {
   try {
     const raw = storage.getItem(QUOTE_SELF_CHECK_STORAGE_KEY);
-    if (!raw) return {};
+    if (!raw || raw.length > QUOTE_SELF_CHECK_MAX_RAW_LENGTH) return {};
     return parseQuoteCheckSelections(JSON.parse(raw));
   } catch {
     return {};
@@ -274,13 +280,17 @@ export function readQuoteCheckSelections(
 }
 
 export function writeQuoteCheckSelections(
-  storage: Pick<Storage, "setItem">,
+  storage: Pick<Storage, "setItem" | "removeItem">,
   selections: QuoteCheckSelections,
-): void {
-  storage.setItem(
-    QUOTE_SELF_CHECK_STORAGE_KEY,
-    JSON.stringify(parseQuoteCheckSelections(selections)),
-  );
+): string | null {
+  const normalized = parseQuoteCheckSelections(selections);
+  if (Object.keys(normalized).length === 0) {
+    storage.removeItem(QUOTE_SELF_CHECK_STORAGE_KEY);
+    return null;
+  }
+  const raw = JSON.stringify(normalized);
+  storage.setItem(QUOTE_SELF_CHECK_STORAGE_KEY, raw);
+  return raw;
 }
 
 const EMPTY_SELECTIONS: QuoteCheckSelections = {};
@@ -323,11 +333,9 @@ export function getQuoteCheckSelectionsSnapshot(): QuoteCheckSelections {
 
 function replaceQuoteCheckSelections(next: QuoteCheckSelections): void {
   const normalized = parseQuoteCheckSelections(next);
-  const raw = JSON.stringify(normalized);
   try {
-    writeQuoteCheckSelections(localStorage, normalized);
+    cachedRaw = writeQuoteCheckSelections(localStorage, normalized);
     memoryOnly = false;
-    cachedRaw = raw;
   } catch {
     memoryOnly = true;
   }
@@ -390,6 +398,8 @@ export function quoteSelfCheckUserFacingCopy(): readonly string[] {
     QUOTE_REPLY_EMPTY_ZH,
     QUOTE_COPY_BUTTON_ZH,
     QUOTE_COPIED_STATUS_ZH,
+    QUOTE_COPY_FAILED_STATUS_ZH,
+    QUOTE_CLEARED_STATUS_ZH,
     QUOTE_REPLY_NOTE_ZH,
     QUOTE_CLEAR_BUTTON_ZH,
     QUOTE_REPLY_GREETING_ZH,
@@ -421,6 +431,7 @@ export function buildQuotePageJsonLd(siteUrl: string): Record<string, unknown> {
     inLanguage: "zh-HK",
     isPartOf: {
       "@type": "WebSite",
+      "@id": `${siteUrl}/#website`,
       name: "Renocheck 裝修點評",
       url: siteUrl,
     },
