@@ -8,7 +8,7 @@ import {
 } from "@/lib/report-trust-copy-zh";
 
 const defaultButtonClass =
-  "inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/5 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 export function CopyCompanyNameButton({
   text,
@@ -28,30 +28,35 @@ export function CopyCompanyNameButton({
   }, []);
 
   return (
-    <button
-      type="button"
-      aria-label={COPY_COMPANY_NAME_BUTTON_ZH}
-      className={className ?? defaultButtonClass}
-      onClick={async () => {
-        try {
-          if (!navigator.clipboard?.writeText) return;
-          await navigator.clipboard.writeText(text);
-          setLabel(COPY_COMPANY_NAME_DONE_ZH);
-          if (resetTimer.current) clearTimeout(resetTimer.current);
-          resetTimer.current = setTimeout(() => {
-            setLabel(COPY_COMPANY_NAME_BUTTON_ZH);
-          }, 2000);
-        } catch {
-          // keep default label
-        }
-      }}
-    >
-      {done ? (
-        <Check className="size-3.5 shrink-0" aria-hidden />
-      ) : (
-        <Copy className="size-3.5 shrink-0" aria-hidden />
-      )}
-      {label}
-    </button>
+    <>
+      <button
+        type="button"
+        title={COPY_COMPANY_NAME_BUTTON_ZH}
+        className={className ?? defaultButtonClass}
+        onClick={async () => {
+          try {
+            if (!navigator.clipboard?.writeText) return;
+            await navigator.clipboard.writeText(text);
+            setLabel(COPY_COMPANY_NAME_DONE_ZH);
+            if (resetTimer.current) clearTimeout(resetTimer.current);
+            resetTimer.current = setTimeout(() => {
+              setLabel(COPY_COMPANY_NAME_BUTTON_ZH);
+            }, 2000);
+          } catch {
+            // keep default label
+          }
+        }}
+      >
+        {done ? (
+          <Check className="size-4 shrink-0" aria-hidden />
+        ) : (
+          <Copy className="size-4 shrink-0" aria-hidden />
+        )}
+        <span className="sr-only">{label}</span>
+      </button>
+      <span className="sr-only" role="status">
+        {done ? COPY_COMPANY_NAME_DONE_ZH : ""}
+      </span>
+    </>
   );
 }

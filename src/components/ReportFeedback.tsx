@@ -234,7 +234,7 @@ export function ReportFeedback({ fingerprint }: { fingerprint: string }) {
       <div
         ref={inlineRef}
         data-feedback-inline=""
-        className="mx-auto mt-8 w-full max-w-[584px] sm:mt-10"
+        className="mt-8 w-full sm:mt-10"
       >
         <FeedbackInline
           sectionRef={inlineSectionRef}

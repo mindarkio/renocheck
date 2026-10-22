@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FeedbackComposer } from "./FeedbackComposer";
-import { reportReadingColumnClass } from "./report-column";
 import {
   FEEDBACK_CLOSE_LABEL_ZH,
   FEEDBACK_COMPANY_HEADING_ZH,
@@ -117,7 +116,7 @@ export function FeedbackSlideIn({
       aria-label={FEEDBACK_REGION_LABEL_ZH}
       ref={regionRef}
       data-motion="slide"
-      className={`${reportReadingColumnClass} fixed z-20 rounded-xl border border-border bg-card p-4 shadow-lg transition-[transform,opacity] duration-200 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${
+      className={`mx-auto w-full max-w-[584px] fixed z-20 rounded-xl border border-border bg-card p-4 shadow-lg transition-[transform,opacity] duration-200 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${
         entered ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
       }`}
       style={{

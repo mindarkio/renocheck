@@ -14,19 +14,13 @@ import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
 import type { OfficialLegalEvent } from "@/lib/legal-event-schema";
 import { judgmentDedupeKey } from "@/lib/lookup-legal-judgments";
 import { LEGAL_EVENT_SOURCE_LINK_LABEL_ZH } from "@/lib/report-trust-copy-zh";
-import { brandReportSectionTitleClass } from "@/lib/ui-surfaces";
+import {
+  reportBlockPaddingClass,
+  reportExternalLinkTouchClass,
+  reportH2SectionClass,
+  reportMetaTextClass,
+} from "@/lib/report-tokens";
 
-const reportBlockClass = "px-5 py-5 sm:px-6 sm:py-6";
-const reportMetaClass =
-  "text-xs leading-[1.65] text-muted-foreground sm:text-[13px]";
-
-const tableHeadClass =
-  "whitespace-nowrap px-2 py-2 text-left text-[13px] font-semibold text-muted-foreground first:pl-0 last:pr-0";
-const tableCellClass =
-  "px-2 py-3 text-[13px] leading-snug first:pl-0 last:pr-0 xl:text-sm";
-const tableNowrapCellClass = `whitespace-nowrap ${tableCellClass}`;
-
-/** Break long CJK labels only at ／ or before （, never character-by-character. */
 function withCjkSoftBreaks(text: string): ReactNode {
   const parts = text
     .split(/(?<=／)|(?=（)/u)
@@ -37,10 +31,6 @@ function withCjkSoftBreaks(text: string): ReactNode {
       {part}
     </span>
   ));
-}
-
-function courtHasCjk(court: string): boolean {
-  return /[\u3400-\u9fff]/u.test(court);
 }
 
 function ReportExternalLink({
@@ -57,7 +47,7 @@ function ReportExternalLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={className}
+      className={`${reportExternalLinkTouchClass} ${className ?? ""}`}
     >
       {children}
       <ExternalLink className="ms-1 inline size-3.5 opacity-80" aria-hidden />
@@ -74,7 +64,7 @@ function LegalEventDetails({
   factsOnly: boolean;
 }) {
   return (
-    <div className="space-y-2 text-[13px] leading-relaxed text-muted-foreground">
+    <div className={`space-y-2 ${reportMetaTextClass}`}>
       {!factsOnly ? (
         <>
           {ev.hearingPointsSource === "ai_verified" ? (
@@ -92,12 +82,12 @@ function LegalEventDetails({
                   {quote ? (
                     <details className="mt-1.5 group">
                       <summary
-                        className="cursor-pointer list-none text-xs font-medium text-primary underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden"
+                        className="cursor-pointer list-none text-sm font-medium text-primary underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden"
                       >
                         <span className="inline-flex items-center gap-1">
                           判詞引文
                           <span
-                            className="text-xs font-normal text-muted-foreground group-open:hidden"
+                            className="text-sm font-normal text-muted-foreground group-open:hidden"
                             aria-hidden
                           >
                             （展開）
@@ -105,7 +95,7 @@ function LegalEventDetails({
                         </span>
                       </summary>
                       <p
-                        className="mt-1.5 whitespace-pre-wrap rounded-md border border-border/60 bg-muted/30 px-2.5 py-2 text-xs leading-relaxed"
+                        className="mt-1.5 whitespace-pre-wrap rounded-md border border-border/60 bg-muted/30 px-2.5 py-2 text-sm leading-relaxed"
                       >
                         {quote}
                       </p>
@@ -113,7 +103,7 @@ function LegalEventDetails({
                         href={ev.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline"
+                        className={`mt-1.5 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline ${reportExternalLinkTouchClass}`}
                       >
                         <ExternalLink className="size-3 shrink-0" aria-hidden />
                         判詞原文（Legal Ref）
@@ -131,12 +121,15 @@ function LegalEventDetails({
   );
 }
 
-function CaseRefCell({ ev }: { ev: OfficialLegalEvent }) {
+function CaseRefBlock({ ev }: { ev: OfficialLegalEvent }) {
   const refs = [ev.caseRef, ...(ev.relatedCaseRefs ?? [])];
   return (
     <div>
       {refs.map((ref) => (
-        <span key={ref} className="block whitespace-nowrap font-medium">
+        <span
+          key={ref}
+          className="block whitespace-nowrap font-medium tabular-nums lg:inline lg:me-2"
+        >
           {ref}
         </span>
       ))}
@@ -154,6 +147,17 @@ function CaseRefCell({ ev }: { ev: OfficialLegalEvent }) {
   );
 }
 
+const FIELD_LABELS = [
+  "案件編號",
+  "中立引用",
+  "法院",
+  "判決日期",
+  "公司角色",
+  "類別",
+  "結果",
+  "判詞",
+] as const;
+
 export function LegalEventsTable({
   events,
   registryAsOf,
@@ -170,124 +174,28 @@ export function LegalEventsTable({
 
   return (
     <section
-      className={reportBlockClass}
+      className={reportBlockPaddingClass}
       aria-labelledby="legal-events-heading"
     >
-      <h3
+      <h2
         id="legal-events-heading"
-        className={`flex items-center gap-2 ${brandReportSectionTitleClass}`}
+        className={`flex items-center gap-2 ${reportH2SectionClass}`}
       >
         <FileText className="size-5 shrink-0 text-primary" aria-hidden />
         {`公開判詞紀錄（${events.length} 宗）`}
-      </h3>
+      </h2>
 
       {factsOnlyBanner ? (
-        <p className={`${reportMetaClass} -mt-1 mb-3`}>
+        <p className={`${reportMetaTextClass} -mt-1 mb-3`}>
           {LEGAL_EVENTS_FACTS_ONLY_ZH}
         </p>
       ) : (
-        <p className={`${reportMetaClass} -mt-1 mb-3`}>
+        <p className={`${reportMetaTextClass} -mt-1 mb-3`}>
           {LEGAL_EVENTS_SCOPE_ZH}
         </p>
       )}
 
-      <div
-        className="hidden overflow-x-auto rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:block"
-        role="region"
-        aria-labelledby="legal-events-table-caption"
-        tabIndex={0}
-      >
-        <table className="w-full border-collapse">
-          <caption id="legal-events-table-caption" className="sr-only">
-            公開判詞紀錄
-          </caption>
-          <thead>
-            <tr className="border-b border-border/60 text-left">
-              {[
-                "案件編號",
-                "中立引用",
-                "法院",
-                "判決日期",
-                "公司角色",
-                "類別",
-                "結果",
-                "判詞",
-              ].map((label) => (
-                <th key={label} scope="col" className={tableHeadClass}>
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          {events.map((ev) => {
-            const factsOnly = hearingSummaryPendingForEvent(
-              ev.hearingKeyPointsZh,
-              ev.hearingPointsSource,
-            );
-            return (
-              <tbody
-                key={judgmentDedupeKey(ev)}
-                data-testid="legal-event-row"
-                className="border-b border-border/50"
-              >
-                <tr className="align-top">
-                  <td className={tableCellClass}>
-                    <CaseRefCell ev={ev} />
-                  </td>
-                  <td className={tableNowrapCellClass}>
-                    {ev.neutralCitation ?? "—"}
-                  </td>
-                  <td
-                    className={
-                      courtHasCjk(ev.court)
-                        ? tableNowrapCellClass
-                        : `${tableCellClass} min-w-[8.5rem]`
-                    }
-                  >
-                    {courtHasCjk(ev.court)
-                      ? withCjkSoftBreaks(ev.court)
-                      : ev.court}
-                  </td>
-                  <td className={tableNowrapCellClass}>
-                    <time dateTime={ev.eventDate}>{ev.eventDate}</time>
-                  </td>
-                  <td className={tableNowrapCellClass}>
-                    {partyRoleLabelZh(ev.partyRole)}
-                  </td>
-                  <td className={tableCellClass}>
-                    {withCjkSoftBreaks(
-                      judgmentCategoryLabelZh(ev.judgmentCategory),
-                    )}
-                  </td>
-                  <td className={tableNowrapCellClass}>
-                    {ev.outcomeHint
-                      ? outcomeHintLabelZh(ev.outcomeHint)
-                      : "—"}
-                  </td>
-                  <td className={tableNowrapCellClass}>
-                    <ReportExternalLink
-                      href={ev.sourceUrl}
-                      className="font-medium text-primary underline-offset-2 hover:underline"
-                    >
-                      {LEGAL_EVENT_SOURCE_LINK_LABEL_ZH}
-                    </ReportExternalLink>
-                  </td>
-                </tr>
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="bg-muted/20 px-2 py-3 text-[13px] first:pl-0 last:pr-0"
-                  >
-                    <LegalEventDetails ev={ev} factsOnly={factsOnly} />
-                  </td>
-                </tr>
-              </tbody>
-            );
-          })}
-        </table>
-      </div>
-
-      <ul className="list-none space-y-4 p-0 lg:hidden">
+      <ul className="list-none space-y-4 p-0">
         {events.map((ev) => {
           const factsOnly = hearingSummaryPendingForEvent(
             ev.hearingKeyPointsZh,
@@ -297,36 +205,80 @@ export function LegalEventsTable({
             <li
               key={judgmentDedupeKey(ev)}
               data-testid="legal-event-card"
-              className="rounded-lg border border-border/60 bg-card px-3 py-3"
+              className="rounded-lg border border-border/60 bg-card px-4 py-4 lg:px-4 lg:py-2"
             >
-              <CaseRefCell ev={ev} />
-              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-                <dt className={reportMetaClass}>中立引用</dt>
-                <dd>{ev.neutralCitation ?? "—"}</dd>
-                <dt className={reportMetaClass}>法院</dt>
-                <dd>{ev.court}</dd>
-                <dt className={reportMetaClass}>判決日期</dt>
-                <dd>
-                  <time dateTime={ev.eventDate}>{ev.eventDate}</time>
-                </dd>
-                <dt className={reportMetaClass}>公司角色</dt>
-                <dd>{partyRoleLabelZh(ev.partyRole)}</dd>
-                <dt className={reportMetaClass}>類別</dt>
-                <dd>{judgmentCategoryLabelZh(ev.judgmentCategory)}</dd>
-                <dt className={reportMetaClass}>結果</dt>
-                <dd>
-                  {ev.outcomeHint
-                    ? outcomeHintLabelZh(ev.outcomeHint)
-                    : "—"}
-                </dd>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm leading-snug lg:grid-cols-[minmax(0,1fr)_auto] lg:items-baseline lg:gap-x-4 lg:gap-y-1">
+                <div className="contents lg:col-start-1 lg:row-start-1 lg:flex lg:min-w-0 lg:flex-wrap lg:items-baseline lg:gap-x-3">
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[0]}
+                  </dt>
+                  <dd>
+                    <CaseRefBlock ev={ev} />
+                  </dd>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[1]}
+                  </dt>
+                  <dd className="tabular-nums">{ev.neutralCitation ?? "—"}</dd>
+                </div>
+                <div className="contents lg:col-span-2 lg:row-start-2 lg:flex lg:flex-wrap lg:items-baseline">
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[2]}
+                  </dt>
+                  <dd>
+                    {/[\u3400-\u9fff]/u.test(ev.court)
+                      ? withCjkSoftBreaks(ev.court)
+                      : ev.court}
+                    <span className="hidden lg:inline" aria-hidden>·</span>
+                  </dd>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[3]}
+                  </dt>
+                  <dd>
+                    <time className="tabular-nums" dateTime={ev.eventDate}>
+                      {ev.eventDate}
+                    </time>
+                    <span className="hidden lg:inline" aria-hidden>·</span>
+                  </dd>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[4]}
+                  </dt>
+                  <dd>
+                    {partyRoleLabelZh(ev.partyRole)}
+                    <span className="hidden lg:inline" aria-hidden>·</span>
+                  </dd>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[5]}
+                  </dt>
+                  <dd>
+                    {withCjkSoftBreaks(
+                      judgmentCategoryLabelZh(ev.judgmentCategory),
+                    )}
+                    <span className="hidden lg:inline" aria-hidden>·</span>
+                  </dd>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[6]}
+                  </dt>
+                  <dd>
+                    {ev.outcomeHint
+                      ? outcomeHintLabelZh(ev.outcomeHint)
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="contents lg:col-start-2 lg:row-start-1 lg:shrink-0">
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[7]}
+                  </dt>
+                  <dd>
+                    <ReportExternalLink
+                      href={ev.sourceUrl}
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      {LEGAL_EVENT_SOURCE_LINK_LABEL_ZH}
+                    </ReportExternalLink>
+                  </dd>
+                </div>
               </dl>
-              <ReportExternalLink
-                href={ev.sourceUrl}
-                className="mt-3 inline-flex items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
-              >
-                {LEGAL_EVENT_SOURCE_LINK_LABEL_ZH}
-              </ReportExternalLink>
-              <div className="mt-2">
+              <div className="mt-3 border-t border-border/50 pt-3 lg:mt-1 lg:border-t-0 lg:pt-0">
                 <LegalEventDetails ev={ev} factsOnly={factsOnly} />
               </div>
             </li>
@@ -335,9 +287,9 @@ export function LegalEventsTable({
       </ul>
 
       {registryAsOf ? (
-        <p className={`mt-3 ${reportMetaClass}`}>
+        <p className={`mt-3 ${reportMetaTextClass}`}>
           判詞庫摘錄截至{" "}
-          <time dateTime={registryAsOf}>
+          <time className="tabular-nums" dateTime={registryAsOf}>
             {formatReportGeneratedAtHkt(registryAsOf)}
           </time>
         </p>

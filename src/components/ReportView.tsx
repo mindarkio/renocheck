@@ -7,9 +7,15 @@ import { useEffect, useState } from "react";
 import type { RiskReport } from "@/lib/report-schema";
 import { ReportCard } from "./ReportCard";
 import { ReportFeedback } from "./ReportFeedback";
+import { ReportSidebarToc } from "./ReportSidebarToc";
 import {
+  reportGridClass,
+  reportMainColumnClass,
   reportPageColumnClass,
   reportReadingColumnClass,
+  reportSidebarColumnClass,
+  reportSidebarStickyClass,
+  siteLayoutGutterClass,
 } from "./report-column";
 
 function readSessionReport(fingerprint: string): RiskReport | null {
@@ -79,8 +85,11 @@ export function ReportView({
   }, [fingerprint]);
 
   return (
-    <main className="flex min-h-0 flex-1 flex-col px-4 pb-12 pt-5 sm:px-6 sm:pb-16 sm:pt-7">
-      <div className={reportPageColumnClass}>
+    <main className="flex min-h-0 flex-1 flex-col pb-12 pt-5 sm:pb-16 sm:pt-7">
+      <div className={siteLayoutGutterClass}>
+      <div className={reportPageColumnClass} data-testid="report-layout-container">
+        <div className={reportGridClass} data-testid="report-layout-grid">
+          <div className={reportMainColumnClass} data-testid="report-main-column">
         {error && (
           <div
             className={`${reportReadingColumnClass} rounded-xl border border-warning/35 bg-warning-foreground/50 px-4 py-3 text-sm leading-relaxed text-warning`}
@@ -139,6 +148,17 @@ export function ReportView({
             </Link>
           </div>
         )}
+          </div>
+          {report ? (
+            <aside
+              className={`${reportSidebarColumnClass} ${reportSidebarStickyClass}`}
+              data-testid="report-layout-sidebar"
+            >
+              <ReportSidebarToc report={report} />
+            </aside>
+          ) : null}
+        </div>
+      </div>
       </div>
     </main>
   );

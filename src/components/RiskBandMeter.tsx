@@ -30,7 +30,7 @@ export function RiskBandMeter({
     ? "bg-primary-foreground/22"
     : "bg-muted";
   const labelInactive = onPrimary
-    ? "text-primary-foreground/50"
+    ? "text-primary-foreground/80"
     : "text-muted-foreground";
 
   const pointerClass = riskBandMeterPointerClass(activeLevel, onPrimary);
@@ -65,9 +65,7 @@ export function RiskBandMeter({
         </div>
       </div>
       <div
-        className={`mt-2.5 grid grid-cols-4 gap-1 text-center leading-snug ${
-          emphasized ? "text-[11px] sm:text-xs" : "text-[10px] sm:text-[11px]"
-        }`}
+        className={`mt-2.5 grid grid-cols-4 gap-1 text-center text-xs leading-snug sm:text-sm`}
         aria-hidden
       >
         {RISK_BAND_METER_LEVELS.map((level, i) => (
