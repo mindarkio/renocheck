@@ -35,6 +35,7 @@ import {
 } from "./search-cache";
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from "./supabase/admin";
 import { SearchPipelineError } from "./search-pipeline-error";
+import { getServiceStatus } from "./service-status";
 import { isLlmConfigured } from "./llm-model";
 import {
   buildQueryEcho,
@@ -116,6 +117,10 @@ export async function runSearchPipeline(
     }
   }
 
+  if (getServiceStatus().paused) {
+    throw new SearchPipelineError("service_paused");
+  }
+
   const pipelineStart = performance.now();
   const mwcStart = performance.now();
   const mwcLookup = await lookupMwcWithMeta(supabase, input);
@@ -147,10 +152,14 @@ export async function runSearchPipeline(
   );
 
   const serpStart = performance.now();
-  const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, {
-    ...mwcOpts,
-    deadlineMs: serpDeadlineMs,
-  });
+  const { hits: serpHits, queriesCompleted } = await fetchWebSearchHitsForEntity(
+    input,
+    {
+      ...mwcOpts,
+      deadlineMs: serpDeadlineMs,
+    },
+  );
+  let anySearchSourceOk = queriesCompleted > 0;
 
   const tokens = entityMatchTokens(input, {
     mwcCompanyName: mwc?.company_name,
@@ -181,6 +190,7 @@ export async function runSearchPipeline(
           merged_organic: rawHits.length,
         }),
       );
+      anySearchSourceOk = true;
     } catch (e) {
       console.warn(
         JSON.stringify({
@@ -194,6 +204,10 @@ export async function runSearchPipeline(
   }
 
   const serpMs = Math.round(performance.now() - serpStart);
+  if (!anySearchSourceOk) {
+    console.warn(JSON.stringify({ event: "serp_all_sources_failed" }));
+    throw new SearchPipelineError("serp_failed");
+  }
   const [legalLookup, companiesRegistry] = await Promise.all([
     legalLookupPromise,
     companiesRegistryPromise,

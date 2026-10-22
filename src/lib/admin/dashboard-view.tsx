@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { submitAdminLogout } from "@/app/admin/logout/actions";
 import { outcomeLabelZh } from "@/lib/admin/outcome-labels";
+import type { GeminiUsageCardResult } from "@/lib/admin/gemini-usage-view";
 import {
   formatHkDateTime,
   type AnalyticsDays,
@@ -27,9 +29,16 @@ type Props = {
   days: AnalyticsDays;
   view: SearchAnalyticsView;
   errorMessage?: string | null;
+  gemini?: GeminiUsageCardResult;
 };
 
-export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
+export function AdminDashboardView({
+  data,
+  days,
+  view,
+  errorMessage,
+  gemini,
+}: Props) {
   const errored = Boolean(errorMessage);
   const rows = data.views[view] ?? data.terms;
   const dailyTotal = data.daily.reduce((sum, d) => sum + d.searches, 0);
@@ -208,6 +217,99 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
           </p>
         ) : null}
       </div>
+
+      {gemini ? <GeminiUsageSection gemini={gemini} /> : null}
+    </div>
+  );
+}
+
+function limitLabel(limit: number | null): string {
+  return limit == null ? "未設定" : String(limit);
+}
+
+function GeminiUsageSection({ gemini }: { gemini: GeminiUsageCardResult }) {
+  if (!gemini.ok) {
+    return (
+      <section className="min-w-0 border-t border-border pt-6" aria-label="AI 用量（Gemini）">
+        <h2 className="mb-3 text-sm font-semibold text-primary">AI 用量（Gemini）</h2>
+        <dl className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+          <GeminiRow label="今日已用" value={<Unavailable />} />
+          <GeminiRow label="每日上限" value={<Unavailable />} />
+          <GeminiRow label="每分鐘上限" value={<Unavailable />} />
+          <GeminiRow label="429（24 小時）" value={<Unavailable />} />
+          <GeminiRow label="爆每日上限" value={<Unavailable />} />
+          <GeminiRow label="爆每分鐘上限" value={<Unavailable />} />
+          <GeminiRow label="伺服器錯誤（24 小時）" value={<Unavailable />} />
+          <GeminiRow label="最後一次 429" value={<Unavailable />} />
+          <GeminiRow label="下次重置（香港時間）" value={<Unavailable />} />
+        </dl>
+      </section>
+    );
+  }
+
+  const card = gemini.data;
+  return (
+    <section className="min-w-0 border-t border-border pt-6" aria-label="AI 用量（Gemini）">
+      <h2 className="mb-3 text-sm font-semibold text-primary">AI 用量（Gemini）</h2>
+      {card.providerLabel ? (
+        <p className="mb-3 min-w-0 break-all text-xs text-muted-foreground">
+          {card.providerLabel}
+        </p>
+      ) : null}
+      {card.warning ? (
+        <div
+          className="mb-3 rounded-md border border-warning bg-warning-foreground px-4 py-3 text-sm text-amber-800"
+          role="alert"
+        >
+          過去 24 小時撞過 Gemini 上限，用戶可能搜唔到
+        </div>
+      ) : null}
+      <dl className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+        <GeminiRow
+          label="今日已用"
+          value={`${card.usedToday} / ${limitLabel(card.rpdLimit)}`}
+        />
+        <GeminiRow label="每日上限" value={limitLabel(card.rpdLimit)} />
+        <GeminiRow label="每分鐘上限" value={limitLabel(card.rpmLimit)} />
+        <GeminiRow label="429（24 小時）" value={String(card.http429)} />
+        <GeminiRow label="爆每日上限" value={String(card.quotaDay)} />
+        <GeminiRow label="爆每分鐘上限" value={String(card.rateMinute)} />
+        <GeminiRow label="伺服器錯誤（24 小時）" value={String(card.server5xx)} />
+        <GeminiRow
+          label="最後一次 429"
+          value={card.last429At ? formatHkDateTime(card.last429At) : "—"}
+        />
+        <GeminiRow
+          label="下次重置（香港時間）"
+          value={formatHkDateTime(card.nextReset)}
+        />
+      </dl>
+      <div className="mt-3 min-w-0 space-y-2 text-[13px] text-muted-foreground">
+        <p className="break-words">
+          Google 每日上限喺美國太平洋時間半夜 12 點重置，實際時間睇上面『下次重置』。
+        </p>
+        <p className="break-words">
+          次數只計到呢部伺服器，重新部署會清零；『今日已用』最少有呢個數。
+        </p>
+        {card.providerKind === "gateway" ? (
+          <p className="break-words">而家用緊 AI Gateway，唔係 Gemini。</p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function GeminiRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="break-words text-sm text-foreground">{value}</dd>
     </div>
   );
 }

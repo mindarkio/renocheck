@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import { connection } from "next/server";
 import { LandingStats } from "@/components/LandingStats";
 import {
   marketingPageInnerClass,
   marketingPageShellClass,
 } from "@/components/ContentPage";
 import { SearchForm } from "@/components/SearchForm";
+import { ServiceBanner } from "@/components/ServiceBanner";
 import { getLandingPublicStats } from "@/lib/landing-public-stats";
 import { JsonLd } from "@/components/JsonLd";
 import { getSiteUrl } from "@/lib/site-url";
@@ -13,14 +15,20 @@ import { BRAND_TAGLINE_LINES } from "@/lib/constants";
 import type { Metadata } from "next";
 import { HOME_DESCRIPTION, pageMetadata } from "@/lib/site-metadata";
 import { buildSiteJsonLd } from "@/lib/site-jsonld";
+import { getServiceStatus } from "@/lib/service-status";
 
 export const metadata: Metadata = pageMetadata({
   path: "/",
   description: HOME_DESCRIPTION,
 });
 
+/** Pause state is read per request (`connection` + in-memory breaker). */
+export const instant = false;
+
 export default async function Home() {
+  await connection();
   const landingStats = await getLandingPublicStats();
+  const paused = getServiceStatus().paused;
   const jsonLd = buildSiteJsonLd(getSiteUrl());
 
   return (
@@ -55,7 +63,8 @@ export default async function Home() {
             {BRAND_TAGLINE_LINES[1]}
           </p>
         </div>
-        <SearchForm variant="landing" />
+        {paused ? <ServiceBanner /> : null}
+        <SearchForm variant="landing" paused={paused} />
       </div>
       {landingStats ? (
         <div

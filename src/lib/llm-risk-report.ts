@@ -1,4 +1,4 @@
-import { generateObject } from "ai";
+import { APICallError, RetryError, generateObject } from "ai";
 import { llmProviderLabel, resolveRiskReportModel } from "./llm-model";
 import { z } from "zod";
 import type { MwcRow } from "./mwc-lookup";
@@ -145,13 +145,39 @@ export async function synthesizeRiskReport(params: {
       generatedAt: new Date().toISOString(),
     };
   } catch (e) {
+    const busy = isLlmBusyError(e);
     console.warn(
       JSON.stringify({
         event: "llm_error",
         provider: llmProviderLabel(),
-        message: String(e),
+        message: busy ? "llm_busy" : String(e),
       }),
     );
-    throw new SearchPipelineError("llm_failed", String(e));
+    throw new SearchPipelineError(
+      busy ? "llm_busy" : "llm_failed",
+      busy ? undefined : String(e),
+    );
   }
+}
+
+/** 429 / 5xx from the AI SDK, including a RetryError whose last attempt was one. */
+export function isLlmBusyError(error: unknown): boolean {
+  const pending: unknown[] = [error];
+  const seen = new Set<unknown>();
+  while (pending.length > 0 && seen.size < 8) {
+    const current = pending.shift();
+    if (current == null || seen.has(current)) continue;
+    seen.add(current);
+    if (APICallError.isInstance(current)) {
+      const status = current.statusCode;
+      if (status === 429 || (typeof status === "number" && status >= 500)) {
+        return true;
+      }
+    }
+    if (typeof current === "object" && current && "cause" in current) {
+      pending.push((current as { cause?: unknown }).cause);
+    }
+    if (RetryError.isInstance(current)) pending.push(current.lastError);
+  }
+  return false;
 }

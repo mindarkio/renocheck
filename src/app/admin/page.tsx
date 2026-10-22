@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AdminDashboardView } from "@/lib/admin/dashboard-view";
 import { isAdminDashboardEnabled } from "@/lib/admin/auth";
 import { isAdminSessionValid } from "@/lib/admin/session";
+import { fetchGeminiUsageCard } from "@/lib/admin/gemini-usage-view";
 import {
   fetchSearchAnalytics,
   parseAnalyticsDays,
@@ -42,7 +43,10 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const days = parseAnalyticsDays(params.days);
   const view = parseView(params.view);
 
-  const result = await fetchSearchAnalytics(days);
+  const [result, gemini] = await Promise.all([
+    fetchSearchAnalytics(days),
+    fetchGeminiUsageCard(),
+  ]);
   if (!result.ok) {
     return (
       <AdminDashboardView
@@ -50,6 +54,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         days={days}
         view={view}
         errorMessage="讀取數據出錯，請遲啲再試"
+        gemini={gemini}
       />
     );
   }
@@ -59,6 +64,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       data={result.data}
       days={days}
       view={view}
+      gemini={gemini}
     />
   );
 }
