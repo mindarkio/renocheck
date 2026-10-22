@@ -115,6 +115,9 @@ export default function DisclaimerPage() {
                 <a href="mailto:hello@renocheck.homes">hello@renocheck.homes</a> 提出。
               </li>
             </ul>
+            <p>
+              本網站部分工具（例如報價自查）只會將閣下的選擇儲存於閣下裝置的瀏覽器內，不會傳送至本網站伺服器。
+            </p>
             <p className="text-xs">
               我們<strong>沒有</strong>設立「資料保護主任（DPO）」的法定義務，除非營運架構觸發私隱條例相關要求；上述聯絡渠道即一般查詢及更正途徑。
             </p>
