@@ -35,6 +35,7 @@ Identical queries may return a cached report snapshot for about **7 days**; see 
 - / — search
 - /how-it-works — methodology
 - /faq — frequently asked questions
+- /quote — quotation self-check list (missing or vague items only; does not judge price)
 - /about — about the project
 - /legal/disclaimer — disclaimer, data sources, privacy summary
 - /guides — homeowner renovation guides (zh-HK), citing official HK sources

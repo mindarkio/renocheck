@@ -97,8 +97,10 @@ export function ContentSection({
 
 export function ContentPageNav({
   links,
+  linkClassName = "",
 }: {
   links: readonly { href: string; label: string }[];
+  linkClassName?: string;
 }) {
   return (
     <nav
@@ -110,7 +112,10 @@ export function ContentPageNav({
           {index > 0 ? (
             <span className="text-border" aria-hidden>·</span>
           ) : null}
-          <Link href={href} className={contentLinkClass}>
+          <Link
+            href={href}
+            className={`${contentLinkClass} ${linkClassName}`.trim()}
+          >
             {label}
           </Link>
         </span>

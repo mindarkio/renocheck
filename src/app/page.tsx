@@ -12,6 +12,7 @@ import { getLandingPublicStats } from "@/lib/landing-public-stats";
 import { JsonLd } from "@/components/JsonLd";
 import { getSiteUrl } from "@/lib/site-url";
 import { BRAND_TAGLINE_LINES } from "@/lib/constants";
+import { contentLinkClass } from "@/lib/ui-surfaces";
 import type { Metadata } from "next";
 import { HOME_DESCRIPTION, pageMetadata } from "@/lib/site-metadata";
 import { buildSiteJsonLd } from "@/lib/site-jsonld";
@@ -65,6 +66,14 @@ export default async function Home() {
         </div>
         {paused ? <ServiceBanner /> : null}
         <SearchForm variant="landing" paused={paused} />
+        <p className="mt-5 text-center text-sm">
+          <Link
+            href="/quote"
+            className={`${contentLinkClass} inline-flex min-h-11 items-center px-2`}
+          >
+            報價自查清單
+          </Link>
+        </p>
       </div>
       {landingStats ? (
         <div

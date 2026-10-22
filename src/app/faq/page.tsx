@@ -19,6 +19,7 @@ export const metadata: Metadata = pageMetadata({
 
 const NAV_LINKS = [
   { href: "/", label: "返回搜尋" },
+  { href: "/quote", label: "報價自查清單" },
   { href: "/guides", label: "裝修指南" },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/legal/disclaimer", label: "免責聲明" },
@@ -56,7 +57,10 @@ export default function FaqPage() {
             </div>
           ))}
         </dl>
-        <ContentPageNav links={NAV_LINKS} />
+        <ContentPageNav
+          links={NAV_LINKS}
+          linkClassName="inline-flex min-h-11 items-center"
+        />
       </ContentCard>
     </ContentPage>
   );
