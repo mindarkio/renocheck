@@ -4,9 +4,9 @@ import { getSiteUrl } from "@/lib/site-url";
 
 /** Bump the date when a page's content materially changes. */
 const STATIC_PAGES: ReadonlyArray<{ path: string; lastModified: string }> = [
-  { path: "/", lastModified: "2026-10-16" },
-  { path: "/about", lastModified: "2026-10-16" },
-  { path: "/faq", lastModified: "2026-10-16" },
+  { path: "/", lastModified: "2026-10-22" },
+  { path: "/about", lastModified: "2026-10-22" },
+  { path: "/faq", lastModified: "2026-10-22" },
   { path: "/how-it-works", lastModified: "2026-10-16" },
   { path: "/legal/disclaimer", lastModified: "2026-10-16" },
   { path: "/guides", lastModified: "2026-10-16" },

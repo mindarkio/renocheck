@@ -240,8 +240,9 @@ export function aggregateSearchAnalytics(
   }
 
   termsAll.sort((a, b) => {
-    if (b.searches !== a.searches) return b.searches - a.searches;
-    return b.lastSeen.localeCompare(a.lastSeen);
+    const bySeen = Date.parse(b.lastSeen) - Date.parse(a.lastSeen);
+    if (bySeen !== 0) return bySeen;
+    return b.searches - a.searches;
   });
 
   const terms = termsAll.slice(0, TERMS_ROW_CAP);

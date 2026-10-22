@@ -18,6 +18,10 @@ Renocheck is a Hong Kong homeowner-facing tool that aggregates **public** source
 - Not user-generated reviews or a forum.
 - Not legal advice or a guarantee of workmanship or completion.
 
+## Service area & disambiguation
+
+Renocheck (renocheck.homes) serves Hong Kong only, in Traditional Chinese (zh-HK). It does not offer expert consultation, renovation cost estimates, or builder matching. It is not affiliated with RenoCheck (renocheck.co.uk), a separate UK company.
+
 ## Risk bands (display)
 
 Reports use Traditional Chinese risk reference bands such as 風險偏高, 風險中等, 中性, and 未見負面摘要—not letter grades A–F as the primary user-facing label.

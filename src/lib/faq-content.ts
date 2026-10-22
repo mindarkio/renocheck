@@ -6,6 +6,11 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
       "Renocheck（裝修點評）係香港裝修承辦商風險參考搜尋：整合屋宇署小型工程承辦商名冊（MWC）公開資料與可檢索的公開網上討論摘要，產生風險參考分檔報告。並非裝修配對平台，亦非信貸報告。",
   },
   {
+    question: "Renocheck 係邊度嘅服務？同 renocheck.co.uk 有冇關係？",
+    answer:
+      "Renocheck（裝修點評，renocheck.homes）只服務香港，提供香港裝修承辦商的公開資料風險參考搜尋。我們不提供專家諮詢、裝修估價或代搵師傅服務。英國的 renocheck.co.uk 是另一間公司，與本網站無任何關係。",
+  },
+  {
     question: "可以點樣查一間裝修公司？",
     answer:
       "在首頁輸入公司名稱、香港電話或商業登記號碼（至少一項），系統會產生公開資料摘要報告，包括查證範圍、風險參考分檔及免責說明。",

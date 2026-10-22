@@ -9,13 +9,10 @@ import { SearchForm } from "@/components/SearchForm";
 import { getLandingPublicStats } from "@/lib/landing-public-stats";
 import { JsonLd } from "@/components/JsonLd";
 import { getSiteUrl } from "@/lib/site-url";
-import { BRAND_TAGLINE, BRAND_TAGLINE_LINES } from "@/lib/constants";
+import { BRAND_TAGLINE_LINES } from "@/lib/constants";
 import type { Metadata } from "next";
-import {
-  HOME_DESCRIPTION,
-  pageMetadata,
-  SITE_CONTACT_EMAIL,
-} from "@/lib/site-metadata";
+import { HOME_DESCRIPTION, pageMetadata } from "@/lib/site-metadata";
+import { buildSiteJsonLd } from "@/lib/site-jsonld";
 
 export const metadata: Metadata = pageMetadata({
   path: "/",
@@ -24,27 +21,7 @@ export const metadata: Metadata = pageMetadata({
 
 export default async function Home() {
   const landingStats = await getLandingPublicStats();
-  const siteUrl = getSiteUrl();
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        name: "Renocheck 裝修點評",
-        url: siteUrl,
-        inLanguage: "zh-HK",
-        description: BRAND_TAGLINE,
-      },
-      {
-        "@type": "Organization",
-        name: "Renocheck",
-        alternateName: "裝修點評",
-        url: siteUrl,
-        logo: `${siteUrl}/logo/mark-color-on-white.png`,
-        email: SITE_CONTACT_EMAIL,
-      },
-    ],
-  };
+  const jsonLd = buildSiteJsonLd(getSiteUrl());
 
   return (
     <main
