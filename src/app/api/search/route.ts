@@ -4,6 +4,7 @@ import { normalizeSearchInput } from "@/lib/normalize-search-input";
 import { runSearchPipeline } from "@/lib/search-pipeline";
 import { SearchPipelineError } from "@/lib/search-pipeline-error";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getServiceStatus } from "@/lib/service-status";
 
 export const maxDuration = 60;
 
@@ -13,6 +14,10 @@ export async function POST(req: Request) {
 
   if (!checkRateLimit(ip)) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  if (getServiceStatus().paused) {
+    return NextResponse.json({ error: "service_paused" }, { status: 503 });
   }
 
   let body: unknown;

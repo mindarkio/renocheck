@@ -1,6 +1,8 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { gateway } from "@ai-sdk/gateway";
 import type { LanguageModel } from "ai";
+import { geminiCountingFetch } from "./gemini-usage";
+import "./service-status";
 
 /** Default Gemini model for structured risk summaries (override with GEMINI_MODEL). */
 export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
@@ -23,7 +25,10 @@ export function resolveRiskReportModel(): LanguageModel | null {
   if (googleKey) {
     const modelId =
       process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
-    const google = createGoogleGenerativeAI({ apiKey: googleKey });
+    const google = createGoogleGenerativeAI({
+      apiKey: googleKey,
+      fetch: geminiCountingFetch,
+    });
     return google(modelId);
   }
 
@@ -34,6 +39,19 @@ export function resolveRiskReportModel(): LanguageModel | null {
     return gateway("openai/gpt-4o-mini");
   }
 
+  return null;
+}
+
+export type LlmProviderKind = "google" | "gateway";
+
+export function llmProviderKind(): LlmProviderKind | null {
+  if (googleGenerativeAiKey()) return "google";
+  if (
+    process.env.AI_GATEWAY_API_KEY?.trim() ||
+    process.env.VERCEL_OIDC_TOKEN?.trim()
+  ) {
+    return "gateway";
+  }
   return null;
 }
 

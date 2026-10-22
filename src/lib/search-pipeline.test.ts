@@ -55,7 +55,9 @@ vi.mock("./web-search", async (importOriginal) => {
   return {
     ...actual,
     isSerpConfigured: () => true,
-    fetchWebSearchHitsForEntity: vi.fn().mockResolvedValue({ hits: [] }),
+    fetchWebSearchHitsForEntity: vi
+      .fn()
+      .mockResolvedValue({ hits: [], queriesCompleted: 1 }),
     fetchSerpOrganicHits: vi.fn(),
     mergeWebSearchHits: vi.fn(),
     buildBrandHostForumQuery: vi.fn(),
@@ -121,6 +123,7 @@ import {
   PIPELINE_BUDGET_MS,
   runSearchPipeline,
 } from "./search-pipeline";
+import { SearchPipelineError } from "./search-pipeline-error";
 import { fetchWebSearchHitsForEntity } from "./web-search";
 
 describe("runSearchPipeline cache + legal degraded", () => {
@@ -263,6 +266,29 @@ describe("runSearchPipeline cache + legal degraded", () => {
     ).rejects.toThrow("mwc_lookup_failed");
 
     expect(setCachedReport).not.toHaveBeenCalled();
+  });
+
+  it("does not cache a neutral report when every search source fails", async () => {
+    vi.mocked(fetchWebSearchHitsForEntity).mockResolvedValueOnce({
+      hits: [],
+      queriesCompleted: 0,
+    });
+
+    let caught: unknown;
+    try {
+      await runSearchPipeline({
+        matchType: "company_name",
+        companyName: "示例裝修有限公司",
+      });
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(SearchPipelineError);
+    expect(caught).toMatchObject({ code: "serp_failed" });
+    expect(synthesizeRiskReport).not.toHaveBeenCalled();
+    expect(setCachedReport).not.toHaveBeenCalled();
+    expect(logSearchEvent).not.toHaveBeenCalled();
   });
 
   it("resolves when cache upsert fails", async () => {

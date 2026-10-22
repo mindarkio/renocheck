@@ -55,6 +55,9 @@ async function measureAtWidths(
   for (const width of WIDTHS) {
     const page = await browser.newPage({ viewport: { width, height: 844 } });
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
+    if (path === "/") {
+      await page.getByRole("alert").waitFor({ timeout: 15_000 }).catch(() => undefined);
+    }
     if (path.startsWith("/report/")) {
       await page.locator("[role=alert]").waitFor({ timeout: 15_000 }).catch(() => undefined);
     }
@@ -65,10 +68,10 @@ async function measureAtWidths(
     }));
     out[width] = { scrollWidth, clientWidth, ok: scrollWidth <= clientWidth };
     const shotDir = process.env.OVERFLOW_SCREENSHOT_DIR;
-    if (shotDir && path === "/" && width === 390) {
+    if (shotDir && path === "/" && (width === 390 || width === 1280)) {
       mkdirSync(shotDir, { recursive: true });
       await page.screenshot({
-        path: pathJoin(shotDir, "landing-390.png"),
+        path: pathJoin(shotDir, `landing-banner-${width}.png`),
         fullPage: true,
       });
     }
@@ -87,11 +90,22 @@ async function measureAdminDashboard(pin: string): Promise<Record<number, Measur
     await page.fill("#admin-pin", pin);
     await page.getByRole("button", { name: "登入" }).click();
     await page.waitForURL(/\/admin(?:\?|$)/, { timeout: 15_000 });
+    await page
+      .getByRole("heading", { name: "AI 用量（Gemini）" })
+      .waitFor({ timeout: 15_000 });
     const { scrollWidth, clientWidth } = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
     }));
     out[width] = { scrollWidth, clientWidth, ok: scrollWidth <= clientWidth };
+    const shotDir = process.env.OVERFLOW_SCREENSHOT_DIR;
+    if (shotDir && (width === 390 || width === 1280)) {
+      mkdirSync(shotDir, { recursive: true });
+      await page.screenshot({
+        path: pathJoin(shotDir, `admin-ai-usage-${width}.png`),
+        fullPage: true,
+      });
+    }
     await page.close();
   }
   await browser.close();
@@ -115,6 +129,8 @@ async function main(): Promise<void> {
       SUPABASE_SERVICE_ROLE_KEY: "",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
       OVERFLOW_CHECK_STATS: "1",
+      OVERFLOW_CHECK_GEMINI: "1",
+      SERVICE_PAUSED: "1",
       ADMIN_DASHBOARD_PIN: pin,
       ADMIN_SESSION_SECRET: secret,
     },

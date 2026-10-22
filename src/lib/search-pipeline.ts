@@ -147,10 +147,14 @@ export async function runSearchPipeline(
   );
 
   const serpStart = performance.now();
-  const { hits: serpHits } = await fetchWebSearchHitsForEntity(input, {
-    ...mwcOpts,
-    deadlineMs: serpDeadlineMs,
-  });
+  const { hits: serpHits, queriesCompleted } = await fetchWebSearchHitsForEntity(
+    input,
+    {
+      ...mwcOpts,
+      deadlineMs: serpDeadlineMs,
+    },
+  );
+  let anySearchSourceOk = queriesCompleted > 0;
 
   const tokens = entityMatchTokens(input, {
     mwcCompanyName: mwc?.company_name,
@@ -181,6 +185,7 @@ export async function runSearchPipeline(
           merged_organic: rawHits.length,
         }),
       );
+      anySearchSourceOk = true;
     } catch (e) {
       console.warn(
         JSON.stringify({
@@ -194,6 +199,10 @@ export async function runSearchPipeline(
   }
 
   const serpMs = Math.round(performance.now() - serpStart);
+  if (!anySearchSourceOk) {
+    console.warn(JSON.stringify({ event: "serp_all_sources_failed" }));
+    throw new SearchPipelineError("serp_failed");
+  }
   const [legalLookup, companiesRegistry] = await Promise.all([
     legalLookupPromise,
     companiesRegistryPromise,
