@@ -21,7 +21,10 @@ describe("CopyCompanyNameButton", () => {
 
     render(<CopyCompanyNameButton text="合成測試有限公司" />);
 
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("button", {
+      name: COPY_COMPANY_NAME_BUTTON_ZH,
+    });
+    expect(screen.getByRole("status").textContent).toBe("");
     expect(button.className).toContain("border");
     expect(button.textContent).toContain(COPY_COMPANY_NAME_BUTTON_ZH);
     fireEvent.click(button);
@@ -32,5 +35,11 @@ describe("CopyCompanyNameButton", () => {
     await waitFor(() => {
       expect(button.textContent).toBe(COPY_COMPANY_NAME_DONE_ZH);
     });
+    expect(screen.getByRole("status").textContent).toBe(
+      COPY_COMPANY_NAME_DONE_ZH,
+    );
+    expect(
+      screen.getByRole("button", { name: COPY_COMPANY_NAME_DONE_ZH }),
+    ).toBe(button);
   });
 });

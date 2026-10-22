@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  riskBandMeterActiveLabelClass,
   riskBandMeterActiveSegmentClass,
   riskBandMeterIndex,
   riskBandSurfaceClass,
@@ -18,6 +19,23 @@ describe("riskBandMeterIndex", () => {
     expect(riskBandMeterIndex("風險中等")).toBe(1);
     expect(riskBandMeterIndex("中性")).toBe(2);
     expect(riskBandMeterIndex("未見負面摘要")).toBe(3);
+  });
+});
+
+describe("riskBandMeterActiveLabelClass", () => {
+  it("keeps 風險中等 on text-accent for both surfaces", () => {
+    expect(riskBandMeterActiveLabelClass("風險中等", true)).toContain(
+      "text-accent",
+    );
+    expect(riskBandMeterActiveLabelClass("風險中等", false)).toContain(
+      "text-accent",
+    );
+    expect(riskBandMeterActiveLabelClass("風險中等", true)).not.toContain(
+      "text-primary-foreground",
+    );
+    expect(riskBandMeterActiveLabelClass("風險中等", false)).not.toContain(
+      "text-primary-foreground",
+    );
   });
 });
 

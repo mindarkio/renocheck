@@ -15,23 +15,34 @@ import {
   crBrNoCompareNoteZh,
   crHintIncorporationUnderOneYearZh,
 } from "@/lib/report-trust-copy-zh";
-import { brandReportSectionTitleClass } from "@/lib/ui-surfaces";
+import {
+  reportBodyTextClass,
+  reportH3CardClass,
+  reportMetaTextClass,
+} from "@/lib/report-tokens";
 
-const reportBlockClass = "px-5 py-5 sm:px-6 sm:py-6 border-t border-border/60";
-const reportBodyClass = "text-sm leading-[1.7] text-foreground/90 sm:text-[15px]";
-const reportMetaClass =
-  "text-xs leading-[1.65] text-muted-foreground sm:text-[13px]";
+const reportBlockClass =
+  "border-t border-border/60 px-5 py-2 lg:px-8 lg:py-8";
+const reportBodyClass = reportBodyTextClass;
+const reportMetaClass = reportMetaTextClass;
 
 function CrSourceAttribution({ retrievedAt }: { retrievedAt: string }) {
   return (
-    <p className={reportMetaClass}>
+    <span>
       {CR_IDENTITY_SOURCE_LABEL_ZH} · 擷取於{" "}
       <time dateTime={retrievedAt}>
         {formatReportGeneratedAtHkt(retrievedAt)}
       </time>
-    </p>
+    </span>
   );
 }
+
+const identityDtClass =
+  "w-[4.5rem] shrink-0 text-xs leading-5 text-muted-foreground";
+const identityDdClass =
+  "min-w-0 flex-1 text-[15px] leading-[18px] text-foreground/90";
+const identityEnClass =
+  "min-w-0 flex-1 text-[13px] leading-[18px] text-foreground/90";
 
 export function CompanyIdentityCard({ report }: { report: RiskReport }) {
   const cr = report.official.companiesRegistry;
@@ -50,77 +61,77 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
       className={reportBlockClass}
       aria-labelledby="cr-identity-heading"
     >
-      <h3
+      <h2
         id="cr-identity-heading"
-        className={`flex items-center gap-2 ${brandReportSectionTitleClass}`}
+        className={`flex items-center gap-2 ${reportH3CardClass}`}
       >
         <Building2 className="size-5 shrink-0 text-primary" aria-hidden />
         {CR_IDENTITY_CARD_HEADING_ZH}
-      </h3>
+      </h2>
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-2 space-y-2">
         {isMatched ? (
           <>
-            <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-[auto_1fr]">
+            <dl className="space-y-1">
               {cr.brNo?.trim() ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-2">
+                  <dt className={identityDtClass}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.brNo}
                   </dt>
-                  <dd className={`${reportBodyClass} font-mono tabular-nums`}>
+                  <dd className={`${identityDdClass} font-mono tabular-nums`}>
                     {cr.brNo}
                   </dd>
-                </>
+                </div>
               ) : null}
               {cr.nameZh?.trim() ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-2">
+                  <dt className={identityDtClass}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.nameZh}
                   </dt>
-                  <dd className={`${reportBodyClass} flex flex-wrap items-center gap-2`}>
+                  <dd className={`${identityDdClass} flex flex-wrap items-center gap-1`}>
                     <span>{cr.nameZh}</span>
                     {copyName ? (
                       <CopyCompanyNameButton text={copyName} />
                     ) : null}
                   </dd>
-                </>
+                </div>
               ) : null}
               {cr.nameEn?.trim() ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-2">
+                  <dt className={identityDtClass}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.nameEn}
                   </dt>
-                  <dd className={reportBodyClass}>{cr.nameEn}</dd>
-                </>
+                  <dd className={identityEnClass}>{cr.nameEn}</dd>
+                </div>
               ) : null}
               {cr.companyType?.trim() ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-2">
+                  <dt className={identityDtClass}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.companyType}
                   </dt>
-                  <dd className={reportBodyClass}>{cr.companyType}</dd>
-                </>
+                  <dd className={identityDdClass}>{cr.companyType}</dd>
+                </div>
               ) : null}
               {cr.incorporationDate ? (
-                <>
-                  <dt className={reportMetaClass}>
+                <div className="flex flex-row items-center gap-x-2">
+                  <dt className={identityDtClass}>
                     {CR_IDENTITY_FIELD_LABELS_ZH.incorporationDate}
                   </dt>
-                  <dd className={reportBodyClass}>
+                  <dd className={identityDdClass}>
                     <time dateTime={cr.incorporationDate}>
                       {cr.incorporationDate}
                     </time>
                   </dd>
-                </>
+                </div>
               ) : null}
             </dl>
-            <div className={`space-y-1 ${reportMetaClass}`}>
+            <p className="text-xs leading-[18px] text-muted-foreground">
               <CrSourceAttribution retrievedAt={cr.retrievedAt} />
-              <p>{CR_DATA_ATTRIBUTION_ZH}</p>
+              <span> {CR_DATA_ATTRIBUTION_ZH}</span>
               {cr.brNo?.trim() ? (
-                <p>{crBrNoCompareNoteZh(cr.brNo)}</p>
+                <span> {crBrNoCompareNoteZh(cr.brNo)}</span>
               ) : null}
-            </div>
+            </p>
             {showIncorporationHint && cr.incorporationDate ? (
               <p className={`${reportBodyClass} text-muted-foreground`}>
                 {crHintIncorporationUnderOneYearZh(cr.incorporationDate)}
@@ -132,7 +143,9 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
         {cr.matchAmbiguous ? (
           <>
             <p className={reportBodyClass}>{CR_IDENTITY_AMBIGUOUS_ZH}</p>
-            <CrSourceAttribution retrievedAt={cr.retrievedAt} />
+            <p className={reportMetaClass}>
+              <CrSourceAttribution retrievedAt={cr.retrievedAt} />
+            </p>
           </>
         ) : null}
 
@@ -145,7 +158,9 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
                 ? CR_IDENTITY_NOT_FOUND_ZH
                 : CR_IDENTITY_INCONCLUSIVE_ZH}
             </p>
-            <CrSourceAttribution retrievedAt={cr.retrievedAt} />
+            <p className={reportMetaClass}>
+              <CrSourceAttribution retrievedAt={cr.retrievedAt} />
+            </p>
           </>
         ) : null}
 

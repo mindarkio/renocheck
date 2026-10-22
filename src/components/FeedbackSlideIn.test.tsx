@@ -149,6 +149,10 @@ describe("FeedbackSlideIn", () => {
     expect(classes).toContain("border");
     expect(classes).toContain("border-border");
     expect(classes).toContain("shadow-lg");
+    expect(classes).toContain("mx-auto");
+    expect(classes).toContain("w-full");
+    expect(classes).toContain("max-w-[584px]");
+    expect(classes).not.toContain("min-w-0");
   });
 
   it("does not steal focus, dismisses only from inside, and respects reduced motion", () => {

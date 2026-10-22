@@ -82,7 +82,7 @@ export function DailyCauseListSearchForm({
         </button>
       </form>
       <span
-        className={`mt-0.5 block text-[11px] leading-[1.6] sm:text-xs ${noteClassName ?? "text-primary-foreground/60"}`}
+        className={`mt-0.5 block text-xs leading-[1.6] sm:text-sm ${noteClassName ?? "text-primary-foreground/80"}`}
       >
         {DAILY_CAUSE_LIST_FORM_NOTE_ZH}
       </span>

@@ -1,10 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { BrandMenuMark } from "@/components/BrandMenuMark";
+import {
+  siteLayoutContainerClass,
+  siteLayoutGutterClass,
+} from "@/components/report-column";
 
 const HOME_NAV = [
   { href: "/guides", label: "裝修指南" },
@@ -113,26 +118,53 @@ export function SiteHeader() {
           menuOpen ? "z-[120] bg-transparent" : "z-[60] bg-background"
         }`}
       >
-        <nav
-          className="mx-auto flex max-w-[584px] items-center justify-end px-4 py-3 sm:px-6"
-          aria-label="頁首"
-        >
-          <button
-            type="button"
-            className={menuButtonClass(menuOpen)}
-            aria-expanded={menuOpen}
-            aria-controls={menuId}
-            aria-label={menuOpen ? "關閉選單" : "開啟選單"}
-            onClick={() => setMenuOpen((open) => !open)}
+        <div className={siteLayoutGutterClass}>
+          <nav
+            className={`${siteLayoutContainerClass} flex items-center justify-between gap-4 py-3`}
+            aria-label="頁首"
+            data-testid="site-header-nav"
           >
-            <BrandMenuMark
-              open={menuOpen}
-              onPrimary={menuOpen}
-              className="size-7"
+          <Link
+            href="/"
+            data-testid="site-header-logo"
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+              menuOpen ? "invisible" : ""
+            }`}
+          >
+            <Image
+              src="/logo/mark-color-transparent.svg"
+              alt=""
+              width={114}
+              height={123}
+              className="h-6 w-auto sm:h-7 lg:h-8"
+              priority
             />
-          </button>
-          <DesktopNavLinks />
-        </nav>
+            <span
+              data-testid="site-header-wordmark"
+              className="text-sm font-semibold leading-none text-primary lg:text-base"
+            >
+              裝修點評
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <DesktopNavLinks />
+            <button
+              type="button"
+              className={menuButtonClass(menuOpen)}
+              aria-expanded={menuOpen}
+              aria-controls={menuId}
+              aria-label={menuOpen ? "關閉選單" : "開啟選單"}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <BrandMenuMark
+                open={menuOpen}
+                onPrimary={menuOpen}
+                className="size-7"
+              />
+            </button>
+          </div>
+          </nav>
+        </div>
       </header>
       <MobileNavMenuPortal
         open={menuOpen}

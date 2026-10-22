@@ -215,7 +215,7 @@ describe("CompanyIdentityCard", () => {
 });
 
 describe("CompanyIdentityCard layout/a11y (PR24 L1/L2)", () => {
-  it("heading is h3 like other report sections; dl grid uses a valid template", () => {
+  it("heading is h2 like other report sections; dl rows use flex for dt/dd alignment", () => {
     const { container } = render(
       <CompanyIdentityCard
         report={minimalReport(
@@ -223,8 +223,10 @@ describe("CompanyIdentityCard layout/a11y (PR24 L1/L2)", () => {
         )}
       />,
     );
-    expect(container.querySelector("h3#cr-identity-heading")).not.toBeNull();
-    expect(container.querySelector("h2")).toBeNull();
-    expect(container.innerHTML).toContain("sm:grid-cols-[auto_1fr]");
+    expect(container.querySelector("h2#cr-identity-heading")).not.toBeNull();
+    expect(container.querySelector("h3")).toBeNull();
+    const row = container.querySelector("dl > div.flex");
+    expect(row).not.toBeNull();
+    expect(row?.className).toMatch(/items-center/);
   });
 });
