@@ -27,9 +27,6 @@ const EN_HONORIFIC_RE =
   /\b(?:Mr|Mrs|Ms|Miss|Mdm|Dr)\.?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2}/g;
 const HONORIFIC_LONG_RE =
   /[\u4e00-\u9fff]{1,3}(?:先生|小姐|太太|女士|姑娘|經理|老闆)|[\u4e00-\u9fff]{1,3}\s?[Ss]ir\b/g;
-/** Pre-0.3.1 long honorific, including 師傅. Mutation test only. */
-const HONORIFIC_LONG_LEGACY_RE =
-  /[\u4e00-\u9fff]{1,3}(?:先生|小姐|太太|女士|師傅|姑娘|經理|老闆)|[\u4e00-\u9fff]{1,3}\s?[Ss]ir\b/g;
 const HONORIFIC_TAI_RE = /[\u4e00-\u9fff]{1,2}太(?!太|陽|空|平|古|極)/g;
 const HONORIFIC_SANG_RE = /[\u4e00-\u9fff]{1,2}生(?![\u4e00-\u9fff])/g;
 
@@ -70,18 +67,6 @@ const SIFU_TAIL_RE =
 const SIFU_RE = /([\u4e00-\u9fff]{1,3})\s{0,2}(師傅|師父|师傅|师父)/g;
 /** 「Ken師傅」「阿Ken 師父」. */
 const EN_SIFU_RE = /\b[A-Za-z]{2,15}\s{0,2}(?:師傅|師父|师傅|师父)/g;
-
-const SANG_KEEP_LEGACY = new Set([
-  "發生",
-  "產生",
-  "學生",
-  "先生",
-  "人生",
-  "衛生",
-  "出生",
-  "醫生",
-  "花生",
-]);
 
 const SANG_KEEP = new Set([
   "一生",
@@ -214,23 +199,8 @@ function applyNameVariantRules(text: string): string {
   return text;
 }
 
-function applyLegacyNameRules(text: string): string {
-  text = text.replace(HONORIFIC_LONG_LEGACY_RE, "[姓名]");
-  text = text.replace(HONORIFIC_TAI_RE, "[姓名]");
-  text = text.replace(HONORIFIC_SANG_RE, (match) =>
-    SANG_KEEP_LEGACY.has(match) ? match : "[姓名]",
-  );
-  return text;
-}
-
-/**
- * Fold full-width first, so ９１２３４５６７ or ａ＠ｂ．ｃｏｍ cannot bypass the patterns.
- * `legacyNameRules` restores the pre-0.3.1 honorific path for the mutation test.
- */
-export function redactFeedbackComment(
-  raw: string,
-  legacyNameRules = false,
-): string {
+/** Fold full-width first, so ９１２３４５６７ or ａ＠ｂ．ｃｏｍ cannot bypass the patterns. */
+export function redactFeedbackComment(raw: string): string {
   let text = foldFullWidth(stripControlAndBidi(raw)).replace(
     // CJK compatibility ideographs and radicals look like the unified char but miss every pattern.
     /[\u2E80-\u2FDF\uF900-\uFAFF]/g,
@@ -245,7 +215,7 @@ export function redactFeedbackComment(
   text = text.replace(ADDRESS_RE, "[地址]");
   text = text.replace(LABELLED_NAME_RE, "$1：[姓名]");
   text = text.replace(EN_HONORIFIC_RE, "[姓名]");
-  text = legacyNameRules ? applyLegacyNameRules(text) : applyNameVariantRules(text);
+  text = applyNameVariantRules(text);
   text = text.trim();
   if (text.length > 500) text = text.slice(0, 500);
   return text;

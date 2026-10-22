@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { redactFeedbackCommentLegacy } from "./redact-legacy-for-test";
 import { redactFeedbackComment, stripControlAndBidi } from "./redact";
 
 describe("feedback comment redaction", () => {
@@ -129,7 +130,7 @@ describe("name-variant redaction", () => {
 
   it("fails at least half of the catch table without the new name rules", () => {
     const missed = NAME_CATCHES.filter(
-      ([raw, expected]) => redactFeedbackComment(raw, true) !== expected,
+      ([raw, expected]) => redactFeedbackCommentLegacy(raw) !== expected,
     );
     expect(missed.length).toBeGreaterThanOrEqual(
       Math.ceil(NAME_CATCHES.length / 2),
