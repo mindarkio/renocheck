@@ -856,6 +856,78 @@ async function measureReportPage(page, fp, vp, baseUrl) {
   };
 }
 
+const QUOTE_NAV_LABEL = "報價自查清單";
+
+async function quoteShellMetrics(page) {
+  return page.evaluate((label) => {
+    const headerNav = document.querySelector("[data-testid=site-header-nav]");
+    const desktopRow = headerNav?.querySelector("[class*='sm:flex']") ?? null;
+    const headerQuote = desktopRow
+      ? [...desktopRow.querySelectorAll("a")].find((a) => a.getAttribute("href") === "/quote")
+      : null;
+    const footerQuote = [...document.querySelectorAll("footer a")].find(
+      (a) => a.getAttribute("href") === "/quote",
+    );
+    const visible = (el) => {
+      if (!el) return false;
+      const s = getComputedStyle(el);
+      return s.display !== "none" && s.visibility !== "hidden";
+    };
+    const rowLinks = desktopRow ? [...desktopRow.querySelectorAll("a")] : [];
+    const visibleLinks = rowLinks.filter(visible);
+    const tops = visibleLinks.map((a) => Math.round(a.getBoundingClientRect().top));
+    const menuButton = headerNav?.querySelector("button[aria-label='開啟選單'], button[aria-expanded]");
+    return {
+      headerLabel: headerQuote?.textContent?.trim() ?? null,
+      headerCurrent: headerQuote?.getAttribute("aria-current") ?? null,
+      headerMinH: (headerQuote?.className ?? "").includes("min-h-11"),
+      headerFocus: (headerQuote?.className ?? "").includes("focus-visible:ring-2"),
+      desktopDisplay: desktopRow ? getComputedStyle(desktopRow).display : null,
+      linkTops: tops,
+      linkHeights: visibleLinks.map((a) => Math.round(a.getBoundingClientRect().height)),
+      menuButtonVisible: visible(menuButton),
+      footerLabel: footerQuote?.textContent?.trim() ?? null,
+      footerCurrent: footerQuote?.getAttribute("aria-current") ?? null,
+      footerHeight: footerQuote ? Math.round(footerQuote.getBoundingClientRect().height) : null,
+      footerFocus: (footerQuote?.className ?? "").includes("focus-visible:ring-2"),
+      expected: label,
+    };
+  }, QUOTE_NAV_LABEL);
+}
+
+function recordQuoteShell(criteria, shell, vp, path) {
+  record(criteria, "quoteHeaderLabel", shell.headerLabel === shell.expected, shell.headerLabel, shell.expected);
+  record(criteria, "quoteFooterLabel", shell.footerLabel === shell.expected, shell.footerLabel, shell.expected);
+  record(criteria, "quoteHeaderFocus", shell.headerFocus, shell.headerFocus, "focus-visible ring");
+  record(criteria, "quoteFooterFocus", shell.footerFocus, shell.footerFocus, "focus-visible ring");
+  const onQuote = path === "/quote";
+  record(
+    criteria,
+    "quoteHeaderCurrent",
+    onQuote ? shell.headerCurrent === "page" : shell.headerCurrent == null,
+    shell.headerCurrent,
+    onQuote ? "page" : "absent",
+  );
+  record(
+    criteria,
+    "quoteFooterCurrent",
+    onQuote ? shell.footerCurrent === "page" : shell.footerCurrent == null,
+    shell.footerCurrent,
+    onQuote ? "page" : "absent",
+  );
+  if (vp.width >= 1024) {
+    const oneRow = shell.linkTops.length > 0 && shell.linkTops.every((top) => top === shell.linkTops[0]);
+    const tall = shell.linkHeights.length > 0 && shell.linkHeights.every((h) => h >= 44);
+    record(criteria, "headerNavOneRow", shell.desktopDisplay === "flex" && oneRow, shell.linkTops, "one row");
+    record(criteria, "headerNavTap", shell.headerMinH && tall, shell.linkHeights, "≥44px");
+    record(criteria, "mobileMenuButtonHidden", shell.menuButtonVisible === false, shell.menuButtonVisible, "hidden at desktop");
+  } else if (vp.width === 390) {
+    record(criteria, "desktopNavHidden", shell.desktopDisplay === "none", shell.desktopDisplay, "none");
+    record(criteria, "mobileMenuButtonVisible", shell.menuButtonVisible === true, shell.menuButtonVisible, "hamburger");
+    record(criteria, "footerQuoteTap", shell.footerHeight != null && shell.footerHeight >= 44, shell.footerHeight, "≥44px");
+  }
+}
+
 async function measureStaticPage(page, sp, vp, baseUrl) {
   const criteria = [];
   await page.goto(`${baseUrl}${sp.path}`, {
@@ -890,6 +962,7 @@ async function measureStaticPage(page, sp, vp, baseUrl) {
     record(criteria, "logoHeightMobile", inRange(metrics.logoHeight, 24, 28), round2(metrics.logoHeight), "24–28");
   }
   recordWordmark(criteria, metrics);
+  recordQuoteShell(criteria, await quoteShellMetrics(page), vp, sp.path);
   return { page: sp.name, viewport: vp.name, screenshot: shot, metrics, criteria };
 }
 
@@ -919,6 +992,19 @@ async function measureMobileMenu(page, baseUrl) {
     state,
     "logo link visibility hidden",
   );
+  const menuQuote = await page.evaluate((label) => {
+    const dialog = document.querySelector("[role=dialog][aria-label='網站選單']");
+    const link = dialog
+      ? [...dialog.querySelectorAll("a")].find((a) => a.getAttribute("href") === "/quote")
+      : null;
+    return {
+      label: link?.textContent?.trim() ?? null,
+      height: link ? Math.round(link.getBoundingClientRect().height) : null,
+      expected: label,
+    };
+  }, QUOTE_NAV_LABEL);
+  record(criteria, "menuQuoteLabel", menuQuote.label === menuQuote.expected, menuQuote.label, menuQuote.expected);
+  record(criteria, "menuQuoteTap", menuQuote.height != null && menuQuote.height >= 44, menuQuote.height, "≥44px");
   return { page: "mobile-menu", viewport: "390x844", screenshot: shot, criteria };
 }
 

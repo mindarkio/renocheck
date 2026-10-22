@@ -10,17 +10,23 @@ import {
   siteLayoutContainerClass,
   siteLayoutGutterClass,
 } from "@/components/report-column";
+import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
 
 const HOME_NAV = [
   { href: "/guides", label: "裝修指南" },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/faq", label: "常見問題" },
+  { href: "/quote", label: QUOTE_PAGE_TITLE_ZH },
   { href: "/about", label: "關於" },
   { href: "/legal/disclaimer", label: "免責聲明" },
 ] as const;
 
 const navLinkClass =
   "rounded-md hover:underline hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+
+function isCurrentNav(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 const homeMenuLinkClass =
   "rounded-md text-white hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
@@ -61,6 +67,7 @@ function MobileNavMenuPortal({
   menuId: string;
   onNavigate: () => void;
 }) {
+  const pathname = usePathname();
   if (!open) return null;
 
   return createPortal(
@@ -78,7 +85,8 @@ function MobileNavMenuPortal({
           <Link
             key={href}
             href={href}
-            className={`renocheck-menu-link-in min-h-12 py-3 text-lg font-medium ${homeMenuLinkClass}`}
+            aria-current={isCurrentNav(pathname, href) ? "page" : undefined}
+            className={`renocheck-menu-link-in min-h-12 whitespace-nowrap py-3 text-lg font-medium ${homeMenuLinkClass}`}
             style={{ animationDelay: `${60 + index * 40}ms` }}
             onClick={onNavigate}
           >
@@ -92,10 +100,16 @@ function MobileNavMenuPortal({
 }
 
 function DesktopNavLinks() {
+  const pathname = usePathname();
   return (
-    <div className="hidden items-center gap-5 text-sm text-foreground/85 sm:flex">
+    <div className="hidden flex-nowrap items-center gap-5 text-sm text-foreground/85 sm:flex">
       {HOME_NAV.map(({ href, label }) => (
-        <Link key={href} href={href} className={navLinkClass}>
+        <Link
+          key={href}
+          href={href}
+          aria-current={isCurrentNav(pathname, href) ? "page" : undefined}
+          className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap ${navLinkClass}`}
+        >
           {label}
         </Link>
       ))}
