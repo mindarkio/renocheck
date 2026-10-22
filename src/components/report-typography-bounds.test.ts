@@ -14,6 +14,7 @@ const SHELL_AND_REPORT_FILES = [
   "DailyCauseListSearchForm.tsx",
   "SiteHeader.tsx",
   "SiteFooter.tsx",
+  "FeedbackSlideIn.tsx",
 ];
 
 function subTwelvePxLiterals(content: string): string[] {

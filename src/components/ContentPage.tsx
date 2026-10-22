@@ -8,7 +8,7 @@ import {
 } from "@/lib/ui-surfaces";
 
 const pageShellClass =
-  "flex min-h-0 flex-1 flex-col overflow-x-hidden px-4 pb-12 pt-5 sm:px-6 sm:pb-16 sm:pt-7";
+  "flex min-h-0 flex-1 flex-col px-4 pb-12 pt-5 sm:px-6 sm:pb-16 sm:pt-7";
 
 const pageInnerClass = "mx-auto w-full max-w-[584px]";
 

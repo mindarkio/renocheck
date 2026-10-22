@@ -170,7 +170,7 @@ function heroChipToneClass(tone: "primary" | "warning" | "muted"): string {
   if (tone === "primary") {
     return "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground";
   }
-  return "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground/85";
+  return "border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground";
 }
 
 type IncidentType = NonNullable<
@@ -699,7 +699,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
               </p>
             ) : null}
             {officialRegister.registryDataAsOf ? (
-              <p className={`mt-2 ${reportHeroMetaClass} opacity-80`}>
+              <p className={`mt-2 ${reportHeroMetaClass}`}>
                 名冊摘錄截至{" "}
                 <time dateTime={officialRegister.registryDataAsOf}>
                   {formatReportGeneratedAtHkt(
@@ -927,7 +927,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                 ) : null}
                 {body ? (
                   <p
-                    className={`mt-2 flex-1 ${reportMetaClass} line-clamp-3 sm:line-clamp-4`}
+                    className={`mt-2 max-w-[40em] flex-1 ${reportMetaClass} line-clamp-3 sm:line-clamp-4`}
                     title={body}
                   >
                     {body}
@@ -936,7 +936,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
                   <div className="flex-1" aria-hidden />
                 )}
                 {h.incidentType ? (
-                  <p className={`mt-auto pt-2 text-xs font-medium text-primary/75 lg:text-sm`}>
+                  <p className={`mt-auto pt-2 text-xs font-medium text-primary lg:text-sm`}>
                     {incidentHashtag(h.incidentType)}
                   </p>
                 ) : null}
@@ -1014,9 +1014,9 @@ export function ReportCard({ report }: { report: RiskReport }) {
         ))}
       </ul>
       <div className="mt-5 rounded-lg border border-border/60 bg-muted/25 px-4 py-4">
-        <h4 className="text-sm font-semibold text-foreground">
+        <h3 className="text-sm font-semibold text-foreground">
           {DAILY_CAUSE_LIST_SELF_SERVICE_HEADING_ZH}
-        </h4>
+        </h3>
         <ul className={`mt-2 list-disc space-y-1.5 pl-5 ${reportMetaClass}`}>
           {DAILY_CAUSE_LIST_SELF_SERVICE_BODY_ZH.map((line) => (
             <li key={line}>{line}</li>
@@ -1054,7 +1054,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
       </ul>
     </section>
 
-    <div className="px-1 py-2 sm:px-0" aria-label="報告免責">
+    <div role="note" className="px-1 py-2 sm:px-0" aria-label="報告免責">
       <p className={`flex items-start gap-1.5 ${reportMetaClass}`}>
         <Info className="mt-0.5 size-3.5 shrink-0 text-primary/60" aria-hidden />
         <span>

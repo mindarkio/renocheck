@@ -89,8 +89,9 @@ describe("LegalEventsTable", () => {
   it("類別 CJK 標點斷行 span", () => {
     const { container } = render(<LegalEventsTable events={events} />);
     const card = screen.getAllByTestId("legal-event-card")[0];
-    const categoryParts = card.querySelectorAll("span.whitespace-nowrap");
-    expect(categoryParts.length).toBeGreaterThanOrEqual(2);
+    const categoryDd = [...card.querySelectorAll("dt")]
+      .find((dt) => dt.textContent === "類別")?.nextElementSibling;
+    expect(categoryDd?.querySelectorAll("span.whitespace-nowrap")).toHaveLength(2);
     expect(container.textContent).toContain("勞資糾紛");
     expect(container.textContent).toContain("（裝修工程相關）");
   });

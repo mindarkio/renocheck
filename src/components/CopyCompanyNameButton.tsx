@@ -8,7 +8,7 @@ import {
 } from "@/lib/report-trust-copy-zh";
 
 const defaultButtonClass =
-  "inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/5 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 export function CopyCompanyNameButton({
   text,
@@ -31,6 +31,7 @@ export function CopyCompanyNameButton({
     <button
       type="button"
       aria-label={COPY_COMPANY_NAME_BUTTON_ZH}
+      title={COPY_COMPANY_NAME_BUTTON_ZH}
       className={className ?? defaultButtonClass}
       onClick={async () => {
         try {
@@ -47,11 +48,11 @@ export function CopyCompanyNameButton({
       }}
     >
       {done ? (
-        <Check className="size-3.5 shrink-0" aria-hidden />
+        <Check className="size-4 shrink-0" aria-hidden />
       ) : (
-        <Copy className="size-3.5 shrink-0" aria-hidden />
+        <Copy className="size-4 shrink-0" aria-hidden />
       )}
-      {label}
+      <span className="sr-only">{label}</span>
     </button>
   );
 }

@@ -48,4 +48,4 @@ export const reportExternalLinkTouchClass =
 export const reportHighlightGridClass =
   "grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-6";
 
-export const reportHighlightLastOddClass = "lg:col-span-2 lg:max-w-[40em]";
+export const reportHighlightLastOddClass = "lg:col-span-2";

@@ -126,16 +126,25 @@ export function SiteHeader() {
           >
           <Link
             href="/"
-            className="shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            data-testid="site-header-logo"
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+              menuOpen ? "invisible" : ""
+            }`}
           >
             <Image
-              src="/logo/lockup-horizontal.svg"
-              alt="Renocheck 裝修點評"
-              width={280}
-              height={48}
+              src="/logo/mark-color-transparent.svg"
+              alt=""
+              width={114}
+              height={123}
               className="h-6 w-auto sm:h-7 lg:h-8"
               priority
             />
+            <span
+              data-testid="site-header-wordmark"
+              className="text-sm font-semibold leading-none text-primary lg:text-base"
+            >
+              裝修點評
+            </span>
           </Link>
           <div className="flex items-center gap-2">
             <DesktopNavLinks />

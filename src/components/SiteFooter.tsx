@@ -54,7 +54,7 @@ export function SiteFooter() {
         </nav>
 
         <p
-          className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-0 text-xs text-primary-foreground/65"
+          className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-0 text-xs text-primary-foreground/80"
         >
           <a
             href={`mailto:${SITE_CONTACT_EMAIL}`}
@@ -62,7 +62,7 @@ export function SiteFooter() {
           >
             {SITE_CONTACT_EMAIL}
           </a>
-          <span className="text-primary-foreground/35" aria-hidden="true">
+          <span className="text-primary-foreground/80" aria-hidden="true">
             ·
           </span>
           <span className="tabular-nums">v{APP_VERSION}</span>

@@ -128,7 +128,7 @@ function CaseRefBlock({ ev }: { ev: OfficialLegalEvent }) {
       {refs.map((ref) => (
         <span
           key={ref}
-          className="block whitespace-nowrap font-medium tabular-nums"
+          className="block whitespace-nowrap font-medium tabular-nums lg:inline lg:me-2"
         >
           {ref}
         </span>
@@ -205,52 +205,86 @@ export function LegalEventsTable({
             <li
               key={judgmentDedupeKey(ev)}
               data-testid="legal-event-card"
-              className="rounded-lg border border-border/60 bg-card px-4 py-4 lg:px-5 lg:py-5"
+              className="rounded-lg border border-border/60 bg-card px-4 py-4 lg:px-4 lg:py-2"
             >
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm leading-snug">
-                <dt className={reportMetaTextClass}>{FIELD_LABELS[0]}</dt>
-                <dd>
-                  <CaseRefBlock ev={ev} />
-                </dd>
-                <dt className={reportMetaTextClass}>{FIELD_LABELS[1]}</dt>
-                <dd className="tabular-nums">{ev.neutralCitation ?? "—"}</dd>
-                <dt className={reportMetaTextClass}>{FIELD_LABELS[2]}</dt>
-                <dd>
-                  {/[\u3400-\u9fff]/u.test(ev.court)
-                    ? withCjkSoftBreaks(ev.court)
-                    : ev.court}
-                </dd>
-                <dt className={reportMetaTextClass}>{FIELD_LABELS[3]}</dt>
-                <dd>
-                  <time className="tabular-nums" dateTime={ev.eventDate}>
-                    {ev.eventDate}
-                  </time>
-                </dd>
-                <dt className={reportMetaTextClass}>{FIELD_LABELS[4]}</dt>
-                <dd>{partyRoleLabelZh(ev.partyRole)}</dd>
-                <dt className={reportMetaTextClass}>{FIELD_LABELS[5]}</dt>
-                <dd>
-                  {withCjkSoftBreaks(
-                    judgmentCategoryLabelZh(ev.judgmentCategory),
-                  )}
-                </dd>
-                <dt className={reportMetaTextClass}>{FIELD_LABELS[6]}</dt>
-                <dd>
-                  {ev.outcomeHint
-                    ? outcomeHintLabelZh(ev.outcomeHint)
-                    : "—"}
-                </dd>
-                <dt className={reportMetaTextClass}>{FIELD_LABELS[7]}</dt>
-                <dd>
-                  <ReportExternalLink
-                    href={ev.sourceUrl}
-                    className="font-medium text-primary underline-offset-2 hover:underline"
-                  >
-                    {LEGAL_EVENT_SOURCE_LINK_LABEL_ZH}
-                  </ReportExternalLink>
-                </dd>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm leading-snug lg:grid-cols-[minmax(0,1fr)_auto] lg:items-baseline lg:gap-x-4 lg:gap-y-1">
+                <div className="contents lg:col-start-1 lg:row-start-1 lg:flex lg:min-w-0 lg:flex-wrap lg:items-baseline lg:gap-x-3">
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[0]}
+                  </dt>
+                  <dd>
+                    <CaseRefBlock ev={ev} />
+                  </dd>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[1]}
+                  </dt>
+                  <dd className="tabular-nums">{ev.neutralCitation ?? "—"}</dd>
+                </div>
+                <div className="contents lg:col-span-2 lg:row-start-2 lg:flex lg:flex-wrap lg:items-baseline">
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[2]}
+                  </dt>
+                  <dd>
+                    {/[\u3400-\u9fff]/u.test(ev.court)
+                      ? withCjkSoftBreaks(ev.court)
+                      : ev.court}
+                  </dd>
+                  <span className="hidden lg:inline" aria-hidden>
+                    {" · "}
+                  </span>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[3]}
+                  </dt>
+                  <dd>
+                    <time className="tabular-nums" dateTime={ev.eventDate}>
+                      {ev.eventDate}
+                    </time>
+                  </dd>
+                  <span className="hidden lg:inline" aria-hidden>
+                    {" · "}
+                  </span>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[4]}
+                  </dt>
+                  <dd>{partyRoleLabelZh(ev.partyRole)}</dd>
+                  <span className="hidden lg:inline" aria-hidden>
+                    {" · "}
+                  </span>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[5]}
+                  </dt>
+                  <dd>
+                    {withCjkSoftBreaks(
+                      judgmentCategoryLabelZh(ev.judgmentCategory),
+                    )}
+                  </dd>
+                  <span className="hidden lg:inline" aria-hidden>
+                    {" · "}
+                  </span>
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[6]}
+                  </dt>
+                  <dd>
+                    {ev.outcomeHint
+                      ? outcomeHintLabelZh(ev.outcomeHint)
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="contents lg:col-start-2 lg:row-start-1 lg:shrink-0">
+                  <dt className={`${reportMetaTextClass} lg:sr-only`}>
+                    {FIELD_LABELS[7]}
+                  </dt>
+                  <dd>
+                    <ReportExternalLink
+                      href={ev.sourceUrl}
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      {LEGAL_EVENT_SOURCE_LINK_LABEL_ZH}
+                    </ReportExternalLink>
+                  </dd>
+                </div>
               </dl>
-              <div className="mt-3 border-t border-border/50 pt-3">
+              <div className="mt-3 border-t border-border/50 pt-3 lg:mt-1 lg:border-t-0 lg:pt-0">
                 <LegalEventDetails ev={ev} factsOnly={factsOnly} />
               </div>
             </li>

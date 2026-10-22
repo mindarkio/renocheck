@@ -203,7 +203,12 @@ describe("ReportCard report trust (PR-BC)", () => {
     assertClean(container.textContent ?? "");
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText(MWC_MISS_NOTE_HEADING_ZH)).toBeTruthy();
-    expect(screen.getByRole("note")).toBeTruthy();
+    expect(screen.getByRole("note", { name: "報告免責" })).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole("note")
+        .some((el) => el.getAttribute("aria-label") !== "報告免責"),
+    ).toBe(true);
     expect(container.textContent).toContain(CR_DATA_ATTRIBUTION_ZH);
   });
 
@@ -361,7 +366,12 @@ describe("ReportCard report trust (PR-BC)", () => {
     );
     assertClean(container.textContent ?? "");
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByRole("note")).toBeTruthy();
+    expect(screen.getByRole("note", { name: "報告免責" })).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole("note")
+        .some((el) => el.getAttribute("aria-label") !== "報告免責"),
+    ).toBe(true);
     expect(screen.getByText(NON_LIMITED_NOTICE_HEADING_ZH)).toBeTruthy();
   });
 

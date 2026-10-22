@@ -30,7 +30,7 @@ export function RiskBandMeter({
     ? "bg-primary-foreground/22"
     : "bg-muted";
   const labelInactive = onPrimary
-    ? "text-primary-foreground/50"
+    ? "text-primary-foreground/80"
     : "text-muted-foreground";
 
   const pointerClass = riskBandMeterPointerClass(activeLevel, onPrimary);

@@ -55,14 +55,14 @@ const METER_POINTER_ON_LIGHT: Record<RiskBandZh, string> = {
 
 const METER_LABEL_ACTIVE_ON_PRIMARY: Record<RiskBandZh, string> = {
   風險偏高: "font-semibold text-amber-200",
-  風險中等: "font-semibold text-primary-foreground",
+  風險中等: "font-semibold text-accent",
   中性: "font-semibold text-primary-foreground",
   未見負面摘要: "font-semibold text-sky-200",
 };
 
 const METER_LABEL_ACTIVE_ON_LIGHT: Record<RiskBandZh, string> = {
   風險偏高: "font-semibold text-warning",
-  風險中等: "font-semibold text-primary-foreground",
+  風險中等: "font-semibold text-accent",
   中性: "font-semibold text-primary",
   未見負面摘要: "font-semibold text-primary/80",
 };
