@@ -4,7 +4,7 @@ import { getSiteUrl } from "./site-url";
 
 const defaultTitle =
   "Renocheck 裝修點評｜香港裝修公司風險參考搜尋（公開資料摘要）";
-const defaultDescription = `${BRAND_TAGLINE} 輸入公司名稱、香港電話或商業登記號碼查閱 MWC 名冊與公開摘要。並非信貸報告、配對或法律意見。`;
+const defaultDescription = `${BRAND_TAGLINE} 輸入公司名稱、香港電話或商業登記號碼查閱 MWC 名冊與公開摘要。並非信貸報告、配對或法律意見。只服務香港。`;
 
 export const OG_IMAGE = {
   url: "/og.png",

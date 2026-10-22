@@ -1,5 +1,5 @@
 /**
- * Local check: admin routes must not overflow the viewport horizontally.
+ * Local check: public pages and admin routes must not overflow horizontally.
  * Usage: pnpm exec tsx scripts/admin-mobile-overflow-check.ts
  * Local only (never CI/prod). Supabase env is blanked so `next dev` can't pick up a DB from .env*;
  * the dashboard renders its error state, which is what this layout check needs. The PIN and
@@ -7,12 +7,16 @@
  */
 import { randomInt, randomUUID } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
-import path from "node:path";
+import { mkdirSync } from "node:fs";
+import path, { join as pathJoin } from "node:path";
 import { chromium } from "playwright";
 
 const PORT = 3456;
 const BASE = `http://127.0.0.1:${PORT}`;
-const WIDTHS = [320, 360, 390] as const;
+const WIDTHS = [320, 360, 375, 390, 412, 430, 1280] as const;
+/** Synthetic report id (hex, not a credential) so the empty-state page can render. */
+const REPORT_PATH = "/report/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const PUBLIC_PATHS = ["/", "/about", "/faq", "/admin/login", REPORT_PATH] as const;
 
 function randomTestPin(len = 8): string {
   let s = String(randomInt(1, 10));
@@ -40,7 +44,7 @@ async function waitForServer(proc: ChildProcess): Promise<void> {
   });
 }
 
-type MeasureRow = { scrollWidth: number; innerWidth: number; ok: boolean };
+type MeasureRow = { scrollWidth: number; clientWidth: number; ok: boolean };
 
 async function measureAtWidths(
   path: string,
@@ -51,12 +55,23 @@ async function measureAtWidths(
   for (const width of WIDTHS) {
     const page = await browser.newPage({ viewport: { width, height: 844 } });
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
+    if (path.startsWith("/report/")) {
+      await page.locator("[role=alert]").waitFor({ timeout: 15_000 }).catch(() => undefined);
+    }
     if (afterGoto) await afterGoto(page);
-    const { scrollWidth, innerWidth } = await page.evaluate(() => ({
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
-      innerWidth: window.innerWidth,
+      clientWidth: document.documentElement.clientWidth,
     }));
-    out[width] = { scrollWidth, innerWidth, ok: scrollWidth <= innerWidth };
+    out[width] = { scrollWidth, clientWidth, ok: scrollWidth <= clientWidth };
+    const shotDir = process.env.OVERFLOW_SCREENSHOT_DIR;
+    if (shotDir && path === "/" && width === 390) {
+      mkdirSync(shotDir, { recursive: true });
+      await page.screenshot({
+        path: pathJoin(shotDir, "landing-390.png"),
+        fullPage: true,
+      });
+    }
     await page.close();
   }
   await browser.close();
@@ -72,11 +87,11 @@ async function measureAdminDashboard(pin: string): Promise<Record<number, Measur
     await page.fill("#admin-pin", pin);
     await page.getByRole("button", { name: "登入" }).click();
     await page.waitForURL(/\/admin(?:\?|$)/, { timeout: 15_000 });
-    const { scrollWidth, innerWidth } = await page.evaluate(() => ({
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
-      innerWidth: window.innerWidth,
+      clientWidth: document.documentElement.clientWidth,
     }));
-    out[width] = { scrollWidth, innerWidth, ok: scrollWidth <= innerWidth };
+    out[width] = { scrollWidth, clientWidth, ok: scrollWidth <= clientWidth };
     await page.close();
   }
   await browser.close();
@@ -99,6 +114,7 @@ async function main(): Promise<void> {
       SUPABASE_URL: "",
       SUPABASE_SERVICE_ROLE_KEY: "",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+      OVERFLOW_CHECK_STATS: "1",
       ADMIN_DASHBOARD_PIN: pin,
       ADMIN_SESSION_SECRET: secret,
     },
@@ -123,11 +139,16 @@ async function main(): Promise<void> {
     await waitForServer(proc);
     await new Promise((r) => setTimeout(r, 2500));
 
-    const login = await measureAtWidths("/admin/login");
-    const admin = await measureAdminDashboard(pin);
+    const pages: Record<string, Record<number, MeasureRow>> = {};
+    for (const pagePath of PUBLIC_PATHS) {
+      pages[pagePath] = await measureAtWidths(pagePath);
+    }
+    pages["/admin"] = await measureAdminDashboard(pin);
 
-    console.log(JSON.stringify({ login, admin }, null, 2));
-    const bad = [...Object.values(login), ...Object.values(admin)].filter((r) => !r.ok);
+    console.log(JSON.stringify(pages, null, 2));
+    const bad = Object.values(pages)
+      .flatMap((rows) => Object.values(rows))
+      .filter((r) => !r.ok);
     if (bad.length > 0) process.exitCode = 1;
   } finally {
     stop();
