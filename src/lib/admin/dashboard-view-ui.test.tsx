@@ -43,12 +43,32 @@ describe("AdminDashboardView UI (YUI)", () => {
     expect(screen.getByRole("link", { name: "7 日" }).getAttribute("aria-current")).toBeNull();
   });
 
-  it("hides daily chart when daily total is zero", () => {
+  it("shows empty states for table and daily (heading kept) with genuine zero KPIs", () => {
     const { container } = render(
       <AdminDashboardView data={emptyData()} days={7} view="all" />,
     );
     expect(container.querySelector("svg")).toBeNull();
-    expect(container.textContent).toContain("呢段時間未有搜尋紀錄");
+    expect(screen.getByRole("heading", { name: "每日搜尋量" })).toBeTruthy();
+    expect(container.textContent?.match(/呢段時間未有搜尋紀錄/g)?.length).toBe(2);
+    expect(container.textContent).toContain("總搜尋次數");
+    expect(container.textContent).toMatch(/總搜尋次數[\s\S]*?0/);
+    expect(container.textContent).toMatch(/快取命中0%/);
+  });
+
+  it("shows em dash KPIs when analytics failed", () => {
+    const { container } = render(
+      <AdminDashboardView
+        data={emptyData()}
+        days={30}
+        view="all"
+        errorMessage="讀取數據出錯，請遲啲再試"
+      />,
+    );
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/0%/);
+    expect(text).not.toContain("0 次");
+    expect(text).toContain("按類型：公司名 —・電話 —・BR —");
+    expect(text.match(/—/g)?.length).toBeGreaterThanOrEqual(4);
   });
 
   it("hides daily section entirely on error", () => {

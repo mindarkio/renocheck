@@ -30,6 +30,7 @@ type Props = {
 };
 
 export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
+  const errored = Boolean(errorMessage);
   const rows = data.views[view] ?? data.terms;
   const dailyTotal = data.daily.reduce((sum, d) => sum + d.searches, 0);
   const maxDaily = Math.max(1, ...data.daily.map((d) => d.searches));
@@ -81,50 +82,65 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4"
         aria-label="KPI"
       >
-        <KpiCard title="總搜尋次數" pct={null} count={data.kpi.totalSearches} />
+        <KpiCard
+          title="總搜尋次數"
+          pct={null}
+          count={data.kpi.totalSearches}
+          unavailable={errored}
+        />
         <KpiCard
           title="快取命中"
           pct={data.kpi.cacheHitPct}
           count={data.kpi.cacheHitCount}
+          unavailable={errored}
         />
         <KpiCard
           title="搵唔到"
           pct={data.kpi.noMatchPct}
           count={data.kpi.noMatchCount}
+          unavailable={errored}
         />
         <KpiCard
           title="撞名多間"
           pct={data.kpi.ambiguousPct}
           count={data.kpi.ambiguousCount}
+          unavailable={errored}
         />
       </section>
 
       <p className="min-w-0 break-words text-xs text-muted-foreground">
-        按類型：公司名 {data.kpi.byInputType.company_name}・電話{" "}
-        {data.kpi.byInputType.phone}・BR {data.kpi.byInputType.br}
-        {data.kpi.byInputType.unknown > 0
+        按類型：公司名 {errored ? "—" : data.kpi.byInputType.company_name}・電話{" "}
+        {errored ? "—" : data.kpi.byInputType.phone}・BR{" "}
+        {errored ? "—" : data.kpi.byInputType.br}
+        {!errored && data.kpi.byInputType.unknown > 0
           ? `・未知 ${data.kpi.byInputType.unknown}`
           : ""}
       </p>
 
-      <nav
-        className="flex w-full min-w-0 max-w-full flex-nowrap gap-2 overflow-x-auto"
-        aria-label="視圖"
-      >
-        {VIEW_TABS.map((tab) => (
-          <Link
-            key={tab.id}
-            prefetch={false}
-            href={`/admin?days=${days}&view=${tab.id}`}
-            className={`shrink-0 whitespace-nowrap ${
-              tab.id === view ? SELECTED_LINK : UNSELECTED_LINK
-            }`}
-            aria-current={tab.id === view ? "page" : undefined}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
+      <div className="relative min-w-0 w-full max-w-full">
+        <nav
+          className="flex w-full min-w-0 max-w-full flex-nowrap gap-2 overflow-x-auto pr-4"
+          aria-label="視圖"
+        >
+          {VIEW_TABS.map((tab) => (
+            <Link
+              key={tab.id}
+              prefetch={false}
+              href={`/admin?days=${days}&view=${tab.id}`}
+              className={`shrink-0 whitespace-nowrap ${
+                tab.id === view ? SELECTED_LINK : UNSELECTED_LINK
+              }`}
+              aria-current={tab.id === view ? "page" : undefined}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent"
+          aria-hidden
+        />
+      </div>
 
       {errorMessage ? null : rows.length === 0 ? (
         <EmptyStateCard />
@@ -151,7 +167,10 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
       )}
 
       {errorMessage ? null : dailyTotal === 0 ? (
-        <EmptyStateCard />
+        <section className="min-w-0" aria-label="每日搜尋量">
+          <h2 className="mb-3 text-sm font-semibold text-primary">每日搜尋量</h2>
+          <EmptyStateCard />
+        </section>
       ) : (
         <section className="min-w-0" aria-label="每日搜尋量">
           <h2 className="mb-3 text-sm font-semibold text-primary">每日搜尋量</h2>
@@ -178,19 +197,17 @@ export function AdminDashboardView({ data, days, view, errorMessage }: Props) {
         </section>
       )}
 
-      <aside
-        className="min-w-0 break-words rounded-md border border-border bg-muted/50 p-4 text-sm text-muted-foreground"
-      >
+      <div className="min-w-0 space-y-2 text-[13px] text-muted-foreground">
         <p className="break-words">
           每個唔同嘅搜尋詞只會出現一次（大細楷當同一個詞）。搜尋失敗嘅暫時未有紀錄，亦未計到每次有幾多個候選公司。電話同
           BR 只計次數，唔會顯示內容。
         </p>
-        {data.kpi.missingCacheRow > 0 ? (
-          <p className="mt-2">
+        {!errored && data.kpi.missingCacheRow > 0 ? (
+          <p className="break-words">
             有 {data.kpi.missingCacheRow} 次搜尋搵唔返報告紀錄
           </p>
         ) : null}
-      </aside>
+      </div>
     </div>
   );
 }
@@ -209,20 +226,20 @@ function KpiCard({
   title,
   pct,
   count,
+  unavailable = false,
 }: {
   title: string;
   pct: number | null;
   count: number | null;
+  unavailable?: boolean;
 }) {
+  const main =
+    unavailable ? "—" : pct != null ? `${pct}%` : count;
   return (
     <div className="rounded-md border border-border bg-card p-3">
       <p className="text-xs text-muted-foreground">{title}</p>
-      {pct != null ? (
-        <p className="text-lg font-semibold text-foreground">{pct}%</p>
-      ) : (
-        <p className="text-lg font-semibold text-foreground">{count}</p>
-      )}
-      {pct != null && count != null ? (
+      <p className="text-lg font-semibold text-foreground">{main}</p>
+      {!unavailable && pct != null && count != null ? (
         <p className="text-xs text-muted-foreground">{count} 次</p>
       ) : null}
     </div>
