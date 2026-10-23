@@ -137,4 +137,36 @@ describe("2026-10-23 SEO guides", () => {
     expect(fromNewest.map((guide) => guide.slug)).not.toContain(related[0]?.slug);
     expect(fromNewest.some((guide) => guide.dateModified === newestDate)).toBe(true);
   });
+
+  it("relatedGuides orders by dateModified, not array position, with later-entry tie-break", () => {
+    const base = GUIDES[0] as Guide;
+    const g = (slug: string, dateModified: string, datePublished = "2026-01-01"): Guide => ({
+      ...base,
+      slug,
+      dateModified,
+      datePublished,
+    });
+    const list = [
+      g("a", "2026-10-20"),
+      g("b", "2026-10-23"),
+      g("c", "2026-10-01", "2026-12-31"),
+      g("d", "2026-10-23"),
+      g("e", "2026-10-20"),
+    ];
+    const slugs = (s: string, limit = 3, items = list) =>
+      relatedGuides(s, limit, items).map((item) => item.slug);
+    expect(slugs("x")).toEqual(["d", "b", "e"]);
+    expect(slugs("d")).toEqual(["b", "e", "a"]);
+    expect(slugs("b", 10)).toEqual(["d", "e", "a", "c"]);
+    expect(slugs("a", 3, list.slice(0, 2))).toEqual(["b"]);
+    expect(slugs("x")).toEqual(slugs("x"));
+  });
+
+  it("every guide date is ISO YYYY-MM-DD and modified on or after publish", () => {
+    for (const guide of GUIDES) {
+      expect(guide.datePublished, guide.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(guide.dateModified, guide.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(guide.dateModified >= guide.datePublished, guide.slug).toBe(true);
+    }
+  });
 });

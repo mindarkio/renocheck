@@ -611,12 +611,19 @@ export function getGuide(slug: string): Guide | undefined {
 }
 
 /** Other guides, newest `dateModified` first. Same-day ties use later entries first. */
-export function relatedGuides(slug: string, limit = 3): Guide[] {
-  return GUIDES.map((guide, index) => ({ guide, index }))
+export function relatedGuides(
+  slug: string,
+  limit = 3,
+  guides: readonly Guide[] = GUIDES,
+): Guide[] {
+  return guides
+    .map((guide, index) => ({ guide, index }))
     .filter(({ guide }) => guide.slug !== slug)
     .sort((a, b) => {
-      const byDate = b.guide.dateModified.localeCompare(a.guide.dateModified);
-      if (byDate !== 0) return byDate;
+      // ISO YYYY-MM-DD strings: plain comparison is chronological and locale-free.
+      if (a.guide.dateModified !== b.guide.dateModified) {
+        return a.guide.dateModified < b.guide.dateModified ? 1 : -1;
+      }
       return b.index - a.index;
     })
     .slice(0, limit)
