@@ -151,6 +151,22 @@ export function splitMixedLabelParts(label: string): { zh?: string; en?: string 
   return {};
 }
 
+/**
+ * Comp_name begins_with is raw text, so a register entry may keep its dots
+ * (`H.K.`). Keep the pre-collapse prefix as one later attempt for Latin-only
+ * labels, so dotted names still get the attempt they had before collapsing.
+ */
+function legacyDottedPrefix(label: string): string | null {
+  const half = toHalfWidthAlnumAndParens(label.trim()).replace(/\s+/g, " ").trim();
+  if (!half || HAN_RE.test(half)) return null;
+  if (collapseDottedAcronyms(half).replace(/\s+/g, " ").trim() === half) return null;
+  const truncated = truncatePrefixSource(half);
+  for (const c of [stripCompanySuffix(truncated), truncated, half]) {
+    if (isValidPrefixSegment(c)) return c;
+  }
+  return null;
+}
+
 export function allNameSearchPrefixAttempts(label: string): string[] {
   const parts = splitMixedLabelParts(label);
   const ordered: string[] = [];
@@ -160,6 +176,8 @@ export function allNameSearchPrefixAttempts(label: string): string[] {
   if (parts.en) {
     ordered.push(...prefixVariantsFromSegment(parts.en));
   }
+  const legacy = legacyDottedPrefix(label);
+  if (legacy) ordered.push(legacy);
   const unique: string[] = [];
   for (const p of ordered) {
     if (!unique.includes(p)) unique.push(p);

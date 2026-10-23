@@ -48,6 +48,24 @@ describe("buildNameSearchPrefixes (B1/M4)", () => {
     expect(buildNameSearchPrefixes("O. M. Y. L. LIMITED")).toEqual(["OMYL"]);
   });
 
+  it("keeps the raw dotted prefix as a later attempt (Comp_name is raw text)", () => {
+    expect(allNameSearchPrefixAttempts("SYNTH H.K. LIMITED")).toEqual([
+      "SYNTH HK",
+      "SYNTH HK LIMITED",
+      "SYNTH H",
+    ]);
+    expect(allNameSearchPrefixAttempts("O.M.Y.L LIMITED")).toEqual([
+      "OMYL",
+      "OMYL LIMITED",
+      "O.M.Y.L LIMITED",
+    ]);
+    expect(allNameSearchPrefixAttempts("SYNTH ALPHA LIMITED")).toEqual([
+      "SYNTH ALPHA",
+      "SYNTH ALPHA LIMITED",
+    ]);
+    expect(buildNameSearchPrefixes("SYNTH H.K. LIMITED")).toEqual(["SYNTH HK"]);
+  });
+
   it("fullwidth Latin normalizes to ZZQ TESTING prefix (L-d)", () => {
     expect(
       buildNameSearchPrefixes("ＺＺＱ　ＴＥＳＴＩＮＧ　ＬＩＭＩＴＥＤ"),

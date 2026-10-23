@@ -37,4 +37,14 @@ describe("mwcStoredNames", () => {
       company_name_en: "OMYL ENGINEERING LIMITED",
     });
   });
+
+  it("falls back to the English contractor name when there is no English company name", () => {
+    expect(
+      mwcStoredNames({
+        CHINESE_NAME: "合成甲",
+        ENGLISH_NAME: "SYNTH PERSON A",
+        REGISTRATION_NUMBER: "MWC-90003",
+      }),
+    ).toEqual({ company_name: "合成甲", company_name_en: "SYNTH PERSON A" });
+  });
 });

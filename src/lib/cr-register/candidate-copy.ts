@@ -1,5 +1,6 @@
 /**
- * COPY PENDING AARON'S APPROVAL
+ * Approved copy (2026-10-23). Constant names keep `PENDING_APPROVAL` only to
+ * avoid churn; rename in a follow-up.
  *
  * Formal written Chinese (書面語) Aaron specified for the Companies Registry
  * grade-D candidate list (1–2 prefix rows that are not a B/C match).

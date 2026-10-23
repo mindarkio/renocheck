@@ -449,6 +449,10 @@ describe("search analytics aggregation", () => {
     expect(isSyntheticProbeTerm("ZZQ_audit probe")).toBe(true);
     expect(isSyntheticProbeTerm("zzq testing")).toBe(true);
     expect(isSyntheticProbeTerm("ZZQTESTING")).toBe(false);
+    expect(isSyntheticProbeTerm("ＺＺＱ＿audit")).toBe(true);
+    expect(isSyntheticProbeTerm("ＺＺＱ　TESTING")).toBe(true);
+    expect(isSyntheticProbeTerm("SYNTH ZZQ TESTING")).toBe(false);
+    expect(isSyntheticProbeTerm("ZZQ工程有限公司")).toBe(false);
     expect(result.kpi.totalSearches).toBe(2);
     expect(result.kpi.cacheHitCount).toBe(0);
     expect(result.kpi.noMatchCount).toBe(1);
@@ -458,5 +462,26 @@ describe("search analytics aggregation", () => {
     expect(result.views.cr_matched.map((row) => row.term)).toEqual(["丙丁工程"]);
     expect(result.terms.map((row) => row.term)).toEqual(["丙丁工程", "甲乙工程"]);
     expect(result.daily.reduce((sum, day) => sum + day.searches, 0)).toBe(2);
+  });
+
+  it("crMatchedPct uses company searches with a cache row as denominator", () => {
+    const now = new Date("2026-06-15T12:00:00.000Z");
+    const events: SearchEventRow[] = [
+      { fingerprint: "fp-cr", cache_hit: false, created_at: "2026-06-15T08:00:00.000Z" },
+      { fingerprint: "fp-nocache", cache_hit: false, created_at: "2026-06-15T09:00:00.000Z" },
+    ];
+    const cache: SearchCacheAnalyticsRow[] = [
+      {
+        fingerprint: "fp-cr",
+        term: "丙丁工程",
+        match_type: "company_name",
+        outcome: "user_only",
+        matched_name: null,
+        cr_matched: "true",
+      },
+    ];
+    const result = aggregateSearchAnalytics(events, cache, now, 7);
+    expect(result.kpi.crMatchedCount).toBe(1);
+    expect(result.kpi.crMatchedPct).toBe(100);
   });
 });

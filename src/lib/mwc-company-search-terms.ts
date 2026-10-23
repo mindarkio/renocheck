@@ -8,6 +8,12 @@ const VARIANT_PAIRS: readonly (readonly [string, string])[] = [
 
 const TRAILING_FILLERS = ["判詞", "評價", "投訴", "好唔好", "裝修"] as const;
 
+/** A stripped remainder shorter than this is too generic for `%term%` (e.g. 2-char 合成). */
+const MIN_FILLER_REMAINDER = 4;
+
+/** Upper bound on ilike terms per search (each term is up to 2 sequential queries). */
+export const MAX_MWC_LOOKUP_TERMS = 16;
+
 function decodeHtmlEntities(label: string): string {
   return label
     .replace(/&amp;/gi, "&")
@@ -35,7 +41,7 @@ export function stripTrailingSearchFillers(value: string): string {
       const re = new RegExp(`\\s*${filler}$`, "u");
       if (!re.test(current)) continue;
       const next = current.replace(re, "").trim();
-      if ([...next].length < 2 || next === current) continue;
+      if ([...next].length < MIN_FILLER_REMAINDER || next === current) continue;
       current = next;
       changed = true;
     }
@@ -84,10 +90,15 @@ function spacedCompanyForms(value: string): string[] {
 
 /**
  * Escape PostgreSQL ILIKE wildcards. Default LIKE escape is backslash,
- * so `_` and `%` in a company name match literally.
+ * so `_` and `%` in a company name match literally. PostgREST also turns
+ * `*` into `%` in like/ilike values, so `*` becomes the one-char `_`.
  */
 export function escapeIlikePattern(term: string): string {
-  return term.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  return term
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_")
+    .replace(/\*/g, "_");
 }
 
 /** Variants for mwc_contractors company-name ilike (P2-C3: punctuation / BR mismatch). */
@@ -139,5 +150,5 @@ export function mwcCompanyNameLookupTerms(companyName: string): string[] {
     }
   }
 
-  return [...seen];
+  return [...seen].slice(0, MAX_MWC_LOOKUP_TERMS);
 }

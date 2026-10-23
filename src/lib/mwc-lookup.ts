@@ -25,10 +25,22 @@ export type MwcRow = {
 type MwcQueryError = { message: string; code?: string; details?: string };
 
 let mwcCompanyNameEnColumn: "unknown" | "present" | "absent" = "unknown";
+let mwcCompanyNameEnAbsentAt = 0;
+
+/** After the migration lands, warm instances re-probe instead of skipping until a cold start. */
+export const MWC_EN_COLUMN_REPROBE_MS = 10 * 60 * 1000;
 
 /** Test hook. Production learns the column from the first lookup error or success. */
 export function resetMwcCompanyNameEnColumnProbeForTests(): void {
   mwcCompanyNameEnColumn = "unknown";
+  mwcCompanyNameEnAbsentAt = 0;
+}
+
+function shouldQueryCompanyNameEn(term: string): boolean {
+  // company_name_en holds the register's English names only.
+  if (/\p{Script=Han}/u.test(term)) return false;
+  if (mwcCompanyNameEnColumn !== "absent") return true;
+  return Date.now() - mwcCompanyNameEnAbsentAt >= MWC_EN_COLUMN_REPROBE_MS;
 }
 
 export function isMissingMwcCompanyNameEnColumn(
@@ -114,7 +126,7 @@ export async function lookupMwcWithMeta(
       const nameRes = await ilikeContractors(supabase, "company_name", pattern);
       throwIfMwcLookupFailed(nameRes.error);
       let rows = nameRes.data ?? [];
-      if (rows.length < 2 && mwcCompanyNameEnColumn !== "absent") {
+      if (rows.length < 2 && shouldQueryCompanyNameEn(term)) {
         const enRes = await ilikeContractors(
           supabase,
           "company_name_en",
@@ -122,6 +134,7 @@ export async function lookupMwcWithMeta(
         );
         if (isMissingMwcCompanyNameEnColumn(enRes.error)) {
           mwcCompanyNameEnColumn = "absent";
+          mwcCompanyNameEnAbsentAt = Date.now();
         } else {
           throwIfMwcLookupFailed(enRes.error);
           mwcCompanyNameEnColumn = "present";

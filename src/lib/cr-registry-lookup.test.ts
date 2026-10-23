@@ -456,6 +456,32 @@ describe("lookupCompaniesRegistryForSearch", () => {
     expect(shouldShowMwcMissWithCrFoundNote(report)).toBe(false);
   });
 
+  it("keeps the smallest grade D row set across prefix attempts", async () => {
+    const row = (brn: string, zh: string) => ({
+      Brn: brn,
+      English_Company_Name: "NULL",
+      Chinese_Company_Name: zh,
+      Company_Type: "Co",
+      Date_of_Incorporation: "01-01-2020",
+      Address_of_Registered_Office: "HK",
+    });
+    searchCrLocalByNameBeginsWith
+      .mockResolvedValue({ kind: "no_result" })
+      .mockResolvedValueOnce({ kind: "rows", rows: [row("C9000011", "其他工程有限公司")] })
+      .mockResolvedValueOnce({
+        kind: "rows",
+        rows: [row("C9000012", "別家工程有限公司"), row("C9000013", "第三工程有限公司")],
+      });
+    const label = "完全唔同有限公司 SYNTH ALPHA LIMITED";
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    expect(official.matched).toBe(false);
+    expect(official.candidateNames?.map((c) => c.brNo)).toEqual(["C9000011"]);
+  });
+
   it("three non-matching prefix rows stay inconclusive, not candidates", async () => {
     searchCrLocalByNameBeginsWith.mockResolvedValue({
       kind: "rows",

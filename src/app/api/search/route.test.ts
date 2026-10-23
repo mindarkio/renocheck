@@ -68,6 +68,20 @@ describe("POST /api/search service pause", () => {
     vi.unstubAllEnvs();
   });
 
+  it("rejects full-width ZZQ probe names in production too", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const res = await POST(
+      new Request("http://localhost/api/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ companyName: "ＺＺＱ＿PROBE LIMITED" }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(mocks.runSearchPipeline).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
   it("keeps ZZQ names working outside production", async () => {
     vi.stubEnv("NODE_ENV", "test");
     const res = await POST(
