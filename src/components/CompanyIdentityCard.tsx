@@ -7,8 +7,8 @@ import type {
   RiskReport,
 } from "@/lib/report-schema";
 import {
-  CR_CANDIDATE_LIST_EXPLAINER_PENDING_APPROVAL_ZH,
-  CR_CANDIDATE_LIST_HEADING_PENDING_APPROVAL_ZH,
+  CR_CANDIDATE_LIST_EXPLAINER_ZH,
+  CR_CANDIDATE_LIST_HEADING_ZH,
 } from "@/lib/cr-register/candidate-copy";
 import {
   CR_DATA_ATTRIBUTION_ZH,
@@ -37,10 +37,10 @@ function CrCandidateList({ names }: { names: CompaniesRegistryCandidate[] }) {
   return (
     <div>
       <h3 className="text-sm font-medium text-foreground">
-        {CR_CANDIDATE_LIST_HEADING_PENDING_APPROVAL_ZH}
+        {CR_CANDIDATE_LIST_HEADING_ZH}
       </h3>
       <p className={`${reportBodyClass} mt-1`}>
-        {CR_CANDIDATE_LIST_EXPLAINER_PENDING_APPROVAL_ZH}
+        {CR_CANDIDATE_LIST_EXPLAINER_ZH}
       </p>
       <ul className={`${reportBodyClass} mt-2 list-disc space-y-1 pl-5`}>
         {names.map((candidate, index) => {

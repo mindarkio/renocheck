@@ -6,8 +6,8 @@ import { REPORT_VERSION } from "@/lib/constants";
 import { buildEvaluationStub } from "@/lib/evaluation-stub";
 import type { CompaniesRegistryOfficial, RiskReport } from "@/lib/report-schema";
 import {
-  CR_CANDIDATE_LIST_EXPLAINER_PENDING_APPROVAL_ZH,
-  CR_CANDIDATE_LIST_HEADING_PENDING_APPROVAL_ZH,
+  CR_CANDIDATE_LIST_EXPLAINER_ZH,
+  CR_CANDIDATE_LIST_HEADING_ZH,
 } from "@/lib/cr-register/candidate-copy";
 import {
   COPY_COMPANY_NAME_BUTTON_ZH,
@@ -103,6 +103,21 @@ function minimalReport(
 }
 
 describe("CompanyIdentityCard", () => {
+  it("locks written-Chinese status sentences", () => {
+    expect(CR_IDENTITY_NOT_FOUND_ZH).toBe(
+      "公司註冊處開放數據（存續本地公司）找不到與此名稱完全對應的紀錄。",
+    );
+    expect(CR_IDENTITY_INCONCLUSIVE_ZH).toBe(
+      "公司註冊處開放數據有結果，但未能確定與此名稱是同一間公司，所以不顯示公司資料。",
+    );
+    expect(CR_IDENTITY_AMBIGUOUS_ZH).toBe(
+      "公司註冊處開放數據有多於一間名稱相近的公司，本報告未能確定是哪一間，所以不顯示公司資料。可以用商業登記號碼再查一次。",
+    );
+    expect(crBrNoCompareNoteZh("C1111111")).toBe(
+      "公司註冊處開放數據顯示商業登記號碼為 C1111111，可與對方商業登記證核對。",
+    );
+  });
+
   it("matched：顯示欄位、複製掣、來源與 brNo 核對", () => {
     const { container } = render(
       <CompanyIdentityCard
@@ -192,16 +207,12 @@ describe("CompanyIdentityCard", () => {
       />,
     );
     assertClean(container.textContent ?? "");
-    expect(CR_CANDIDATE_LIST_HEADING_PENDING_APPROVAL_ZH).toBe("可能相關的公司");
-    expect(CR_CANDIDATE_LIST_EXPLAINER_PENDING_APPROVAL_ZH).toBe(
+    expect(CR_CANDIDATE_LIST_HEADING_ZH).toBe("可能相關的公司");
+    expect(CR_CANDIDATE_LIST_EXPLAINER_ZH).toBe(
       "以下公司僅名稱相近，或為同一公司，惟未經核實。請向對方核對完整公司名稱及商業登記號碼。",
     );
-    expect(container.textContent).toContain(
-      CR_CANDIDATE_LIST_HEADING_PENDING_APPROVAL_ZH,
-    );
-    expect(container.textContent).toContain(
-      CR_CANDIDATE_LIST_EXPLAINER_PENDING_APPROVAL_ZH,
-    );
+    expect(container.textContent).toContain(CR_CANDIDATE_LIST_HEADING_ZH);
+    expect(container.textContent).toContain(CR_CANDIDATE_LIST_EXPLAINER_ZH);
     expect(container.textContent).toContain("其他工程有限公司");
     expect(container.textContent).toContain("OTHER WORKS LIMITED");
     expect(container.textContent).toContain("C9000001");
