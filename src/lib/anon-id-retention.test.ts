@@ -30,8 +30,21 @@ describe("anonymous id retention", () => {
     expect(fn.match(/set anon_id = null/g)).toHaveLength(2);
     expect(fn.match(/interval '90 days'/g)).toHaveLength(2);
     expect(fn.toLowerCase()).not.toContain("delete from");
+    expect(fn.match(/and created_at < now\(\) - interval '90 days'/g)).toHaveLength(2);
+    expect(fn.match(/where anon_id is not null/g)).toHaveLength(2);
+    expect(fn).toContain("set search_path = ''");
+    expect(fn.toLowerCase()).not.toContain("security definer");
+    expect(fn).toContain(
+      "revoke all on function public.purge_returning_user_anon_ids() from public, anon, authenticated;",
+    );
+    expect(fn).toContain(
+      "grant execute on function public.purge_returning_user_anon_ids() to service_role;",
+    );
     expect(migration).toContain("anon_id uuid,");
     expect(migration).not.toContain("anon_id uuid not null");
+    expect(migration).toContain("alter column anon_id drop not null");
+    const vercel = JSON.parse(sql("vercel.json")) as { crons: { path: string }[] };
+    expect(vercel.crons.map((cron) => cron.path)).toContain("/api/cron/purge-anon-ids");
     const rollback = sql(ROLLBACK);
     expect(rollback).toContain("drop function if exists public.purge_returning_user_anon_ids()");
     expect(rollback.indexOf("drop function")).toBeLessThan(rollback.indexOf("drop table"));

@@ -8,10 +8,8 @@
 --
 -- Retention is 90 days. purge_returning_user_anon_ids() sets anon_id to null
 -- on rows older than that. The rows stay, so search totals and usage counts
--- remain. This repo does not enable pg_cron. After applying, schedule a daily
--- run of:
---   select * from public.purge_returning_user_anon_ids();
--- Suggested time: 18:15 UTC (02:15 Hong Kong), the same clock as the feedback purge.
+-- remain. Vercel Cron calls it daily at 18:20 UTC (02:20 Hong Kong) through
+-- GET /api/cron/purge-anon-ids (vercel.json). No pg_cron is needed.
 
 alter table public.search_events
   add column if not exists anon_id uuid;
@@ -38,6 +36,10 @@ create table if not exists public.usage_events (
   fingerprint text check (fingerprint is null or fingerprint ~ '^[0-9a-f]{32}$'),
   created_at timestamptz not null default now()
 );
+
+-- An environment that ran an earlier draft of this file has NOT NULL here.
+-- The purge would then fail, so drop it explicitly. Safe to re-run.
+alter table public.usage_events alter column anon_id drop not null;
 
 comment on table public.usage_events is
   'Anonymous usage counts. anon_id is a random browser UUID. Not linked to name, contact details, IP, or user agent. anon_id is nulled after 90 days; the event row stays.';
