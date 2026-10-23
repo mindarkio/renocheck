@@ -890,7 +890,7 @@ Statuses: ✅ 有寫清楚 / ⚠️ 寫得含糊 / ❌ 冇提及 / — 唔適用
 | `variations` | 加單／變更機制 | Extra works need written confirmation and a price before starting | Not mentioned | Most common 加單 dispute |
 | `warranty` | 保養期 | Length, scope, exclusions | 「有保養」 only | After-sales |
 | `defects_handover` | 驗收及執漏 | Handover inspection and a defect-fix period | Not mentioned | Ties to retention |
-| `licence_registration` (conditional) | 牌照／註冊 | For minor works (e.g. 拆非結構牆、冷氣機支架、簷篷): MWC registration no. or class stated. For structural works: who handles BD approval | Such works listed with no registration mentioned | [Likely] Minor Works Control System; links to RenoCheck's MWC lookup |
+| `licence_registration` (conditional) | 牌照／註冊 | For minor works (e.g. 加建間隔牆、冷氣機支架、簷篷): MWC registration no. or class stated. For structural works: who handles BD approval | Such works listed with no registration mentioned | [Likely] Minor Works Control System; links to RenoCheck's MWC lookup |
 | `insurance` | 保險 | Third-party liability and employees' compensation insurance stated | Not mentioned | [Likely] Employees' Compensation Ordinance makes EC insurance compulsory for employers |
 | `site_protection_cleanup` | 保護及清潔 | Protection of floors/lift/common areas, final cleaning | Not mentioned | Building-management deposit deductions |
 | `building_mgmt` | 管理處手續 | Who applies, deposit, working hours | Not mentioned | Delays and deposit |
