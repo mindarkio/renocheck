@@ -19,6 +19,11 @@ const PAGE_SIZE = 1000;
 const ROW_CAP = 50_000;
 const CACHE_CHUNK = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
+/**
+ * Usage rows older than the 90-day anon_id purge are not needed for return
+ * counts. One extra day keeps a row whose id was just cleared inside the read.
+ */
+export const USAGE_EVENTS_LOOKBACK_DAYS = 91;
 /** Visits closer together than this are one sitting, not a return. */
 export const RETURN_MIN_GAP_MS = 30 * 60 * 1000;
 
@@ -369,9 +374,13 @@ export async function fetchReturnAnalytics(
     fingerprint: string | null;
     created_at: string;
   }>(async (offset) => {
+    const usageSince = new Date(
+      now.getTime() - USAGE_EVENTS_LOOKBACK_DAYS * DAY_MS,
+    ).toISOString();
     const { data, error } = await supabase
       .from("usage_events")
       .select("anon_id, event_type, fingerprint, created_at")
+      .gte("created_at", usageSince)
       .order("created_at", { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
     return {

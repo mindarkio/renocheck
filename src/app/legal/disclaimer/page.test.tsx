@@ -39,7 +39,7 @@ const QUOTE_SELF_CHECK_PRIVACY_ZH =
   "本網站部分工具（例如報價自查）只會將閣下的選擇儲存於閣下裝置的瀏覽器內，不會傳送至本網站伺服器。";
 
 const ANON_ID_PRIVACY_ZH =
-  "本網站會於閣下瀏覽器內儲存一個隨機識別碼，並連同使用紀錄傳送至本網站伺服器，僅用於統計重複使用情況，並於 90 日後刪除。該識別碼不會與閣下的姓名、聯絡資料或 IP 地址連結。";
+  "本網站會於閣下瀏覽器內儲存一個隨機識別碼，並連同使用紀錄傳送至本網站伺服器，僅用於統計重複使用情況。伺服器紀錄中的識別碼會於 90 日後清除（相關使用次數紀錄會以不含識別碼的形式保留）；閣下可隨時清除瀏覽器資料以刪除瀏覽器內的識別碼。該識別碼不會與閣下的姓名、聯絡資料或 IP 地址連結。";
 
 describe("disclaimer page feedback notice", () => {
   it("publishes the approved §七 notice at 1.2.3 without changing the report version", () => {

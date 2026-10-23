@@ -17,6 +17,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 import {
   aggregateReturnAnalytics,
   fetchReturnAnalytics,
+  USAGE_EVENTS_LOOKBACK_DAYS,
   type ReturnSearchRow,
   type ReturnUsageRow,
 } from "./return-analytics";
@@ -296,5 +297,35 @@ describe("fetchReturnAnalytics degradation", () => {
     expect(result.readError).toBe(true);
     expect(result.searchAnon).toBe("ready");
     expect(result.funnel.reportShare).toBe(0);
+  });
+
+  it("loads usage events only from the last 91 days", async () => {
+    vi.useFakeTimers();
+    const now = new Date("2026-10-23T12:00:00.000Z");
+    vi.setSystemTime(now);
+    const filters: unknown[][] = [];
+    admin.from.mockImplementation((table: string) => {
+      const query = queryResult({ data: [], error: null });
+      if (table === "usage_events") {
+        const pass = query.gte as (...args: unknown[]) => unknown;
+        query.gte = (...args: unknown[]) => {
+          filters.push(args);
+          return pass(...args);
+        };
+      }
+      return query;
+    });
+    try {
+      await fetchReturnAnalytics(30);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(USAGE_EVENTS_LOOKBACK_DAYS).toBe(91);
+    expect(filters).toEqual([
+      [
+        "created_at",
+        new Date(now.getTime() - 91 * 24 * 60 * 60 * 1000).toISOString(),
+      ],
+    ]);
   });
 });
