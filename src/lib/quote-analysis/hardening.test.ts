@@ -24,7 +24,7 @@ describe("quote analysis hardening", () => {
   });
 
   it("falls back to the default budget for negative values and rounds cost up", () => {
-    expect(quoteDailyBudgetMicroUsd({ QUOTE_DAILY_BUDGET_USD: "-1" })).toBe(2_000_000);
+    expect(quoteDailyBudgetMicroUsd({ QUOTE_DAILY_BUDGET_USD: "-1" })).toBe(1_000_000);
     expect(quoteDailyBudgetMicroUsd({ QUOTE_DAILY_BUDGET_USD: "0" })).toBe(0);
     expect(microUsdFromTokens(1, 0)).toBe(1);
   });

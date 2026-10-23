@@ -25,6 +25,8 @@ export type QuoteStore = {
     reserveMicroUsd: number;
     dailyLimit: number;
     capMicroUsd: number;
+    freeCapMicroUsd: number;
+    callCap: number;
   }): Promise<QuoteBeginResult>;
   finish(input: QuoteFinishInput): Promise<{ analysisId: string | null }>;
 };
@@ -48,6 +50,8 @@ export const supabaseQuoteStore: QuoteStore = {
       p_reserve: input.reserveMicroUsd,
       p_daily_limit: input.dailyLimit,
       p_cap_micro: input.capMicroUsd,
+      p_free_cap_micro: input.freeCapMicroUsd,
+      p_call_cap: input.callCap,
     });
     if (error || !data || typeof data !== "object") {
       return { ok: false, reason: "unavailable" };

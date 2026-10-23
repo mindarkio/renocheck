@@ -10,8 +10,14 @@ export const QUOTE_OUTPUT_USD_PER_MILLION = 0.5;
 export const QUOTE_PDF_MAX_BYTES = 4_000_000;
 export const QUOTE_PDF_MAX_PAGES = 6;
 
-/** Default app-side cap for this draft. Azure itself has no hard cap. */
-export const QUOTE_DEFAULT_DAILY_BUDGET_USD = 2;
+/** Default app-side cap (DEC-0013 D36). Azure itself has no hard cap. */
+export const QUOTE_DEFAULT_DAILY_BUDGET_USD = 1;
+
+/** Free analyses stop here (D36b). Every analysis is free for now, so this is the effective stop. */
+export const QUOTE_DEFAULT_FREE_DAILY_BUDGET_USD = 0.8;
+
+/** Hard cap on Azure calls per Hong Kong day, inside the same locked spend row. */
+export const QUOTE_DEFAULT_DAILY_CALL_CAP = 300;
 
 const USD_TO_MICRO = 1_000_000;
 
@@ -75,16 +81,37 @@ export function quoteAzureBaseUrl(endpoint: string): string {
   return url.toString().replace(/\/$/, "");
 }
 
+function usdToMicro(raw: string | undefined, fallbackUsd: number): number {
+  const fallback = Math.round(fallbackUsd * USD_TO_MICRO);
+  if (!raw?.trim()) return fallback;
+  const value = Number(raw.trim());
+  if (!Number.isFinite(value) || value < 0) return fallback;
+  return Math.round(value * USD_TO_MICRO);
+}
+
+/** `QUOTE_DAILY_BUDGET_USD`. Missing, invalid, or negative falls back to US$1. Zero blocks. */
 export function quoteDailyBudgetMicroUsd(
   env: Record<string, string | undefined> = process.env,
 ): number {
-  const raw = env.QUOTE_DAILY_BUDGET_USD?.trim();
-  if (!raw) return QUOTE_DEFAULT_DAILY_BUDGET_USD * USD_TO_MICRO;
+  return usdToMicro(env.QUOTE_DAILY_BUDGET_USD, QUOTE_DEFAULT_DAILY_BUDGET_USD);
+}
+
+/** `QUOTE_FREE_DAILY_BUDGET_USD`. Missing, invalid, or negative falls back to US$0.80. Zero blocks. */
+export function quoteFreeDailyBudgetMicroUsd(
+  env: Record<string, string | undefined> = process.env,
+): number {
+  return usdToMicro(env.QUOTE_FREE_DAILY_BUDGET_USD, QUOTE_DEFAULT_FREE_DAILY_BUDGET_USD);
+}
+
+/** `QUOTE_DAILY_CALL_CAP`. Missing, non-integer, or negative falls back to 300. Zero blocks. */
+export function quoteDailyCallCap(
+  env: Record<string, string | undefined> = process.env,
+): number {
+  const raw = env.QUOTE_DAILY_CALL_CAP?.trim();
+  if (!raw) return QUOTE_DEFAULT_DAILY_CALL_CAP;
   const value = Number(raw);
-  if (!Number.isFinite(value) || value < 0) {
-    return QUOTE_DEFAULT_DAILY_BUDGET_USD * USD_TO_MICRO;
-  }
-  return Math.round(value * USD_TO_MICRO);
+  if (!Number.isInteger(value) || value < 0) return QUOTE_DEFAULT_DAILY_CALL_CAP;
+  return value;
 }
 
 export function microUsdFromTokens(inputTokens: number, outputTokens: number): number {
@@ -111,8 +138,18 @@ export function spendDecision(input: {
   reserved: number;
   reserve: number;
   cap: number;
+  freeCap: number;
+  calls: number;
+  callCap: number;
 }): "ok" | "quota" | "budget" {
   if (input.used >= input.limit) return "quota";
-  if (input.spent + input.reserved + input.reserve > input.cap) return "budget";
+  const next = input.spent + input.reserved + input.reserve;
+  if (
+    input.calls >= input.callCap ||
+    next > input.freeCap ||
+    next > input.cap
+  ) {
+    return "budget";
+  }
   return "ok";
 }

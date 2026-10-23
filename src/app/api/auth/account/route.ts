@@ -3,6 +3,7 @@ import { deleteAccountAndAnalyses } from "@/lib/auth/delete-account";
 import { sameOrigin } from "@/lib/request-guards";
 import {
   ACCOUNT_DELETE_ACK_ZH,
+  ACCOUNT_DELETE_CONFIRM_WORD_ZH,
   ACCOUNT_DELETE_ERROR_ZH,
   QUOTE_AUTH_REQUIRED_ZH,
 } from "@/lib/quote-analysis/copy";
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     body && typeof body === "object"
       ? (body as Record<string, unknown>).confirm
       : null;
-  if (confirm !== "delete") {
+  if (confirm !== ACCOUNT_DELETE_CONFIRM_WORD_ZH) {
     return NextResponse.json(
       { error: "acknowledgement_required", message: ACCOUNT_DELETE_ACK_ZH },
       { status: 400 },

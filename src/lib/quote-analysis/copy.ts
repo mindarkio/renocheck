@@ -4,8 +4,20 @@
  * Aaron must approve every string in this file before the draft merges.
  */
 
+const QUOTE_ANALYSIS_DISCLAIMER_OPENING_ZH =
+  "如閣下設立帳戶以使用報價單上載分析，本服務會收集閣下的電郵地址，用途限於發送一次性登入驗證碼、識別帳戶，以及處理刪除帳戶的要求。閣下上載的報價單（只限 PDF）僅在分析期間於伺服器記憶體中處理，並會傳送至 Microsoft Azure OpenAI（資源位於日本東部；個別請求可能在該模型可供使用的任何 Azure 地區處理）作自動分析。本服務不會保留報價單原檔。分析完成後，本服務只保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。閣下可於帳戶頁面要求刪除帳戶；帳戶刪除後，該電郵帳戶及其報價分析結果會一併移除。登入驗證碼經 Supabase 認證服務以電郵發送，電郵傳遞由 Resend 負責。設立帳戶屬自願；不設立帳戶仍可使用公司查冊及報價自查清單。";
+
+/** Aaron's verbatim wording. Do not edit. */
+export const QUOTE_ANALYSIS_DISCLAIMER_AZURE_ZH =
+  "Microsoft Azure 可能為偵測濫用而暫時保留提交內容及回應；微軟現行公開文件並未列明保留期限，較早版本文件曾列明最多 30 日。本服務亦會保留分析頁數、用量及費用紀錄、所用模型及時間。上述分析結果及紀錄會於 180 日後或閣下刪除帳戶時（以較早者為準）刪除。登入後，本網站會以 cookie 保存閣下的登入狀態。";
+
+export const QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH =
+  "如報價單上載分析未開放，閣下可電郵至 hello@renocheck.homes 要求刪除帳戶。";
+
 export const QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH =
-  "如閣下設立帳戶以使用報價單上載分析，本服務會收集閣下的電郵地址，用途限於發送一次性登入驗證碼、識別帳戶，以及處理刪除帳戶的要求。閣下上載的報價單（只限 PDF）僅在分析期間於伺服器記憶體中處理，並會傳送至 Microsoft Azure OpenAI（資源位於日本東部；個別請求可能在該模型可供使用的任何 Azure 地區處理）作自動分析。本服務不會保留報價單原檔。分析完成後，本服務只保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至閣下刪除帳戶。閣下可於帳戶頁面要求刪除帳戶；帳戶刪除後，該電郵帳戶及其報價分析結果會一併移除。登入驗證碼經 Supabase 認證服務以電郵發送，電郵傳遞由 Resend 負責。設立帳戶屬自願；不設立帳戶仍可使用公司查冊及報價自查清單。";
+  QUOTE_ANALYSIS_DISCLAIMER_OPENING_ZH +
+  QUOTE_ANALYSIS_DISCLAIMER_AZURE_ZH +
+  QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH;
 
 export const QUOTE_ANALYSIS_ENTRY_ZH = "用 AI 對住同一張清單睇一份 PDF 報價單";
 
@@ -80,12 +92,14 @@ export const ACCOUNT_SIGN_OUT_ZH = "登出";
 export const ACCOUNT_DELETE_HEADING_ZH = "刪除帳戶";
 export const ACCOUNT_DELETE_BODY_ZH =
   "刪除之後，呢個帳戶同你嘅報價分析結果會一併刪走，而且唔可以還原。";
-export const ACCOUNT_DELETE_CHECK_ZH =
-  "我明白刪除帳戶後，登入資料同報價分析結果會一併刪走，而且唔可以還原。";
+export const ACCOUNT_DELETE_CONFIRM_WORD_ZH = "刪除";
+export const ACCOUNT_DELETE_CONFIRM_LABEL_ZH = "請輸入「刪除」確認。";
 export const ACCOUNT_DELETE_BUTTON_ZH = "刪除我個帳戶";
 export const ACCOUNT_DELETE_ERROR_ZH =
   "暫時刪除唔到帳戶，請稍後再試，或者電郵 hello@renocheck.homes。";
-export const ACCOUNT_DELETE_ACK_ZH = "請先剔選，確認你想刪除帳戶。";
+export const ACCOUNT_DELETE_ACK_ZH = "請先輸入「刪除」，確認你想刪除帳戶。";
+export const ACCOUNT_DELETE_CLOSED_ZH =
+  "而家未開放登入。如果要刪除帳戶，可以電郵 hello@renocheck.homes。";
 export const ACCOUNT_SIGNED_OUT_PROMPT_ZH = "你未登入。";
 export const ACCOUNT_SIGN_IN_LINK_ZH = "去登入";
 
@@ -145,10 +159,12 @@ export function quoteAnalysisUserFacingCopy(): readonly string[] {
     ACCOUNT_SIGN_OUT_ZH,
     ACCOUNT_DELETE_HEADING_ZH,
     ACCOUNT_DELETE_BODY_ZH,
-    ACCOUNT_DELETE_CHECK_ZH,
+    ACCOUNT_DELETE_CONFIRM_WORD_ZH,
+    ACCOUNT_DELETE_CONFIRM_LABEL_ZH,
     ACCOUNT_DELETE_BUTTON_ZH,
     ACCOUNT_DELETE_ERROR_ZH,
     ACCOUNT_DELETE_ACK_ZH,
+    ACCOUNT_DELETE_CLOSED_ZH,
     ACCOUNT_SIGNED_OUT_PROMPT_ZH,
     ACCOUNT_SIGN_IN_LINK_ZH,
   ];

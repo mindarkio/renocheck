@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { pageMetadata } from "@/lib/site-metadata";
 import {
   ContentCard,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ContentPage";
 import { DISCLAIMER_VERSION } from "@/lib/constants";
 import { FEEDBACK_PRIVACY_NOTICE_ZH } from "@/lib/feedback-copy-zh";
+import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import { QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH } from "@/lib/quote-analysis/copy";
 export const metadata: Metadata = pageMetadata({
   path: "/legal/disclaimer",
@@ -21,7 +23,11 @@ export const metadata: Metadata = pageMetadata({
 
 const NAV_LINKS = [{ href: "/", label: "返回搜尋" }] as const;
 
-export default function DisclaimerPage() {
+export const instant = false;
+
+export default async function DisclaimerPage() {
+  await connection();
+  const showQuoteAnalysis = isQuoteAnalysisFlagOn();
   return (
     <ContentPage>
       <ContentCard>
@@ -130,7 +136,9 @@ export default function DisclaimerPage() {
               <a href="mailto:hello@renocheck.homes">hello@renocheck.homes</a>
               {FEEDBACK_PRIVACY_NOTICE_ZH.split("hello@renocheck.homes")[1]}
             </p>
-            <p id="quote-analysis-privacy">{QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH}</p>
+            {showQuoteAnalysis ? (
+              <p id="quote-analysis-privacy">{QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH}</p>
+            ) : null}
           </ContentSection>
 
           <ContentSection title="八、責任限制">

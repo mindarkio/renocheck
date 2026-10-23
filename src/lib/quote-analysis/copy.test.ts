@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   isQuoteAnalysisAvailable,
 } from "@/lib/quote-analysis/config";
-import { quoteAnalysisUserFacingCopy } from "@/lib/quote-analysis/copy";
+import {
+  QUOTE_ANALYSIS_DISCLAIMER_AZURE_ZH,
+  QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH,
+  quoteAnalysisUserFacingCopy,
+} from "@/lib/quote-analysis/copy";
 import {
   REPORT_TRUST_FORBIDDEN_ZH,
   REPORT_TRUST_NEGATED_ALLOWLIST_ZH,
@@ -27,6 +31,20 @@ describe("quote analysis copy and flag", () => {
         AZURE_OPENAI_DEPLOYMENT: "quote-gpt-6-luna",
       }),
     ).toBe(true);
+  });
+
+  it("keeps Aaron's Azure sentence verbatim and the 180-day retention clause", () => {
+    const azure =
+      "Microsoft Azure 可能為偵測濫用而暫時保留提交內容及回應；微軟現行公開文件並未列明保留期限，較早版本文件曾列明最多 30 日。本服務亦會保留分析頁數、用量及費用紀錄、所用模型及時間。上述分析結果及紀錄會於 180 日後或閣下刪除帳戶時（以較早者為準）刪除。登入後，本網站會以 cookie 保存閣下的登入狀態。";
+    expect(QUOTE_ANALYSIS_DISCLAIMER_AZURE_ZH).toBe(azure);
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(azure);
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
+      "直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。",
+    );
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).not.toContain("直至閣下刪除帳戶");
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
+      "如報價單上載分析未開放，閣下可電郵至 hello@renocheck.homes 要求刪除帳戶。",
+    );
   });
 
   it("keeps new copy clear of report-trust forbidden words", () => {

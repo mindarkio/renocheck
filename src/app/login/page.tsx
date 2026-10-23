@@ -9,6 +9,7 @@ import {
 } from "@/components/ContentPage";
 import { SignInForm } from "@/components/SignInForm";
 import {
+  ACCOUNT_DELETE_CLOSED_ZH,
   LOGIN_LEAD_ZH,
   LOGIN_TITLE_ZH,
   LOGIN_UNAVAILABLE_ZH,
@@ -41,7 +42,17 @@ export default async function LoginPage({ searchParams }: PageProps) {
       <ContentCard>
         <ContentPageTitle>{LOGIN_TITLE_ZH}</ContentPageTitle>
         <ContentPageLead>{ready ? LOGIN_LEAD_ZH : LOGIN_UNAVAILABLE_ZH}</ContentPageLead>
-        {ready ? <SignInForm nextPath={nextPath} /> : null}
+        {ready ? (
+          <SignInForm nextPath={nextPath} />
+        ) : (
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {ACCOUNT_DELETE_CLOSED_ZH.split("hello@renocheck.homes")[0]}
+            <a href="mailto:hello@renocheck.homes" className={contentLinkClass}>
+              hello@renocheck.homes
+            </a>
+            {ACCOUNT_DELETE_CLOSED_ZH.split("hello@renocheck.homes")[1]}
+          </p>
+        )}
         <p className="mt-6 text-sm">
           <Link href="/quote" className={`inline-flex min-h-11 items-center ${contentLinkClass}`}>
             {QUOTE_BACK_TO_CHECKLIST_ZH}

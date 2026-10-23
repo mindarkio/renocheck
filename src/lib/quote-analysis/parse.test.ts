@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { QUOTE_CHECK_ITEMS } from "@/lib/quote-selfcheck";
 import {
   quoteDailyBudgetMicroUsd,
+  quoteDailyCallCap,
+  quoteFreeDailyBudgetMicroUsd,
   spendDecision,
 } from "@/lib/quote-analysis/config";
 import {
@@ -83,28 +85,64 @@ describe("quote analysis parser", () => {
 });
 
 describe("quote daily budget decision", () => {
-  it("defaults the cap to US$2 and blocks on the second comparison", () => {
-    expect(quoteDailyBudgetMicroUsd({})).toBe(2_000_000);
+  it("defaults the cap to US$1, the free share to US$0.80, and 300 calls", () => {
+    expect(quoteDailyBudgetMicroUsd({})).toBe(1_000_000);
+    expect(quoteFreeDailyBudgetMicroUsd({})).toBe(800_000);
+    expect(quoteDailyCallCap({})).toBe(300);
     expect(quoteDailyBudgetMicroUsd({ QUOTE_DAILY_BUDGET_USD: "2.5" })).toBe(2_500_000);
-    expect(quoteDailyBudgetMicroUsd({ QUOTE_DAILY_BUDGET_USD: "nope" })).toBe(2_000_000);
+    expect(quoteDailyBudgetMicroUsd({ QUOTE_DAILY_BUDGET_USD: "nope" })).toBe(1_000_000);
+    expect(quoteFreeDailyBudgetMicroUsd({ QUOTE_FREE_DAILY_BUDGET_USD: "0.5" })).toBe(500_000);
+    expect(quoteFreeDailyBudgetMicroUsd({ QUOTE_FREE_DAILY_BUDGET_USD: "0" })).toBe(0);
+    expect(quoteDailyCallCap({ QUOTE_DAILY_CALL_CAP: "10" })).toBe(10);
+    expect(quoteDailyCallCap({ QUOTE_DAILY_CALL_CAP: "0" })).toBe(0);
+    expect(quoteDailyCallCap({ QUOTE_DAILY_CALL_CAP: "10.5" })).toBe(300);
+    const room = { freeCap: 800_000, calls: 0, callCap: 300 };
     expect(
       spendDecision({
         used: 2,
         limit: 2,
-        spent: 0,
+        spent: 900_000,
         reserved: 0,
         reserve: 1,
-        cap: 2_000_000,
+        cap: 1_000_000,
+        ...room,
       }),
     ).toBe("quota");
     expect(
       spendDecision({
         used: 0,
         limit: 2,
-        spent: 1_999_000,
-        reserved: 2_000,
-        reserve: 1_000,
-        cap: 2_000_000,
+        spent: 790_000,
+        reserved: 5_000,
+        reserve: 6_000,
+        cap: 1_000_000,
+        ...room,
+      }),
+    ).toBe("budget");
+    expect(
+      spendDecision({
+        used: 0,
+        limit: 2,
+        spent: 100_000,
+        reserved: 0,
+        reserve: 1,
+        cap: 1_000_000,
+        freeCap: 800_000,
+        calls: 300,
+        callCap: 300,
+      }),
+    ).toBe("budget");
+    expect(
+      spendDecision({
+        used: 0,
+        limit: 2,
+        spent: 900_000,
+        reserved: 0,
+        reserve: 200_000,
+        cap: 1_000_000,
+        freeCap: 2_000_000,
+        calls: 0,
+        callCap: 300,
       }),
     ).toBe("budget");
     expect(
@@ -114,7 +152,8 @@ describe("quote daily budget decision", () => {
         spent: 10,
         reserved: 0,
         reserve: 20,
-        cap: 2_000_000,
+        cap: 1_000_000,
+        ...room,
       }),
     ).toBe("ok");
   });
@@ -126,6 +165,14 @@ describe("quote daily budget decision", () => {
     );
     expect(sql).toContain("v_used >= p_daily_limit");
     expect(sql).toContain("v_spent + v_reserved + p_reserve > p_cap_micro");
+    expect(sql).toContain("v_spent + v_reserved + p_reserve > p_free_cap_micro");
+    expect(sql).toContain("v_calls >= p_call_cap");
+    const begin = sql.slice(
+      sql.indexOf("create or replace function public.begin_quote_analysis"),
+      sql.indexOf("create or replace function public.finish_quote_analysis"),
+    );
+    expect(begin.indexOf("for update")).toBeLessThan(begin.indexOf("v_calls >= p_call_cap"));
+    expect(begin.indexOf("v_calls >= p_call_cap")).toBeLessThan(begin.indexOf("calls = calls + 1"));
     expect(sql).toContain("Asia/Hong_Kong");
     expect(sql).toContain("enable row level security");
     expect(sql).toContain("user_id = (select auth.uid())");

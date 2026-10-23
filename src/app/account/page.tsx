@@ -8,8 +8,10 @@ import {
   ContentPageLead,
   ContentPageTitle,
 } from "@/components/ContentPage";
+import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import {
   ACCOUNT_DELETE_BODY_ZH,
+  ACCOUNT_DELETE_CLOSED_ZH,
   ACCOUNT_DELETE_HEADING_ZH,
   ACCOUNT_EMAIL_LABEL_ZH,
   ACCOUNT_SIGNED_OUT_PROMPT_ZH,
@@ -50,6 +52,15 @@ export default async function AccountPage() {
         ) : (
           <>
             <ContentPageLead>{ACCOUNT_SIGNED_OUT_PROMPT_ZH}</ContentPageLead>
+            {isQuoteAnalysisFlagOn() ? null : (
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {ACCOUNT_DELETE_CLOSED_ZH.split("hello@renocheck.homes")[0]}
+                <a href="mailto:hello@renocheck.homes" className={contentLinkClass}>
+                  hello@renocheck.homes
+                </a>
+                {ACCOUNT_DELETE_CLOSED_ZH.split("hello@renocheck.homes")[1]}
+              </p>
+            )}
             <p className="mt-4 text-sm">
               <Link
                 href="/login?next=/account"

@@ -66,7 +66,7 @@ describe("POST /api/auth/account", () => {
       new Request("http://localhost/api/auth/account", {
         method: "POST",
         headers: { origin: "https://evil.example", "content-type": "application/json" },
-        body: JSON.stringify({ confirm: "delete" }),
+        body: JSON.stringify({ confirm: "刪除" }),
       }),
     );
     expect(res.status).toBe(403);
@@ -75,29 +75,37 @@ describe("POST /api/auth/account", () => {
 
   it("keeps the session when the rows cannot be removed", async () => {
     mocks.failTable = "quote_analysis_claims";
-    const res = await POST(request({ confirm: "delete" }));
+    const res = await POST(request({ confirm: "刪除" }));
     mocks.failTable = null;
     expect(res.status).toBe(503);
     expect(mocks.deleteUser).not.toHaveBeenCalled();
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
 
-  it("rejects account deletion without the confirmation", async () => {
+  it("rejects account deletion without the typed confirmation", async () => {
     const res = await POST(request({}));
     expect(res.status).toBe(400);
     expect(mocks.deleteUser).not.toHaveBeenCalled();
   });
 
+  it("rejects the old english token and anything other than 刪除", async () => {
+    for (const confirm of ["delete", "刪除 ", " 刪除", "删除"]) {
+      const res = await POST(request({ confirm }));
+      expect(res.status).toBe(400);
+    }
+    expect(mocks.deleteUser).not.toHaveBeenCalled();
+  });
+
   it("requires a session", async () => {
     mocks.getAuthUser.mockResolvedValue(null);
-    const res = await POST(request({ confirm: "delete" }));
+    const res = await POST(request({ confirm: "刪除" }));
     expect(res.status).toBe(401);
     expect(mocks.deleteUser).not.toHaveBeenCalled();
   });
 
   it("deletes the signed-in user and their quote analyses", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const res = await POST(request({ confirm: "delete" }));
+    const res = await POST(request({ confirm: "刪除" }));
     expect(res.status).toBe(200);
     expect(mocks.tables).toEqual(["quote_analysis_claims", "quote_analyses"]);
     expect(mocks.deleteUser).toHaveBeenCalledWith(USER);

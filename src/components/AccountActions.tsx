@@ -5,17 +5,22 @@ import { useRef, useState } from "react";
 import {
   ACCOUNT_DELETE_ACK_ZH,
   ACCOUNT_DELETE_BUTTON_ZH,
-  ACCOUNT_DELETE_CHECK_ZH,
+  ACCOUNT_DELETE_CONFIRM_LABEL_ZH,
+  ACCOUNT_DELETE_CONFIRM_WORD_ZH,
   ACCOUNT_DELETE_ERROR_ZH,
   ACCOUNT_SIGN_OUT_ZH,
 } from "@/lib/quote-analysis/copy";
 
+const fieldClass =
+  "mt-1 w-full min-h-11 rounded-lg border border-border bg-background px-3 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+
 export function AccountActions() {
   const router = useRouter();
-  const checkboxRef = useRef<HTMLInputElement>(null);
-  const [confirmed, setConfirmed] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [typed, setTyped] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<"out" | "delete" | null>(null);
+  const confirmed = typed === ACCOUNT_DELETE_CONFIRM_WORD_ZH;
 
   async function signOut() {
     setPending("out");
@@ -33,7 +38,7 @@ export function AccountActions() {
     event.preventDefault();
     if (!confirmed) {
       setError(ACCOUNT_DELETE_ACK_ZH);
-      checkboxRef.current?.focus();
+      inputRef.current?.focus();
       return;
     }
     setPending("delete");
@@ -42,7 +47,7 @@ export function AccountActions() {
       const res = await fetch("/api/auth/account", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ confirm: "delete" }),
+        body: JSON.stringify({ confirm: ACCOUNT_DELETE_CONFIRM_WORD_ZH }),
       });
       const data = (await res.json().catch(() => null)) as { message?: string } | null;
       if (!res.ok) {
@@ -69,22 +74,23 @@ export function AccountActions() {
         {ACCOUNT_SIGN_OUT_ZH}
       </button>
       <form onSubmit={deleteAccount} className="space-y-3">
-        <label className="flex min-h-11 items-start gap-3 text-sm text-foreground">
-          <input
-            ref={checkboxRef}
-            type="checkbox"
-            name="confirm"
-            value="delete"
-            checked={confirmed}
-            onChange={(event) => {
-              setConfirmed(event.target.checked);
-              setError(null);
-            }}
-            className="mt-1 size-5 shrink-0"
-            aria-describedby={error ? "delete-account-error" : undefined}
-          />
-          <span>{ACCOUNT_DELETE_CHECK_ZH}</span>
+        <label htmlFor="delete-confirm" className="block text-sm text-foreground">
+          {ACCOUNT_DELETE_CONFIRM_LABEL_ZH}
         </label>
+        <input
+          ref={inputRef}
+          id="delete-confirm"
+          type="text"
+          name="confirm"
+          value={typed}
+          autoComplete="off"
+          onChange={(event) => {
+            setTyped(event.target.value);
+            setError(null);
+          }}
+          aria-describedby={error ? "delete-account-error" : undefined}
+          className={fieldClass}
+        />
         {error ? (
           <p
             id="delete-account-error"
@@ -96,7 +102,7 @@ export function AccountActions() {
         ) : null}
         <button
           type="submit"
-          disabled={pending !== null}
+          disabled={pending !== null || !confirmed}
           className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
         >
           {ACCOUNT_DELETE_BUTTON_ZH}

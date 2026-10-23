@@ -72,12 +72,15 @@ revoke all on table public.quote_spend_daily from anon, authenticated;
 grant select, insert, update, delete on table public.quote_spend_daily to service_role;
 
 -- Day boundary is the database clock in Asia/Hong_Kong, not the app clock.
--- Cap and the per-account limit are arguments so the env default can change without a migration.
+-- Cap, free share, call cap, and the per-account limit are arguments so env
+-- overrides can change without another migration.
 create or replace function public.begin_quote_analysis(
   p_user_id uuid,
   p_reserve bigint,
   p_daily_limit integer,
-  p_cap_micro bigint
+  p_cap_micro bigint,
+  p_free_cap_micro bigint,
+  p_call_cap integer
 ) returns jsonb
 language plpgsql
 security invoker
@@ -89,19 +92,22 @@ declare
   v_claim uuid;
   v_spent bigint;
   v_reserved bigint;
+  v_calls integer;
 begin
   if p_user_id is null
      or p_reserve is null or p_reserve <= 0
      or p_daily_limit is null or p_daily_limit <= 0
-     or p_cap_micro is null or p_cap_micro < 0 then
+     or p_cap_micro is null or p_cap_micro < 0
+     or p_free_cap_micro is null or p_free_cap_micro < 0
+     or p_call_cap is null or p_call_cap < 0 then
     return pg_catalog.jsonb_build_object('ok', false, 'reason', 'bad_args');
   end if;
 
   insert into public.quote_spend_daily (day_hkt) values (v_day)
   on conflict (day_hkt) do nothing;
 
-  select spent_micro_usd, reserved_micro_usd
-    into v_spent, v_reserved
+  select spent_micro_usd, reserved_micro_usd, calls
+    into v_spent, v_reserved, v_calls
     from public.quote_spend_daily
    where day_hkt = v_day
    for update;
@@ -130,8 +136,8 @@ begin
    where d.day_hkt = v_day
      and t.total > 0;
 
-  select spent_micro_usd, reserved_micro_usd
-    into v_spent, v_reserved
+  select spent_micro_usd, reserved_micro_usd, calls
+    into v_spent, v_reserved, v_calls
     from public.quote_spend_daily
    where day_hkt = v_day;
 
@@ -152,7 +158,11 @@ begin
     return pg_catalog.jsonb_build_object('ok', false, 'reason', 'quota');
   end if;
 
-  if v_spent + v_reserved + p_reserve > p_cap_micro then
+  -- Same locked row. Free analyses stop at the free share; the overall cap and
+  -- the call cap still apply. Calls increment only after these checks.
+  if v_calls >= p_call_cap
+     or v_spent + v_reserved + p_reserve > p_free_cap_micro
+     or v_spent + v_reserved + p_reserve > p_cap_micro then
     return pg_catalog.jsonb_build_object('ok', false, 'reason', 'budget');
   end if;
 
@@ -276,9 +286,9 @@ begin
 end;
 $$;
 
-revoke all on function public.begin_quote_analysis(uuid, bigint, integer, bigint)
+revoke all on function public.begin_quote_analysis(uuid, bigint, integer, bigint, bigint, integer)
   from public, anon, authenticated;
-grant execute on function public.begin_quote_analysis(uuid, bigint, integer, bigint)
+grant execute on function public.begin_quote_analysis(uuid, bigint, integer, bigint, bigint, integer)
   to service_role;
 
 revoke all on function public.finish_quote_analysis(uuid, text, bigint, smallint, jsonb, integer, integer, text)
@@ -372,3 +382,46 @@ revoke all on function public.take_auth_rate_limit(text, integer, integer, integ
   from public, anon, authenticated;
 grant execute on function public.take_auth_rate_limit(text, integer, integer, integer)
   to service_role;
+
+-- Analyses, their claims, and analysis metadata: 180 days.
+-- Daily usage and spend rows: 30 days. Counts only. Service role only.
+-- Vercel Cron calls this daily at 18:25 UTC via GET /api/cron/purge-quote-analysis.
+create or replace function public.purge_quote_analysis_retention()
+returns table (
+  analyses_deleted bigint,
+  claims_deleted bigint,
+  spend_rows_deleted bigint
+)
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_analyses bigint;
+  v_claims bigint;
+  v_spend bigint;
+begin
+  delete from public.quote_analysis_claims as c
+   where c.created_at < pg_catalog.now() - interval '180 days'
+      or exists (
+        select 1
+          from public.quote_analyses as a
+         where a.id = c.analysis_id
+           and a.created_at < pg_catalog.now() - interval '180 days'
+      );
+  get diagnostics v_claims = row_count;
+
+  delete from public.quote_analyses
+   where created_at < pg_catalog.now() - interval '180 days';
+  get diagnostics v_analyses = row_count;
+
+  delete from public.quote_spend_daily
+   where day_hkt < (pg_catalog.timezone('Asia/Hong_Kong', pg_catalog.now()))::date - 30;
+  get diagnostics v_spend = row_count;
+
+  return query select v_analyses, v_claims, v_spend;
+end;
+$$;
+
+revoke all on function public.purge_quote_analysis_retention() from public, anon, authenticated;
+grant execute on function public.purge_quote_analysis_retention() to service_role;

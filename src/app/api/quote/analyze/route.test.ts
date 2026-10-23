@@ -184,7 +184,11 @@ describe("POST /api/quote/analyze", () => {
     expect(body.error).toBe("quote_paused");
     expect(body.message).toContain("今日嘅報價分析名額已滿");
     expect(mocks.begin).toHaveBeenCalledWith(
-      expect.objectContaining({ capMicroUsd: 2_000_000 }),
+      expect.objectContaining({
+        capMicroUsd: 1_000_000,
+        freeCapMicroUsd: 800_000,
+        callCap: 300,
+      }),
     );
     expect(mocks.completeQuotePdf).not.toHaveBeenCalled();
   });

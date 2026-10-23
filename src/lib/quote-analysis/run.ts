@@ -6,6 +6,8 @@ import {
   isQuoteAnalysisAvailable,
   microUsdFromTokens,
   quoteDailyBudgetMicroUsd,
+  quoteDailyCallCap,
+  quoteFreeDailyBudgetMicroUsd,
   reserveMicroUsd,
 } from "@/lib/quote-analysis/config";
 import {
@@ -121,6 +123,8 @@ export async function runQuoteAnalysis(input: {
     reserveMicroUsd: reserve,
     dailyLimit: QUOTE_FREE_ANALYSES_PER_DAY,
     capMicroUsd: quoteDailyBudgetMicroUsd(env),
+    freeCapMicroUsd: quoteFreeDailyBudgetMicroUsd(env),
+    callCap: quoteDailyCallCap(env),
   });
   if (!begun.ok) {
     if (begun.reason === "quota") {
