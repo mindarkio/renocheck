@@ -162,6 +162,54 @@ describe("2026-10-23 SEO guides", () => {
     expect(slugs("x")).toEqual(slugs("x"));
   });
 
+  it("relatedGuides prefers the same category, then fills with newest", () => {
+    const base = GUIDES[0] as Guide;
+    const g = (slug: string, category: string, dateModified: string): Guide => ({
+      ...base,
+      slug,
+      category,
+      dateModified,
+      datePublished: "2026-01-01",
+    });
+    const list = [
+      g("old-same", "合約", "2026-10-16"),
+      g("new-other", "報價", "2026-10-23"),
+      g("newer-other", "核實", "2026-10-23"),
+      g("current", "合約", "2026-10-23"),
+      g("mid-other", "揀公司", "2026-10-20"),
+    ];
+    const picked = relatedGuides("current", 3, list).map((item) => item.slug);
+    expect(picked).toEqual(["old-same", "newer-other", "new-other"]);
+    expect(picked).not.toContain("current");
+    expect(picked).toEqual(relatedGuides("current", 3, list).map((item) => item.slug));
+    expect(relatedGuides("mid-other", 3, list).map((item) => item.slug)).toEqual([
+      "current",
+      "newer-other",
+      "new-other",
+    ]);
+    const ties = [
+      g("same-early", "合約", "2026-10-23"),
+      g("other", "報價", "2026-10-23"),
+      g("same-late", "合約", "2026-10-23"),
+      g("reader", "合約", "2026-10-16"),
+    ];
+    expect(relatedGuides("reader", 3, ties).map((item) => item.slug)).toEqual([
+      "same-late",
+      "same-early",
+      "other",
+    ]);
+
+    const contract = relatedGuides("renovation-contract-clauses-hong-kong");
+    expect(contract.map((item) => item.slug)[0]).toBe("renovation-contract-checklist");
+    expect(contract).toHaveLength(3);
+    expect(contract.map((item) => item.slug)).not.toContain(
+      "renovation-contract-clauses-hong-kong",
+    );
+    const quotes = relatedGuides("renovation-quote-timing-compare-three");
+    expect(quotes[0]?.slug).toBe("how-to-read-renovation-quotation");
+    expect(quotes).toHaveLength(3);
+  });
+
   it("every guide date is ISO YYYY-MM-DD and modified on or after publish", () => {
     for (const guide of GUIDES) {
       expect(guide.datePublished, guide.slug).toMatch(/^\d{4}-\d{2}-\d{2}$/);

@@ -610,22 +610,36 @@ export function getGuide(slug: string): Guide | undefined {
   return GUIDES.find((g) => g.slug === slug);
 }
 
-/** Other guides, newest `dateModified` first. Same-day ties use later entries first. */
+/**
+ * Related guides: same category first, then other categories.
+ * Within each group, newest `dateModified` first; same-day ties use later entries.
+ * Excludes `slug`. At most `limit` (default 3).
+ */
 export function relatedGuides(
   slug: string,
   limit = 3,
   guides: readonly Guide[] = GUIDES,
 ): Guide[] {
-  return guides
-    .map((guide, index) => ({ guide, index }))
-    .filter(({ guide }) => guide.slug !== slug)
-    .sort((a, b) => {
-      // ISO YYYY-MM-DD strings: plain comparison is chronological and locale-free.
-      if (a.guide.dateModified !== b.guide.dateModified) {
-        return a.guide.dateModified < b.guide.dateModified ? 1 : -1;
-      }
-      return b.index - a.index;
-    })
-    .slice(0, limit)
-    .map(({ guide }) => guide);
+  const indexed = guides.map((guide, index) => ({ guide, index }));
+  const current = indexed.find(({ guide }) => guide.slug === slug);
+  const byNewest = (
+    a: { guide: Guide; index: number },
+    b: { guide: Guide; index: number },
+  ) => {
+    // ISO YYYY-MM-DD strings: plain comparison is chronological and locale-free.
+    if (a.guide.dateModified !== b.guide.dateModified) {
+      return a.guide.dateModified < b.guide.dateModified ? 1 : -1;
+    }
+    return b.index - a.index;
+  };
+  const others = indexed.filter(({ guide }) => guide.slug !== slug);
+  const same = current
+    ? others
+        .filter(({ guide }) => guide.category === current.guide.category)
+        .sort(byNewest)
+    : [];
+  const rest = others
+    .filter(({ guide }) => !current || guide.category !== current.guide.category)
+    .sort(byNewest);
+  return [...same, ...rest].slice(0, limit).map(({ guide }) => guide);
 }
