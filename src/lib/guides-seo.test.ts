@@ -110,4 +110,19 @@ describe("2026-10-23 SEO guides", () => {
     expect(corpus).not.toMatch(/黑店網|blacklist\.|名富|陳師傅/);
     expect(text).not.toMatch(/黑店網|blacklist\./i);
   });
+
+  it("has no duplicate sitemap or llms.txt URLs and /guides is never older than a guide", () => {
+    const entries = sitemap();
+    const urls = entries.map((row) => row.url);
+    expect(new Set(urls).size).toBe(urls.length);
+    const hub = entries.find((row) => row.url === `${getSiteUrl()}/guides`);
+    const newest = GUIDES.map((g) => g.dateModified).sort().at(-1) ?? "";
+    expect(String(hub?.lastModified) >= newest).toBe(true);
+    const text = readFileSync(path.join(process.cwd(), "public/llms.txt"), "utf8");
+    const llmsUrls = text
+      .split("\n")
+      .filter((line) => line.startsWith("- https://"))
+      .map((line) => line.split(" ")[1]);
+    expect(new Set(llmsUrls).size).toBe(llmsUrls.length);
+  });
 });

@@ -45,7 +45,7 @@ export async function generateMetadata({
   };
 }
 
-const INLINE_LINK = /\[([^\]]+)\]\((\/[^)\s]*)\)/g;
+const INLINE_LINK = /\[([^\]]+)\]\((\/(?!\/)[^)\s]*)\)/g;
 
 function GuideRichText({ text }: { text: string }) {
   const nodes: ReactNode[] = [];

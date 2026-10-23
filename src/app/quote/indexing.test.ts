@@ -38,7 +38,7 @@ describe("/quote indexing", () => {
 
   it("lists /quote in the sitemap and does not disallow it", () => {
     const entry = sitemap().find((item) => item.url === `${getSiteUrl()}/quote`);
-    expect(entry?.lastModified).toBe("2026-10-22");
+    expect(entry?.lastModified).toBe("2026-10-23");
     expect(entry?.url.endsWith("/quote")).toBe(true);
 
     const rules = robots().rules;
