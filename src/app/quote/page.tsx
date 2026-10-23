@@ -11,6 +11,7 @@ import { QuoteSelfCheck } from "@/components/QuoteSelfCheck";
 import {
   QUOTE_PAGE_DESCRIPTION_ZH,
   QUOTE_PAGE_LEAD_ZH,
+  QUOTE_PAGE_META_TITLE_ZH,
   QUOTE_PAGE_NAV,
   QUOTE_PAGE_TITLE_ZH,
   buildQuotePageJsonLd,
@@ -21,7 +22,7 @@ import { getSiteUrl } from "@/lib/site-url";
 export const metadata: Metadata = {
   ...pageMetadata({
     path: "/quote",
-    title: QUOTE_PAGE_TITLE_ZH,
+    title: QUOTE_PAGE_META_TITLE_ZH,
     description: QUOTE_PAGE_DESCRIPTION_ZH,
   }),
   robots: { index: true, follow: true },

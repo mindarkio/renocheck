@@ -49,6 +49,9 @@ Identical queries may return a cached report snapshot for about **7 days**; see 
 - https://renocheck.homes/guides/questions-before-hiring-contractor — 揀裝修公司前要問嘅 10 條問題
 - https://renocheck.homes/guides/business-registration-number-search — 商業登記號碼點查？商業登記同公司註冊有咩分別
 - https://renocheck.homes/guides/how-to-read-renovation-quotation — 裝修報價點睇？報價單要列明嘅重點
+- https://renocheck.homes/guides/renovation-contract-clauses-hong-kong — 裝修合約範本同條款注意事項（香港）
+- https://renocheck.homes/guides/renovation-quote-timing-compare-three — 裝修報價要幾耐？點樣比較 3 份報價
+- https://renocheck.homes/guides/renovation-warning-signs-without-blacklist — 點樣分辨裝修黑店（唔靠黑名單）
 
 ## Crawling
 
