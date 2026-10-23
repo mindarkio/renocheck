@@ -48,21 +48,47 @@ export function tierForRow(
   return null;
 }
 
+export type CrMatchedPick = {
+  tier: "A" | "B" | "C";
+  row: CrApiLocalRow;
+};
+
+/**
+ * Grade D is not a match. The prefix search returned only 1–2 rows and
+ * none of them are B/C. Callers must keep `matched` false and must not
+ * change report grading.
+ */
+export type CrCandidatePick = {
+  tier: "D";
+  rows: CrApiLocalRow[];
+};
+
+export type CrPickResult = CrMatchedPick | CrCandidatePick | "ambiguous" | null;
+
+export function isCrMatchedPick(pick: CrPickResult): pick is CrMatchedPick {
+  return pick !== null && pick !== "ambiguous" && pick.tier !== "D";
+}
+
 export function pickMatchedRows(
   rows: CrApiLocalRow[],
   searchLabel: string,
-): { tier: "A" | "B" | "C"; row: CrApiLocalRow } | "ambiguous" | null {
+): CrPickResult {
   if (rows.length >= 100) {
     const hasB = rows.some((r) => tierForRow(r, searchLabel) === "B");
     if (!hasB) return null;
   }
 
-  const hits: { tier: "A" | "B" | "C"; row: CrApiLocalRow }[] = [];
+  const hits: CrMatchedPick[] = [];
   for (const row of rows) {
     const tier = tierForRow(row, searchLabel);
     if (tier) hits.push({ tier, row });
   }
-  if (hits.length === 0) return null;
+  if (hits.length === 0) {
+    if (rows.length >= 1 && rows.length <= 2) {
+      return { tier: "D", rows: rows.slice(0, 2) };
+    }
+    return null;
+  }
 
   const bestRank = Math.min(...hits.map((h) => TIER_RANK[h.tier]));
   const bestTier = (["A", "B", "C"] as const).find(

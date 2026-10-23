@@ -3,12 +3,14 @@ import { randomFakePhoneDigits } from "@/lib/admin/test-helpers";
 import { outcomeLabelZh } from "@/lib/admin/outcome-labels";
 import {
   aggregateSearchAnalytics,
+  analyticsCrMatched,
   hkDayKey,
   parseAnalyticsDays,
   SEARCH_CACHE_ANALYTICS_SELECT,
   type SearchCacheAnalyticsRow,
   type SearchEventRow,
 } from "@/lib/admin/search-analytics";
+import { isSyntheticProbeTerm } from "@/lib/synthetic-probe";
 
 const SENTINEL = "SENTINEL_TERM_MUST_NOT_RENDER";
 
@@ -375,6 +377,86 @@ describe("search analytics aggregation", () => {
   });
 
   it("select string excludes sensitive query fields", () => {
-    expect(SEARCH_CACHE_ANALYTICS_SELECT).not.toMatch(/phone|br|queryEcho|registrationNo/);
+    expect(SEARCH_CACHE_ANALYTICS_SELECT).toContain(
+      "cr_matched:report->official->companiesRegistry->>matched",
+    );
+    expect(SEARCH_CACHE_ANALYTICS_SELECT).not.toMatch(
+      /phone|br|queryEcho|registrationNo/,
+    );
+  });
+
+  it("does not count a CR match as 搵唔到 and drops ZZQ probe fingerprints", () => {
+    const now = new Date("2026-06-15T12:00:00.000Z");
+    const events: SearchEventRow[] = [
+      {
+        fingerprint: "fp-miss",
+        cache_hit: false,
+        created_at: "2026-06-15T08:00:00.000Z",
+      },
+      {
+        fingerprint: "fp-cr",
+        cache_hit: false,
+        created_at: "2026-06-15T09:00:00.000Z",
+      },
+      {
+        fingerprint: "fp-probe",
+        cache_hit: false,
+        created_at: "2026-06-15T10:00:00.000Z",
+      },
+      {
+        fingerprint: "fp-probe-space",
+        cache_hit: true,
+        created_at: "2026-06-15T11:00:00.000Z",
+      },
+    ];
+    const cache: SearchCacheAnalyticsRow[] = [
+      {
+        fingerprint: "fp-miss",
+        term: "甲乙工程",
+        match_type: "company_name",
+        outcome: "user_only",
+        matched_name: null,
+        cr_matched: "false",
+      },
+      {
+        fingerprint: "fp-cr",
+        term: "丙丁工程",
+        match_type: "company_name",
+        outcome: "user_only",
+        matched_name: null,
+        cr_matched: "true",
+      },
+      {
+        fingerprint: "fp-probe",
+        term: "ZZQ_audit probe",
+        match_type: "company_name",
+        outcome: "user_only",
+        matched_name: null,
+        cr_matched: false,
+      },
+      {
+        fingerprint: "fp-probe-space",
+        term: "ZZQ TESTING LIMITED",
+        match_type: "company_name",
+        outcome: "user_only",
+        matched_name: null,
+      },
+    ];
+    const result = aggregateSearchAnalytics(events, cache, now, 7);
+    expect(analyticsCrMatched("true")).toBe(true);
+    expect(analyticsCrMatched(true)).toBe(true);
+    expect(analyticsCrMatched("false")).toBe(false);
+    expect(isSyntheticProbeTerm("ZZQ_audit probe")).toBe(true);
+    expect(isSyntheticProbeTerm("zzq testing")).toBe(true);
+    expect(isSyntheticProbeTerm("ZZQTESTING")).toBe(false);
+    expect(result.kpi.totalSearches).toBe(2);
+    expect(result.kpi.cacheHitCount).toBe(0);
+    expect(result.kpi.noMatchCount).toBe(1);
+    expect(result.kpi.crMatchedCount).toBe(1);
+    expect(result.kpi.byInputType.company_name).toBe(2);
+    expect(result.views.none.map((row) => row.term)).toEqual(["甲乙工程"]);
+    expect(result.views.cr_matched.map((row) => row.term)).toEqual(["丙丁工程"]);
+    expect(result.terms.map((row) => row.term)).toEqual(["丙丁工程", "甲乙工程"]);
+    expect(result.daily.reduce((sum, day) => sum + day.searches, 0)).toBe(2);
   });
 });

@@ -14,6 +14,7 @@ import {
 const VIEW_TABS: { id: SearchAnalyticsView; label: string }[] = [
   { id: "all", label: "全部" },
   { id: "none", label: "搵唔到" },
+  { id: "cr_matched", label: "公司註冊處搵到" },
   { id: "ambiguous", label: "撞名多間" },
   { id: "mwc_authoritative", label: "名唔同但搵到" },
   { id: "short", label: "太短（4 個字或以下）" },
@@ -113,6 +114,12 @@ export function AdminDashboardView({
           title="撞名多間"
           pct={data.kpi.ambiguousPct}
           count={data.kpi.ambiguousCount}
+          unavailable={errored}
+        />
+        <KpiCard
+          title="公司註冊處搵到"
+          pct={data.kpi.crMatchedPct}
+          count={data.kpi.crMatchedCount}
           unavailable={errored}
         />
       </section>

@@ -20,6 +20,7 @@ function parseView(raw: string | undefined): SearchAnalyticsView {
   const allowed: SearchAnalyticsView[] = [
     "all",
     "none",
+    "cr_matched",
     "ambiguous",
     "mwc_authoritative",
     "short",
@@ -77,6 +78,8 @@ function emptyAggregate() {
       cacheHitCount: 0,
       noMatchPct: 0,
       noMatchCount: 0,
+      crMatchedPct: 0,
+      crMatchedCount: 0,
       ambiguousPct: 0,
       ambiguousCount: 0,
       byInputType: {
@@ -91,6 +94,7 @@ function emptyAggregate() {
     views: {
       all: [],
       none: [],
+      cr_matched: [],
       ambiguous: [],
       mwc_authoritative: [],
       short: [],

@@ -419,6 +419,90 @@ describe("lookupCompaniesRegistryForSearch", () => {
     expect(b.brNo).toBe("C2222222");
     expect(searchCrLocalByNameBeginsWith.mock.calls.length).toBeGreaterThan(1);
   });
+
+  it("grade D prefix rows are candidates and are not counted as a match", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({
+      kind: "rows",
+      rows: [
+        {
+          Brn: "C9000001",
+          English_Company_Name: "OTHER WORKS LIMITED",
+          Chinese_Company_Name: "其他工程有限公司",
+          Company_Type: "Co",
+          Date_of_Incorporation: "01-01-2020",
+          Address_of_Registered_Office: "HK",
+        },
+      ],
+    });
+    const label = "完全唔同有限公司";
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    expect(official.matched).toBe(false);
+    expect(official.matchTier).toBeUndefined();
+    expect(official.hints).not.toContain("not_found_in_active_list");
+    expect(official.candidateNames).toEqual([
+      {
+        brNo: "C9000001",
+        nameZh: "其他工程有限公司",
+        nameEn: "OTHER WORKS LIMITED",
+      },
+    ]);
+    const report = riskReportFromCr(official);
+    expect(report.grade).toBe("C");
+    expect(report.entity.nameAlignment).toBe("user_only");
+    expect(shouldShowMwcMissWithCrFoundNote(report)).toBe(false);
+  });
+
+  it("three non-matching prefix rows stay inconclusive, not candidates", async () => {
+    searchCrLocalByNameBeginsWith.mockResolvedValue({
+      kind: "rows",
+      rows: ["其他工程有限公司", "別家工程有限公司", "第三工程有限公司"].map(
+        (zh, index) => ({
+          Brn: `C900000${index}`,
+          English_Company_Name: "NULL",
+          Chinese_Company_Name: zh,
+          Company_Type: "Co",
+          Date_of_Incorporation: "01-01-2020",
+          Address_of_Registered_Office: "HK",
+        }),
+      ),
+    });
+    const label = "完全唔同有限公司";
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    expect(official.matched).toBe(false);
+    expect(official.candidateNames).toBeUndefined();
+    expect(official.hints).toEqual([]);
+  });
+
+  it("a later B match wins over grade D candidates", async () => {
+    searchCrLocalByNameBeginsWith.mockImplementation(async (prefix: string) => {
+      if (prefix === "DECORATION WORKS LIMITED") {
+        return {
+          kind: "rows",
+          rows: [row("DECORATION WORKS LIMITED", "C1566911")],
+        };
+      }
+      return {
+        kind: "rows",
+        rows: [row("OTHER WORKS LIMITED", "C9000009")],
+      };
+    });
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput("DECORATION WORKS LIMITED"),
+      "DECORATION WORKS LIMITED",
+      null,
+    );
+    expect(official.matched).toBe(true);
+    expect(official.matchTier).toBe("B");
+    expect(official.candidateNames).toBeUndefined();
+  });
 });
 
 function riskReportFromCr(

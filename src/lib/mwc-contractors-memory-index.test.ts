@@ -28,6 +28,29 @@ describe("MwcContractorsMemoryIndex", () => {
     expect(r.ambiguous).toBe(false);
   });
 
+  it("matches an English name and a 恒/恆 variant", () => {
+    const bilingual = new MwcContractorsMemoryIndex([
+      {
+        company_name: "恆偉工程公司",
+        company_name_en: "HANG WAI ENGINEERING LIMITED",
+        phone: null,
+        registration_no: "MWC-00001",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+    ]);
+    expect(
+      bilingual.lookupWithMeta(companyNameOnlySearchInput("恒偉工程公司")).row
+        ?.registration_no,
+    ).toBe("MWC-00001");
+    expect(
+      bilingual.lookupWithMeta(
+        companyNameOnlySearchInput("HANG WAI ENGINEERING LIMITED"),
+      ).row?.company_name,
+    ).toBe("恆偉工程公司");
+  });
+
   it("flags ambiguous when two rows match", () => {
     const r = index.lookupWithMeta(companyNameOnlySearchInput("裝修"));
     expect(r.ambiguous).toBe(true);

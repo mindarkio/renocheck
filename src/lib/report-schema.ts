@@ -115,6 +115,17 @@ export const companiesRegistryHintSchema = z.enum([
   "not_found_in_active_list",
 ]);
 
+/** Grade-D CR rows. Presence does not set `matched` and is not a grade input. */
+export const companiesRegistryCandidateSchema = z.object({
+  brNo: z.string().max(32).optional(),
+  nameZh: z.string().max(200).optional(),
+  nameEn: z.string().max(200).optional(),
+});
+
+export type CompaniesRegistryCandidate = z.infer<
+  typeof companiesRegistryCandidateSchema
+>;
+
 export const companiesRegistrySchema = z.object({
   lookupStatus: z.enum(["ok", "error", "timeout", "skipped"]),
   matched: z.boolean().optional(),
@@ -124,6 +135,7 @@ export const companiesRegistrySchema = z.object({
   companyType: z.string().max(120).optional(),
   nameZh: z.string().max(200).optional(),
   nameEn: z.string().max(200).optional(),
+  candidateNames: z.array(companiesRegistryCandidateSchema).max(2).optional(),
   incorporationDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)

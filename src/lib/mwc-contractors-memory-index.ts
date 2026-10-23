@@ -1,7 +1,13 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NormalizedSearchInput } from "./normalize-search-input";
-import type { MwcLookupResult, MwcRow } from "./mwc-lookup";
+import {
+  isMissingMwcCompanyNameEnColumn,
+  MWC_CONTRACTOR_SELECT,
+  MWC_CONTRACTOR_SELECT_WITH_EN,
+  type MwcLookupResult,
+  type MwcRow,
+} from "./mwc-lookup";
 import { mwcCompanyNameLookupTerms } from "./mwc-company-search-terms";
 
 function ilikeSubstring(haystack: string, needle: string): boolean {
@@ -19,23 +25,56 @@ export class MwcContractorsMemoryIndex {
 
   /** @deprecated D2 用 loadD2GoldenMwcRows；呢個會讀 primary_signatory_name */
   static async loadAll(supabase: SupabaseClient): Promise<MwcContractorsMemoryIndex> {
+    const withEn = await MwcContractorsMemoryIndex.fetchPages(
+      supabase,
+      MWC_CONTRACTOR_SELECT_WITH_EN,
+    );
+    if (withEn.kind === "missing_en") {
+      const base = await MwcContractorsMemoryIndex.fetchPages(
+        supabase,
+        MWC_CONTRACTOR_SELECT,
+      );
+      if (base.kind !== "ok") MwcContractorsMemoryIndex.throwPageError(base);
+      return new MwcContractorsMemoryIndex(base.rows);
+    }
+    if (withEn.kind !== "ok") MwcContractorsMemoryIndex.throwPageError(withEn);
+    return new MwcContractorsMemoryIndex(withEn.rows);
+  }
+
+  private static throwPageError(result: {
+    kind: "missing_en" | "error";
+    error?: { message: string };
+  }): never {
+    if (result.kind === "error" && result.error) throw result.error;
+    throw new Error("mwc_lookup_failed");
+  }
+
+  private static async fetchPages(
+    supabase: SupabaseClient,
+    columns: string,
+  ): Promise<
+    | { kind: "ok"; rows: MwcRow[] }
+    | { kind: "missing_en" }
+    | { kind: "error"; error: { message: string } }
+  > {
     const pageSize = 1000;
     let from = 0;
     const out: MwcRow[] = [];
     while (true) {
       const { data, error } = await supabase
         .from("mwc_contractors")
-        .select(
-          "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at",
-        )
+        .select(columns)
         .range(from, from + pageSize - 1);
-      if (error) throw error;
-      const batch = (data ?? []) as MwcRow[];
+      if (error) {
+        if (isMissingMwcCompanyNameEnColumn(error)) return { kind: "missing_en" };
+        return { kind: "error", error };
+      }
+      const batch = (data ?? []) as unknown as MwcRow[];
       out.push(...batch);
       if (batch.length < pageSize) break;
       from += pageSize;
     }
-    return new MwcContractorsMemoryIndex(out);
+    return { kind: "ok", rows: out };
   }
 
   get size(): number {
@@ -78,8 +117,12 @@ export class MwcContractorsMemoryIndex {
     if (input.companyName) {
       let ambiguous = false;
       for (const term of mwcCompanyNameLookupTerms(input.companyName)) {
-        const matches = this.rows.filter((r) =>
-          ilikeSubstring(r.company_name, term),
+        const matches = this.rows.filter(
+          (r) =>
+            ilikeSubstring(r.company_name, term) ||
+            (r.company_name_en
+              ? ilikeSubstring(r.company_name_en, term)
+              : false),
         );
         if (matches.length === 0) continue;
         if (matches.length >= 2) ambiguous = true;

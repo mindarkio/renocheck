@@ -12,6 +12,7 @@ import {
 } from "./cr-register/eligibility";
 import {
   ambiguousCrSnapshot,
+  candidateCrSnapshot,
   inconclusiveCrSnapshot,
   mapCrApiRowToSnapshot,
   notFoundCrSnapshot,
@@ -19,15 +20,17 @@ import {
 import {
   allNameSearchPrefixAttempts,
   buildNameSearchPrefixes,
+  isCrMatchedPick,
   pickMatchedRows,
   tierForRow,
+  type CrPickResult,
 } from "./cr-register/match";
 import {
   crRegistryCacheKey,
   getCrRegistryCached,
   setCrRegistryCached,
 } from "./cr-register/memory-cache";
-import type { CrMappedSnapshot } from "./cr-register/types";
+import type { CrApiLocalRow, CrMappedSnapshot } from "./cr-register/types";
 import type { MwcRow } from "./mwc-lookup";
 import type { NormalizedSearchInput } from "./normalize-search-input";
 
@@ -64,6 +67,9 @@ function snapshotToOfficial(
     retrievedAt: snapshot.retrievedAt,
     hints: snapshot.hints,
     icrisHomeUrl: snapshot.icrisHomeUrl || CR_ESERVICES_URL,
+    ...(snapshot.candidateNames && snapshot.candidateNames.length > 0
+      ? { candidateNames: snapshot.candidateNames }
+      : {}),
   };
 }
 
@@ -100,7 +106,7 @@ function toDegraded(
 }
 
 function matchedFromPick(
-  pick: { tier: "A" | "B" | "C"; row: import("./cr-register/types").CrApiLocalRow },
+  pick: { tier: "A" | "B" | "C"; row: CrApiLocalRow },
   retrievedAt: string,
 ): CrMappedSnapshot {
   const mapped = mapCrApiRowToSnapshot(pick.row, {
@@ -144,6 +150,18 @@ async function resolveNamePrefixes(
   }
 
   const prefixCache = new Map<string, CrLocalSearchResult>();
+  let candidates: CrApiLocalRow[] | null = null;
+
+  const takePick = (pick: CrPickResult): CrMappedSnapshot | undefined => {
+    if (pick === "ambiguous") return ambiguousCrSnapshot(retrievedAt);
+    if (isCrMatchedPick(pick)) return matchedFromPick(pick, retrievedAt);
+    if (pick?.tier === "D") {
+      if (!candidates || pick.rows.length < candidates.length) {
+        candidates = pick.rows;
+      }
+    }
+    return undefined;
+  };
 
   for (const prefix of primary) {
     const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs, stats);
@@ -153,13 +171,8 @@ async function resolveNamePrefixes(
     if (res.kind === "no_result") {
       continue;
     }
-    const pick = pickMatchedRows(res.rows, searchLabelUsed);
-    if (pick === "ambiguous") {
-      return { kind: "snapshot", snapshot: ambiguousCrSnapshot(retrievedAt) };
-    }
-    if (pick) {
-      return { kind: "snapshot", snapshot: matchedFromPick(pick, retrievedAt) };
-    }
+    const done = takePick(pickMatchedRows(res.rows, searchLabelUsed));
+    if (done) return { kind: "snapshot", snapshot: done };
   }
 
   for (const prefix of allAttempts.slice(0, 4)) {
@@ -168,17 +181,14 @@ async function resolveNamePrefixes(
       return toDegraded(res.message);
     }
     if (res.kind === "rows") {
-      const pick = pickMatchedRows(res.rows, searchLabelUsed);
-      if (pick === "ambiguous") {
-        return { kind: "snapshot", snapshot: ambiguousCrSnapshot(retrievedAt) };
-      }
-      if (pick) {
-        return {
-          kind: "snapshot",
-          snapshot: matchedFromPick(pick, retrievedAt),
-        };
-      }
+      const done = takePick(pickMatchedRows(res.rows, searchLabelUsed));
+      if (done) return { kind: "snapshot", snapshot: done };
     }
+  }
+
+  if (candidates) {
+    const snapshot = candidateCrSnapshot(candidates, retrievedAt);
+    if (snapshot) return { kind: "snapshot", snapshot };
   }
 
   // Untried variants (beyond the cap) are literal extensions of the shorter
@@ -268,7 +278,7 @@ async function runLiveLookup(
         if (pick === "ambiguous") {
           return persist(ambiguousCrSnapshot(retrievedAt));
         }
-        if (pick) {
+        if (isCrMatchedPick(pick)) {
           return persist(matchedFromPick(pick, retrievedAt));
         }
         return persist(inconclusiveCrSnapshot(retrievedAt));

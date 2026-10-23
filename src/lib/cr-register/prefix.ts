@@ -8,8 +8,24 @@ function toHalfWidthAlnumAndParens(s: string): string {
   );
 }
 
+/**
+ * Collapse dotted initials before prefix cutting. `TRUNCATE_AT` cuts on `.`,
+ * so `O.M.Y.L` would otherwise become `O`.
+ */
+export function collapseDottedAcronyms(value: string): string {
+  return value.replace(
+    /(?:[A-Za-z]\s*\.\s*){2,}(?:[A-Za-z](?![A-Za-z]))?/g,
+    (match) => {
+      const trailingSpace = /\s+$/.test(match);
+      const collapsed = match.replace(/[\s.]/g, "");
+      return trailingSpace ? `${collapsed} ` : collapsed;
+    },
+  );
+}
+
 export function normalizePrefixSource(label: string): string {
-  return toHalfWidthAlnumAndParens(label.trim()).replace(/\s+/g, " ");
+  const half = toHalfWidthAlnumAndParens(label.trim());
+  return collapseDottedAcronyms(half).replace(/\s+/g, " ").trim();
 }
 
 export function truncatePrefixSource(normalized: string): string {

@@ -41,6 +41,13 @@ describe("buildNameSearchPrefixes (B1/M4)", () => {
     expect(truncatePrefixSource("九龍巴士（一九三三）")).toBe("九龍巴士");
   });
 
+  it("collapses dotted acronyms before cutting on the dot", () => {
+    expect(buildNameSearchPrefixes("O.M.Y.L ENGINEERING LIMITED")).toEqual([
+      "OMYL ENGINEERING",
+    ]);
+    expect(buildNameSearchPrefixes("O. M. Y. L. LIMITED")).toEqual(["OMYL"]);
+  });
+
   it("fullwidth Latin normalizes to ZZQ TESTING prefix (L-d)", () => {
     expect(
       buildNameSearchPrefixes("ＺＺＱ　ＴＥＳＴＩＮＧ　ＬＩＭＩＴＥＤ"),

@@ -14,6 +14,12 @@ export type CrApiNoResult = {
   message: string;
 };
 
+export type CrCandidateName = {
+  brNo?: string;
+  nameZh?: string;
+  nameEn?: string;
+};
+
 export type CrMappedSnapshot = {
   matched: boolean;
   matchAmbiguous?: boolean;
@@ -26,4 +32,6 @@ export type CrMappedSnapshot = {
   retrievedAt: string;
   hints: Array<"incorporation_under_one_year" | "not_found_in_active_list">;
   icrisHomeUrl: string;
+  /** Grade D only. Not a match and not a grade input. */
+  candidateNames?: CrCandidateName[];
 };

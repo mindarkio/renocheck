@@ -2,10 +2,13 @@ import "server-only";
 
 import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
 import { foldFullWidth, stripControlAndBidi } from "@/lib/feedback/redact";
+import { isSyntheticProbeTerm } from "@/lib/synthetic-probe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
+export { isSyntheticProbeTerm };
+
 export const SEARCH_CACHE_ANALYTICS_SELECT =
-  "fingerprint, term:query_input->>companyName, match_type:query_input->>matchType, outcome:report->entity->>nameAlignment, matched_name:report->official->details->>companyName";
+  "fingerprint, term:query_input->>companyName, match_type:query_input->>matchType, outcome:report->entity->>nameAlignment, matched_name:report->official->details->>companyName, cr_matched:report->official->companiesRegistry->>matched";
 
 const EVENT_PAGE_SIZE = 1000;
 const EVENT_ROW_CAP = 50_000;
@@ -37,6 +40,8 @@ export type SearchCacheAnalyticsRow = {
   match_type: string | null;
   outcome: string | null;
   matched_name: string | null;
+  /** `companiesRegistry.matched`. PostgREST `->>` returns text `"true"` / `"false"`. */
+  cr_matched?: boolean | string | null;
 };
 
 export type TermRow = {
@@ -46,6 +51,8 @@ export type TermRow = {
   cacheHits: number;
   outcome: string | null;
   matchedName: string | null;
+  /** Companies Registry matched. Does not change `outcome` (nameAlignment). */
+  crMatched: boolean;
   lastSeen: string;
 };
 
@@ -58,6 +65,7 @@ export type DailyRow = {
 export type SearchAnalyticsView =
   | "all"
   | "none"
+  | "cr_matched"
   | "ambiguous"
   | "mwc_authoritative"
   | "short";
@@ -69,6 +77,8 @@ export type SearchAnalyticsAggregate = {
     cacheHitCount: number;
     noMatchPct: number;
     noMatchCount: number;
+    crMatchedPct: number;
+    crMatchedCount: number;
     ambiguousPct: number;
     ambiguousCount: number;
     byInputType: {
@@ -137,6 +147,17 @@ function pct(numerator: number, denominator: number): number {
   return Math.round((numerator / denominator) * 1000) / 10;
 }
 
+/** `->>` yields text. Only an explicit true counts as a Companies Registry match. */
+export function analyticsCrMatched(
+  value: SearchCacheAnalyticsRow["cr_matched"],
+): boolean {
+  return value === true || value === "true";
+}
+
+function isAnalyticsNoMatch(outcome: string | null, crMatched: boolean): boolean {
+  return outcome === "user_only" && !crMatched;
+}
+
 /** Start of the oldest HK calendar day shown in `daily`, so KPI totals and the daily chart cover the same events. HK has no DST. */
 export function analyticsRangeStart(now: Date, days: AnalyticsDays): Date {
   const oldestDay = hkDayKey(new Date(now.getTime() - (days - 1) * 24 * 60 * 60 * 1000));
@@ -163,6 +184,11 @@ export function aggregateSearchAnalytics(
     cacheByFp.set(row.fingerprint, row);
   }
 
+  const countedEvents = events.filter((ev) => {
+    const term = cacheByFp.get(ev.fingerprint)?.term ?? "";
+    return !isSyntheticProbeTerm(term);
+  });
+
   const byInputType = {
     company_name: 0,
     phone: 0,
@@ -173,6 +199,7 @@ export function aggregateSearchAnalytics(
   let cacheHitCount = 0;
   let companyWithCache = 0;
   let noMatchCount = 0;
+  let crMatchedCount = 0;
   let ambiguousCount = 0;
 
   const dailyMap = new Map<string, { searches: number; cacheHits: number }>();
@@ -188,7 +215,7 @@ export function aggregateSearchAnalytics(
   };
   const byFp = new Map<string, FpAgg>();
 
-  for (const ev of events) {
+  for (const ev of countedEvents) {
     cacheHitCount += ev.cache_hit ? 1 : 0;
     const cache = cacheByFp.get(ev.fingerprint);
     if (!cache) {
@@ -203,7 +230,9 @@ export function aggregateSearchAnalytics(
 
       if (mt === "company_name") {
         companyWithCache += 1;
-        if (cache.outcome === "user_only") noMatchCount += 1;
+        const crMatched = analyticsCrMatched(cache.cr_matched);
+        if (isAnalyticsNoMatch(cache.outcome, crMatched)) noMatchCount += 1;
+        if (crMatched) crMatchedCount += 1;
         if (cache.outcome === "ambiguous") ambiguousCount += 1;
       }
     }
@@ -235,7 +264,8 @@ export function aggregateSearchAnalytics(
     if (row.match_type === "phone" || row.match_type === "br") continue;
     if (row.match_type !== "company_name") continue;
     const rawTerm = row.term?.trim() ?? "";
-    if (!rawTerm) continue;
+    if (!rawTerm || isSyntheticProbeTerm(rawTerm)) continue;
+    const crMatched = analyticsCrMatched(row.cr_matched);
     termsAll.push({
       term: maskAdminTerm(rawTerm),
       length: codePointLength(rawTerm),
@@ -243,6 +273,7 @@ export function aggregateSearchAnalytics(
       cacheHits: agg.cacheHits,
       outcome: row.outcome,
       matchedName: row.matched_name ? maskAdminTerm(row.matched_name) : null,
+      crMatched,
       lastSeen: agg.lastSeen,
     });
   }
@@ -260,7 +291,8 @@ export function aggregateSearchAnalytics(
 
   const filterView = (view: SearchAnalyticsView): TermRow[] => {
     let list = termsAll;
-    if (view === "none") list = list.filter((t) => t.outcome === "user_only");
+    if (view === "none") list = list.filter((t) => isAnalyticsNoMatch(t.outcome, t.crMatched));
+    else if (view === "cr_matched") list = list.filter((t) => t.crMatched);
     else if (view === "ambiguous")
       list = list.filter((t) => t.outcome === "ambiguous");
     else if (view === "mwc_authoritative")
@@ -279,11 +311,13 @@ export function aggregateSearchAnalytics(
 
   return {
     kpi: {
-      totalSearches: events.length,
-      cacheHitPct: pct(cacheHitCount, events.length),
+      totalSearches: countedEvents.length,
+      cacheHitPct: pct(cacheHitCount, countedEvents.length),
       cacheHitCount,
       noMatchPct: pct(noMatchCount, companyWithCache),
       noMatchCount,
+      crMatchedPct: pct(crMatchedCount, companyWithCache),
+      crMatchedCount,
       ambiguousPct: pct(ambiguousCount, companyWithCache),
       ambiguousCount,
       byInputType,
@@ -293,6 +327,7 @@ export function aggregateSearchAnalytics(
     views: {
       all: filterView("all"),
       none: filterView("none"),
+      cr_matched: filterView("cr_matched"),
       ambiguous: filterView("ambiguous"),
       mwc_authoritative: filterView("mwc_authoritative"),
       short: filterView("short"),

@@ -52,4 +52,33 @@ describe("POST /api/search service pause", () => {
     expect(res.status).toBe(200);
     expect(mocks.runSearchPipeline).toHaveBeenCalledTimes(1);
   });
+
+  it("rejects ZZQ probe names in production before any pipeline write", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const res = await POST(
+      new Request("http://localhost/api/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ companyName: "ZZQ_PROBE LIMITED" }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid_input" });
+    expect(mocks.runSearchPipeline).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps ZZQ names working outside production", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    const res = await POST(
+      new Request("http://localhost/api/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ companyName: "ZZQ TESTING LIMITED" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(mocks.runSearchPipeline).toHaveBeenCalledTimes(1);
+    vi.unstubAllEnvs();
+  });
 });

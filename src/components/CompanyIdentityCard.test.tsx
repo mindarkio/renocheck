@@ -6,6 +6,10 @@ import { REPORT_VERSION } from "@/lib/constants";
 import { buildEvaluationStub } from "@/lib/evaluation-stub";
 import type { CompaniesRegistryOfficial, RiskReport } from "@/lib/report-schema";
 import {
+  CR_CANDIDATE_LIST_EXPLAINER_PENDING_APPROVAL_ZH,
+  CR_CANDIDATE_LIST_HEADING_PENDING_APPROVAL_ZH,
+} from "@/lib/cr-register/candidate-copy";
+import {
   COPY_COMPANY_NAME_BUTTON_ZH,
   CR_DATA_ATTRIBUTION_ZH,
   CR_ESERVICES_URL,
@@ -168,6 +172,38 @@ describe("CompanyIdentityCard", () => {
     );
     assertClean(container.textContent ?? "");
     expect(container.textContent).toContain(CR_IDENTITY_NOT_FOUND_ZH);
+  });
+
+  it("shows grade D candidates without calling them a match", () => {
+    const { container } = render(
+      <CompanyIdentityCard
+        report={minimalReport(
+          crRegistry({
+            matched: false,
+            candidateNames: [
+              {
+                brNo: "C9000001",
+                nameZh: "其他工程有限公司",
+                nameEn: "OTHER WORKS LIMITED",
+              },
+            ],
+          }),
+        )}
+      />,
+    );
+    assertClean(container.textContent ?? "");
+    expect(container.textContent).toContain(
+      CR_CANDIDATE_LIST_HEADING_PENDING_APPROVAL_ZH,
+    );
+    expect(container.textContent).toContain(
+      CR_CANDIDATE_LIST_EXPLAINER_PENDING_APPROVAL_ZH,
+    );
+    expect(container.textContent).toContain("其他工程有限公司");
+    expect(container.textContent).toContain("OTHER WORKS LIMITED");
+    expect(container.textContent).toContain("C9000001");
+    expect(container.textContent).not.toContain(CR_IDENTITY_INCONCLUSIVE_ZH);
+    expect(container.textContent).not.toContain(CR_IDENTITY_NOT_FOUND_ZH);
+    expect(screen.queryByText(COPY_COMPANY_NAME_BUTTON_ZH)).toBeNull();
   });
 
   it("inconclusive", () => {
