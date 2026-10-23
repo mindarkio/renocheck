@@ -20,3 +20,6 @@ Pair each file with the matching migration under `supabase/migrations/`. Run on 
 | `20261020180000_report_feedback.down.sql` | `20261020180000_report_feedback.sql` |
 | `20261023180000_mwc_company_name_en.down.sql` | `20261023180000_mwc_company_name_en.sql` |
 | `20261023203000_returning_user_analytics.down.sql` | `20261023203000_returning_user_analytics.sql` |
+| `20261023220000_quote_analysis.down.sql` | `20261023220000_quote_analysis.sql` |
+
+20261023220000 嘅 down 會刪走 `quote_analyses`、`quote_analysis_claims` 同 `quote_spend_daily` 全部列（EMERGENCY／資料損失），只限緊急用。

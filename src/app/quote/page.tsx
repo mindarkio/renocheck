@@ -7,6 +7,7 @@ import {
   ContentPageTitle,
 } from "@/components/ContentPage";
 import { JsonLd } from "@/components/JsonLd";
+import { QuoteAnalysisEntry } from "@/components/QuoteAnalysisEntry";
 import { QuoteSelfCheck } from "@/components/QuoteSelfCheck";
 import {
   QUOTE_PAGE_DESCRIPTION_ZH,
@@ -36,6 +37,7 @@ export default function QuotePage() {
         <ContentPageTitle>{QUOTE_PAGE_TITLE_ZH}</ContentPageTitle>
         <ContentPageLead>{QUOTE_PAGE_LEAD_ZH}</ContentPageLead>
         <QuoteSelfCheck />
+        <QuoteAnalysisEntry />
         <ContentPageNav
           links={QUOTE_PAGE_NAV}
           linkClassName="inline-flex min-h-11 items-center"

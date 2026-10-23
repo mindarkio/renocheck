@@ -11,6 +11,7 @@ import {
 } from "@/components/ContentPage";
 import { DISCLAIMER_VERSION } from "@/lib/constants";
 import { FEEDBACK_PRIVACY_NOTICE_ZH } from "@/lib/feedback-copy-zh";
+import { QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH } from "@/lib/quote-analysis/copy";
 export const metadata: Metadata = pageMetadata({
   path: "/legal/disclaimer",
   title: "免責聲明與資料來源",
@@ -129,6 +130,7 @@ export default function DisclaimerPage() {
               <a href="mailto:hello@renocheck.homes">hello@renocheck.homes</a>
               {FEEDBACK_PRIVACY_NOTICE_ZH.split("hello@renocheck.homes")[1]}
             </p>
+            <p id="quote-analysis-privacy">{QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH}</p>
           </ContentSection>
 
           <ContentSection title="八、責任限制">
