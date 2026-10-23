@@ -1,6 +1,6 @@
 /**
  * Homeowner guides (/guides/*). Every fact here must trace to an official source in `sources`.
- * Last fact-check: 2026-10-16.
+ * Last fact-check: 2026-10-16. Guides added 2026-10-23 were checked the same day.
  */
 
 export type GuideSection = {
@@ -10,6 +10,9 @@ export type GuideSection = {
 };
 
 export type GuideSource = { label: string; url: string };
+
+/** Visible Q&A. FAQPage JSON-LD must reuse these strings unchanged. */
+export type GuideFaq = { question: string; answer: string };
 
 export type Guide = {
   slug: string;
@@ -21,10 +24,25 @@ export type Guide = {
   /** Answer-first lead paragraph (AEO). */
   answer: string;
   sections: GuideSection[];
+  /** Optional. Omitted guides do not emit FAQPage JSON-LD. */
+  faqs?: GuideFaq[];
   sources: GuideSource[];
   datePublished: string;
   dateModified: string;
 };
+
+export function guideFaqJsonLd(guide: Guide): Record<string, unknown> | null {
+  if (!guide.faqs?.length) return null;
+  return {
+    "@type": "FAQPage",
+    inLanguage: "zh-HK",
+    mainEntity: guide.faqs.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  };
+}
 
 const BD_REGISTER_SEARCH: GuideSource = {
   label: "屋宇署：註冊專業人士及承建商名冊搜尋",
@@ -82,8 +100,25 @@ const CR_ESEARCH: GuideSource = {
   label: "公司註冊處：電子服務網站——電子查冊",
   url: "https://www.cr.gov.hk/tc/electronic/e-servicesportal/e-search.htm",
 };
+const IRD_STAMP: GuideSource = {
+  label: "稅務局：印花稅",
+  url: "https://www.ird.gov.hk/chi/tax/sdu.htm",
+};
+const IRD_SOIPN01: GuideSource = {
+  label: "稅務局：印花稅署釋義及執行指引第1號（物業買賣協議）",
+  url: "https://www.ird.gov.hk/chi/pdf/soipn01.pdf",
+};
+const LD_EC_FAQ: GuideSource = {
+  label: "勞工處：《僱員補償條例》常見問題（強制投購保險）",
+  url: "https://www.labour.gov.hk/tc/faq/cap282a_whole.htm",
+};
+const LD_EC_GUIDE: GuideSource = {
+  label: "勞工處：僱員補償條例簡介（PDF）",
+  url: "https://www.labour.gov.hk/tc/public/pdf/ecd/pco360.pdf",
+};
 
 const PUBLISHED = "2026-10-16";
+const PUBLISHED_SEO = "2026-10-23";
 
 export const GUIDES: Guide[] = [
   {
@@ -356,6 +391,218 @@ export const GUIDES: Guide[] = [
     sources: [CC_QUOTATION, CC_RENO_PRESS],
     datePublished: PUBLISHED,
     dateModified: PUBLISHED,
+  },
+  {
+    slug: "renovation-contract-clauses-hong-kong",
+    title: "裝修合約範本同條款注意事項（香港）",
+    category: "合約",
+    description:
+      "香港裝修合約要逐項核對，不是下載即用的法律範本。簽約前睇清工程範圍、按進度付款、改動書面確認、工期同延誤、保養期、保險同終止安排。",
+    answer:
+      "下文係簽約前可以逐項核對的要點，不是一份可以下載簽署的合約範本，亦不構成法律意見。消委會提醒，工程前要有詳細、清晰和準確的報價，並將執漏、尾數同保養寫入合約。消委會文章提到，香港測量師學會印製的維修及裝修工程標準合同，以及香港樓宇檢驗學會等制訂的《香港裝修指引》，可作參考，但要以你同承辦商實際簽的書面為準。",
+    sections: [
+      {
+        heading: "工程範圍",
+        paragraphs: [
+          "消委會指，合約要訂明各項工程同價錢，並註明「連工包料」、「代買」定「材料由客人提供」。有指定品牌、型號或圖則，就寫入合約。只得一個總價、冇逐項說明的，之後很難對回做咗咩。",
+        ],
+      },
+      {
+        heading: "付款同進度",
+        paragraphs: [
+          "消委會建議按工程進度分階段付款，每一期付費前先同對方檢視進度同核對費用。訂金佔總價幾多，該文章冇訂官方百分比。你要睇合約寫明未開工之前付幾多、每一期對應完成邊一項，以及尾數係咪等到執漏清單完成先付。",
+        ],
+      },
+      {
+        heading: "改動同後加工程",
+        paragraphs: [
+          "消委會指，施工期間如果有工程改動、額外費用，或者因為物料等原因做唔到原先協議，都要書面確認，並補充入合約。口頭講「之後再計」很容易爭拗。後加或改動工程（variation order）點計價、會唔會拉長工期，最好喺簽約時已經寫低。",
+        ],
+      },
+      {
+        heading: "工期同延誤",
+        paragraphs: [
+          "消委會文章提到要編排施工期同完工時間，並確立工期。合約應寫開工日期、預計完工日期，以及延誤點處理。如果改動會拉長工期，消委會指應事先商議費用同時間，再以書面記錄。",
+        ],
+      },
+      {
+        heading: "保養期",
+        paragraphs: [
+          "消委會提醒，執漏、尾數同日後保養的範圍同條款，都要寫入合約，包括保養幾耐、包手工定包物料、訂造傢俬維修邊個負責。上述文章冇指定一個統一保養月數，所以以合約寫明的為準，唔好只靠口頭一句。",
+        ],
+      },
+      {
+        heading: "保險",
+        paragraphs: [
+          "消委會文章把保險、工期同合約條款列為報價要留意的事項。簽約前問清楚：有冇僱員補償保險、保單涵蓋地盤上邊啲人（包括次承判商的工人）、有冇其他工程相關保險，以及邊一方負責。勞工處說明，根據《僱員補償條例》第40條，僱主必須投購僱員補償保險，否則不得僱用僱員從事任何工作，不論全職、兼職或工期長短。勞工處的《僱員補償條例簡介》亦指出，工程的總承判商同次承判商應以書面釐清邊一方的保單涵蓋邊啲僱員。你可以要求出示保單。業主同工人如果唔係僱傭關係，本文不判斷邊個先係僱主。",
+        ],
+      },
+      {
+        heading: "做唔完或想停工",
+        paragraphs: [
+          "合約如果完全冇寫工程停咗、嚴重延誤，或者做唔完點處理，簽約前要問清楚：未完成項目、已付款項、物料同場地點樣交還，並以書面補充入合約。消委會文章冇提供一條標準終止條款，本文亦不提供可以照抄的終止範本。",
+        ],
+      },
+      {
+        heading: "印花稅",
+        paragraphs: [
+          "稅務局就物業徵收的印花稅，適用於物業買賣協議、樓契同租約等文書。一份只訂明裝修工程範圍同價錢、並不買賣或轉讓物業、亦不是租約的合約，並不屬於該等物業文書。如果同一份文件同時涉及物業轉讓、提名或租住，就要按該份文書向稅務局查核。本文不判斷你手上那一份使唔使印花。",
+        ],
+      },
+      {
+        heading: "簽之前可以再對一次",
+        paragraphs: [
+          "報價未簽成合約之前，可以先用 [報價自查清單](/quote) 對吓有冇寫齊。較短的簽約清單見 [裝修合約要寫咩](/guides/renovation-contract-checklist)。想查公司的公開討論，去 [Renocheck 搜尋](/)。",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "呢篇係咪一份可以下載簽署的裝修合約範本？",
+        answer:
+          "不是。呢篇只係簽約前的核對清單，不提供合約範本，亦不構成法律意見。條款以你同承辦商書面寫低的為準。",
+      },
+      {
+        question: "住宅裝修工程合約使唔使印花稅？",
+        answer:
+          "稅務局就物業徵收的印花稅，適用於物業買賣協議、樓契同租約等文書。一份只訂明裝修工程範圍同價錢、並不買賣或轉讓物業、亦不是租約的合約，並不屬於該等物業文書。如果同一份文件同時涉及物業轉讓、提名或租住，就要按該份文書向稅務局查核。本文不判斷你手上那一份使唔使印花。",
+      },
+    ],
+    sources: [
+      CC_RENO_PRESS,
+      CC_QUOTATION,
+      IRD_STAMP,
+      IRD_SOIPN01,
+      LD_EC_FAQ,
+      LD_EC_GUIDE,
+    ],
+    datePublished: PUBLISHED_SEO,
+    dateModified: PUBLISHED_SEO,
+  },
+  {
+    slug: "renovation-quote-timing-compare-three",
+    title: "裝修報價要幾耐？點樣比較 3 份報價",
+    category: "報價",
+    description:
+      "裝修報價冇官方交件時限。呢篇用大致範圍說明點解有快有慢，以及點樣用同一工程範圍比較三份報價的數量、單價同包唔包料，對完可以用報價自查清單再睇一次。",
+    answer:
+      "香港冇官方時限，規定裝修公司要幾耐內交出報價。範圍有冇講清楚、使唔使上門度尺、圖則齊唔齊，都會影響時間。實務上，初步報價有時幾日內收到，列明數量同單價的詳細報價可能要一兩個星期；呢個只係幫你預期的大致範圍，不是調查統計，遲幾日亦說明唔到呢份報價唔值得再睇。",
+    sections: [
+      {
+        heading: "點解有快有慢",
+        bullets: [
+          "只係一個房間換磚，同全屋連傢俬，所需時間唔同。",
+          "未上門度尺、未有圖則，對方多數只能給概數。",
+          "消委會引述香港測量師學會：正式報價前宜先確立工程目標、範圍同預算。",
+          "上面的「幾日」同「一兩個星期」係大致範圍，不是統計數字。",
+        ],
+      },
+      {
+        heading: "三份要同一範圍",
+        paragraphs: [
+          "消委會文章引述學會意見，建議貨比三家。比較之前，三間公司要收到同一份範圍說明：拆邊度、做邊幾個空間、包唔包訂造傢俬、水電改動到咩程度。範圍唔同的總價，比較唔到。",
+        ],
+      },
+      {
+        heading: "逐項先比較",
+        bullets: [
+          "每項數量、單價、分項合計同總數。只得合計的，香港樓宇檢驗學會指只是估算。",
+          "係咪連工包料、代買，定材料由你提供。",
+          "「包生仔」定「實量實度」。",
+          "後加工程點收費，有冇另外收費或免責條款。",
+          "工期同點樣分期付款。",
+          "唔好只睇最平的總價。",
+        ],
+      },
+      {
+        heading: "對完可以點做",
+        paragraphs: [
+          "同一範圍的項目，可以用 [報價自查清單](/quote) 逐項睇有冇寫齊、寫清楚。想知報價單應列咩，見 [裝修報價點睇](/guides/how-to-read-renovation-quotation)。揀定公司之後，可以喺 [Renocheck 搜尋](/) 查公開討論同名冊對照的風險參考。",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "裝修報價要幾耐先有？",
+        answer:
+          "香港冇官方時限。實務上，初步報價有時幾日內收到，列明數量同單價的詳細報價可能要一兩個星期。呢個係大致範圍，方便你預期，不是統計結果。",
+      },
+      {
+        question: "三份報價點樣先比較到？",
+        answer:
+          "先鎖定同一工程範圍，再對數量、單價、分項合計、總數、係咪連工包料，以及「包生仔」定「實量實度」。只比較總價，容易漏咗冇寫的項目。",
+      },
+    ],
+    sources: [CC_QUOTATION, CC_RENO_PRESS],
+    datePublished: PUBLISHED_SEO,
+    dateModified: PUBLISHED_SEO,
+  },
+  {
+    slug: "renovation-warning-signs-without-blacklist",
+    title: "點樣分辨裝修黑店（唔靠黑名單）",
+    category: "核實",
+    description:
+      "想分辨坊間講的裝修黑店，唔好靠黑名單網站。用屋宇署承建商名冊、書面報價、商業登記同分階段付款核對，本文不點名任何公司。",
+    answer:
+      "搜尋「裝修黑店」或「裝修公司黑名單」的人，多數想知道點樣核實一間承辦商。本文不會指向任何黑名單網站，亦不會點名或定性任何公司。你可以做的，係查屋宇署註冊、對書面報價，同埋睇付款係咪跟進度。",
+    sections: [
+      {
+        heading: "唔好靠一份名單",
+        paragraphs: [
+          "網上流傳的名單會過時，亦未必對得上你要查的公司。本文不會提供或連結任何黑名單網站，亦不會話某一間公司係黑店。你可以核對的，係登記、書面報價同付款安排。",
+        ],
+      },
+      {
+        heading: "簽約前可以核對的情況",
+        bullets: [
+          "未有寫明公司全名的報價，就追住你付訂金。",
+          "報價只有總價或分項合計，冇數量同單價。",
+          "工程可能屬小型工程，但對方講唔到屋宇署登記級別，或者名稱同名冊對唔上。",
+          "改動同額外收費只肯口頭答應，不肯寫低。",
+          "要求一次過付清，或者完全冇寫執漏同尾數。",
+        ],
+      },
+      {
+        heading: "屋宇署名冊",
+        paragraphs: [
+          "如果工程屬小型工程或須由註冊承建商進行的建築工程，可以喺屋宇署「註冊專業人士及承建商名冊搜尋」免費核對公司名稱、登記號碼、級別或類型、屆滿日期。名冊會標示過去一段期間曾被譴責、罰款、除名或禁止進行某些工程的人士或承建商。名冊只證明登記狀態，不反映工程質素。步驟見 [點樣查裝修公司有冇牌](/guides/check-renovation-contractor-licence)。",
+        ],
+      },
+      {
+        heading: "書面報價同訂金",
+        paragraphs: [
+          "消委會建議按工程進度分階段付款，每一期之前核對進度同費用；訂金百分比該文章冇訂官方數字。未開工前付幾多、每一期完成咩先付、尾數留唔留到執漏，都要寫在報價或合約。你可以開 [報價自查清單](/quote)，對住報價單睇有冇寫齊。比較幾份報價的方法見 [裝修報價要幾耐](/guides/renovation-quote-timing-compare-three)。",
+        ],
+      },
+      {
+        heading: "商業登記同公開討論",
+        paragraphs: [
+          "報價單、合約同收據上的公司名稱應一致。商業登記號碼可以用稅務局的查詢頁核對，見 [商業登記號碼點查](/guides/business-registration-number-search)。想睇公開網上討論摘要，去 [Renocheck 搜尋](/)；嗰度係風險參考，不是黑名單，亦不會話一間公司係黑店。",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "可唔可以靠黑名單判斷裝修公司？",
+        answer:
+          "本文不會指向任何黑名單網站，亦不會點名或定性任何公司。屋宇署提供的是註冊承建商名冊，顯示登記狀態同紀律處分，不是一份黑名單。",
+      },
+      {
+        question: "訂金應該俾幾多？",
+        answer:
+          "消委會文章建議按工程進度分階段付款，冇訂一個官方訂金百分比。要睇合約寫明未開工前付幾多、每一期對應完成邊一項，以及尾數係咪留到執漏。",
+      },
+    ],
+    sources: [
+      BD_REGISTER_SEARCH,
+      BD_WHO_CAN,
+      BD_OWNER_PAMPHLET,
+      CC_QUOTATION,
+      CC_RENO_PRESS,
+      BRN_ENQUIRY,
+    ],
+    datePublished: PUBLISHED_SEO,
+    dateModified: PUBLISHED_SEO,
   },
 ];
 

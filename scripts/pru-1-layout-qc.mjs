@@ -61,6 +61,18 @@ const STATIC_PAGES = [
   { name: "faq", path: "/faq" },
   { name: "about", path: "/about" },
   { name: "quote", path: "/quote" },
+  {
+    name: "guide-contract-clauses",
+    path: "/guides/renovation-contract-clauses-hong-kong",
+  },
+  {
+    name: "guide-compare-quotes",
+    path: "/guides/renovation-quote-timing-compare-three",
+  },
+  {
+    name: "guide-warning-signs",
+    path: "/guides/renovation-warning-signs-without-blacklist",
+  },
 ];
 
 const CORAL = [255, 143, 125];

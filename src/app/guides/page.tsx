@@ -18,7 +18,7 @@ export const metadata: Metadata = pageMetadata({
   path: "/guides",
   title: "業主裝修指南",
   description:
-    "香港業主裝修實用指南：點樣查裝修公司牌照、小型工程級別、裝修合約清單、報價點睇、商業登記查冊，以及裝修爛尾追討步驟。",
+    "香港業主裝修實用指南：查承建商註冊、小型工程、合約條款、報價要幾耐同點樣比較、商業登記，以及裝修爛尾追討步驟。",
 });
 
 const NAV_LINKS = [

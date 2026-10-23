@@ -3,6 +3,7 @@ import { REPORT_TRUST_FORBIDDEN_ZH } from "./report-trust-copy-zh";
 import {
   QUOTE_CHECK_ITEMS,
   QUOTE_PAGE_LEAD_ZH,
+  QUOTE_PAGE_TITLE_ZH,
   QUOTE_REPLY_CLOSING_ZH,
   QUOTE_REPLY_GREETING_ZH,
   QUOTE_REPLY_ITEM_LIMIT,
@@ -171,6 +172,9 @@ describe("quote page JSON-LD", () => {
     const data = buildQuotePageJsonLd("https://renocheck.homes");
     expect(data["@type"]).toBe("WebPage");
     expect(data.url).toBe("https://renocheck.homes/quote");
+    expect(data.name).toBe(QUOTE_PAGE_TITLE_ZH);
+    expect(data.description).toContain("報價單");
+    expect(data.description).toContain("報價陷阱");
     const mainEntity = data.mainEntity as { "@type": string; step: unknown[] };
     expect(mainEntity["@type"]).toBe("HowTo");
     expect(mainEntity.step).toHaveLength(3);

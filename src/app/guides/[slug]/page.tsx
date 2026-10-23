@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -12,7 +13,7 @@ import {
 import { GuideDisclaimer } from "@/components/GuideDisclaimer";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbJsonLd } from "@/lib/breadcrumb-jsonld";
-import { GUIDES, getGuide } from "@/lib/guides";
+import { GUIDES, getGuide, guideFaqJsonLd } from "@/lib/guides";
 import { OG_IMAGE, pageMetadata } from "@/lib/site-metadata";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -44,6 +45,28 @@ export async function generateMetadata({
   };
 }
 
+const INLINE_LINK = /\[([^\]]+)\]\((\/[^)\s]*)\)/g;
+
+function GuideRichText({ text }: { text: string }) {
+  const nodes: ReactNode[] = [];
+  const re = new RegExp(INLINE_LINK.source, "g");
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > last) nodes.push(text.slice(last, match.index));
+    const href = match[2] ?? "/";
+    nodes.push(
+      <Link key={`${match.index}-${href}`} href={href}>
+        {match[1]}
+      </Link>,
+    );
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  if (nodes.length === 0) return text;
+  return <>{nodes}</>;
+}
+
 const NAV_LINKS = [
   { href: "/guides", label: "全部指南" },
   { href: "/how-it-works", label: "點樣運作" },
@@ -58,6 +81,7 @@ export default async function GuidePage({ params }: PageProps) {
   const base = getSiteUrl();
   const url = `${base}/guides/${guide.slug}`;
   const related = GUIDES.filter((g) => g.slug !== guide.slug).slice(0, 3);
+  const faqLd = guideFaqJsonLd(guide);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -80,6 +104,7 @@ export default async function GuidePage({ params }: PageProps) {
         },
         citation: guide.sources.map((s) => s.url),
       },
+      ...(faqLd ? [faqLd] : []),
       breadcrumbJsonLd([
         { name: "首頁", path: "/" },
         { name: "業主裝修指南", path: "/guides" },
@@ -102,19 +127,39 @@ export default async function GuidePage({ params }: PageProps) {
           更新日期：<time dateTime={guide.dateModified}>{guide.dateModified}</time>
         </p>
         <ContentSections>
-          <p className="text-foreground">{guide.answer}</p>
+          <p className="text-foreground">
+            <GuideRichText text={guide.answer} />
+          </p>
           {guide.sections.map((section) => (
             <ContentSection key={section.heading} title={section.heading}>
-              {section.paragraphs?.map((p) => <p key={p}>{p}</p>)}
+              {section.paragraphs?.map((p) => (
+                <p key={p}>
+                  <GuideRichText text={p} />
+                </p>
+              ))}
               {section.bullets ? (
                 <ul className="list-disc space-y-1 pl-5">
                   {section.bullets.map((b) => (
-                    <li key={b}>{b}</li>
+                    <li key={b}>
+                      <GuideRichText text={b} />
+                    </li>
                   ))}
                 </ul>
               ) : null}
             </ContentSection>
           ))}
+          {guide.faqs?.length ? (
+            <ContentSection title="常見問題">
+              <dl className="space-y-3">
+                {guide.faqs.map((item) => (
+                  <div key={item.question}>
+                    <dt className="font-medium text-foreground">{item.question}</dt>
+                    <dd className="mt-1">{item.answer}</dd>
+                  </div>
+                ))}
+              </dl>
+            </ContentSection>
+          ) : null}
           <ContentSection title="委聘前查一查">
             <p>
               想知心水裝修公司有冇公開討論或名冊紀錄？可以喺
@@ -127,7 +172,12 @@ export default async function GuidePage({ params }: PageProps) {
             <ul className="list-disc space-y-1 pl-5">
               {guide.sources.map((s) => (
                 <li key={s.url}>
-                  <a href={s.url} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-words"
+                  >
                     {s.label}
                   </a>
                 </li>
