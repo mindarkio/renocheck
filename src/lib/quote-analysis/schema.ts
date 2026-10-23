@@ -42,12 +42,14 @@ export function quoteLlmSchema(ids: readonly string[]) {
   const idTuple = ids as [string, ...string[]];
   return z.object({
     isQuotation: z.boolean(),
-    items: z.array(
-      z.object({
-        id: z.enum(idTuple),
-        status: statusSchema(),
-      }),
-    ),
+    items: z
+      .array(
+        z.object({
+          id: z.enum(idTuple),
+          status: statusSchema(),
+        }),
+      )
+      .max(ids.length),
   });
 }
 

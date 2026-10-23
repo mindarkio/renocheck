@@ -148,13 +148,11 @@ export async function runQuoteAnalysis(input: {
     return json(503, { error: "quote_llm_failed", message: QUOTE_FAILED_ZH });
   }
 
+  // A missing count is not zero. Null tells SQL to book the reservation.
   const actual =
-    modelResult.inputTokens == null && modelResult.outputTokens == null
+    modelResult.inputTokens == null || modelResult.outputTokens == null
       ? null
-      : microUsdFromTokens(
-          modelResult.inputTokens ?? 0,
-          modelResult.outputTokens ?? 0,
-        );
+      : microUsdFromTokens(modelResult.inputTokens, modelResult.outputTokens);
   const parsed = parseQuoteModelObject(modelResult.object);
 
   if (parsed.kind === "invalid") {

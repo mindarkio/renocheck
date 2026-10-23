@@ -40,13 +40,25 @@ describe("quote Azure provider", () => {
       maxOutputTokens: number;
       abortSignal?: AbortSignal;
       maxRetries: number;
-      providerOptions: { azure: { store: boolean } };
+      providerOptions: {
+        azure: {
+          store: boolean;
+          reasoningEffort?: string;
+          forceReasoning?: boolean;
+          reasoningSummary?: string | null;
+        };
+      };
       messages: Array<{ content: Array<{ filename?: string }> }>;
     };
     expect(call.maxRetries).toBe(0);
     expect(call.maxOutputTokens).toBe(4000);
     expect(call.abortSignal).toBeInstanceOf(AbortSignal);
     expect(call.providerOptions.azure.store).toBe(false);
+    expect(call.providerOptions.azure).toMatchObject({
+      reasoningEffort: "low",
+      forceReasoning: true,
+      reasoningSummary: null,
+    });
     const file = call.messages[0]?.content.find((part) => part.filename);
     expect(file?.filename).toBe("quote.pdf");
     fetchSpy.mockRestore();

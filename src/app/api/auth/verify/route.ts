@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSixDigitCode, normalizeLoginEmail } from "@/lib/auth/email";
-import { takeMemoryRateLimit } from "@/lib/memory-rate-limit";
+import { takeAuthRateLimit } from "@/lib/auth/rate-limit";
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import { clientIp, sameOrigin } from "@/lib/request-guards";
 import {
@@ -47,11 +47,35 @@ export async function POST(req: Request) {
   }
 
   const ip = clientIp(req);
-  const now = Date.now();
-  if (
-    !takeMemoryRateLimit(`otp-verify-ip:${ip}`, 10, FIFTEEN_MINUTES, now) ||
-    !takeMemoryRateLimit(`otp-verify-email:${email}`, 8, FIFTEEN_MINUTES, now)
-  ) {
+  const ipLimit = await takeAuthRateLimit({
+    key: `otp-verify-ip:${ip}`,
+    limit: 10,
+    windowMs: FIFTEEN_MINUTES,
+  });
+  if (ipLimit === "unavailable") {
+    return NextResponse.json(
+      { error: "unavailable", message: LOGIN_UNAVAILABLE_ZH },
+      { status: 503 },
+    );
+  }
+  if (ipLimit === "limited") {
+    return NextResponse.json(
+      { error: "rate_limited", message: QUOTE_RATE_LIMIT_ZH },
+      { status: 429 },
+    );
+  }
+  const emailLimit = await takeAuthRateLimit({
+    key: `otp-verify-email:${email}`,
+    limit: 8,
+    windowMs: FIFTEEN_MINUTES,
+  });
+  if (emailLimit === "unavailable") {
+    return NextResponse.json(
+      { error: "unavailable", message: LOGIN_UNAVAILABLE_ZH },
+      { status: 503 },
+    );
+  }
+  if (emailLimit === "limited") {
     return NextResponse.json(
       { error: "rate_limited", message: QUOTE_RATE_LIMIT_ZH },
       { status: 429 },

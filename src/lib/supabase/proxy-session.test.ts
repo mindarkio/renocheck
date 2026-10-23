@@ -58,6 +58,13 @@ describe("Supabase session refresh in the proxy", () => {
   it("writes rotated cookies back on the response", async () => {
     const res = await refreshSupabaseSession(req("/account", "sb-local-auth-token=old"));
     expect(ssr.createServerClient).toHaveBeenCalledOnce();
+    expect(ssr.createServerClient).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        cookieOptions: expect.objectContaining({ httpOnly: true }),
+      }),
+    );
     expect(res.cookies.get("sb-local-auth-token")?.value).toBe("rotated");
   });
 

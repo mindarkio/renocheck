@@ -285,3 +285,90 @@ revoke all on function public.finish_quote_analysis(uuid, text, bigint, smallint
   from public, anon, authenticated;
 grant execute on function public.finish_quote_analysis(uuid, text, bigint, smallint, jsonb, integer, integer, text)
   to service_role;
+
+-- OTP and verify allowances. The bucket is a sha256 hex digest from the app.
+-- No email address and no IP are stored. RLS on, no policies, service_role only.
+-- The row cap is hard: a caller cannot raise it above 5000.
+create table public.auth_otp_rate_limits (
+  bucket text primary key check (bucket ~ '^[0-9a-f]{64}$'),
+  hit_count integer not null check (hit_count >= 1 and hit_count <= 100),
+  reset_at timestamptz not null
+);
+
+create index auth_otp_rate_limits_reset_at_idx
+  on public.auth_otp_rate_limits (reset_at);
+
+alter table public.auth_otp_rate_limits enable row level security;
+
+revoke all on table public.auth_otp_rate_limits from public, anon, authenticated;
+grant select, insert, update, delete on table public.auth_otp_rate_limits to service_role;
+
+create or replace function public.take_auth_rate_limit(
+  p_bucket text,
+  p_limit integer,
+  p_window_seconds integer,
+  p_max_rows integer
+) returns boolean
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_cap integer;
+  v_count integer;
+  v_rows integer;
+begin
+  if p_bucket is null or p_bucket !~ '^[0-9a-f]{64}$'
+     or p_limit is null or p_limit <= 0 or p_limit > 100
+     or p_window_seconds is null or p_window_seconds <= 0 or p_window_seconds > 86400
+     or p_max_rows is null or p_max_rows <= 0 then
+    return false;
+  end if;
+
+  v_cap := pg_catalog.least(p_max_rows, 5000);
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtext('public.auth_otp_rate_limits'),
+    1
+  );
+
+  delete from public.auth_otp_rate_limits
+   where reset_at <= pg_catalog.now();
+
+  select hit_count into v_count
+    from public.auth_otp_rate_limits
+   where bucket = p_bucket
+   for update;
+
+  if found then
+    if v_count >= p_limit then
+      return false;
+    end if;
+    update public.auth_otp_rate_limits
+       set hit_count = hit_count + 1
+     where bucket = p_bucket;
+    return true;
+  end if;
+
+  select count(*)::integer into v_rows
+    from public.auth_otp_rate_limits;
+
+  if v_rows >= v_cap then
+    return false;
+  end if;
+
+  insert into public.auth_otp_rate_limits (bucket, hit_count, reset_at)
+  values (
+    p_bucket,
+    1,
+    pg_catalog.now() + pg_catalog.make_interval(secs => p_window_seconds)
+  );
+
+  return true;
+end;
+$$;
+
+revoke all on function public.take_auth_rate_limit(text, integer, integer, integer)
+  from public, anon, authenticated;
+grant execute on function public.take_auth_rate_limit(text, integer, integer, integer)
+  to service_role;

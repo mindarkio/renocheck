@@ -87,6 +87,11 @@ export const QUOTE_PROVIDER_OPTIONS = {
   azure: {
     store: false as const,
     reasoningEffort: "low" as const,
+    // Custom deployment names are not on the SDK allowlist, so effort is
+    // dropped unless the model is forced onto the reasoning path.
+    // null keeps the SDK from adding a "detailed" reasoning summary.
+    reasoningSummary: null,
+    forceReasoning: true,
     strictJsonSchema: true,
   },
 };

@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetMemoryRateLimitForTests } from "@/lib/memory-rate-limit";
 
 const verifyOtp = vi.hoisted(() => vi.fn());
+const rpc = vi.hoisted(() => vi.fn());
+const rateHits = vi.hoisted(() => ({ map: new Map<string, number>() }));
 
 vi.mock("@/lib/supabase/server", () => ({
   isSupabaseAuthConfigured: () => true,
   createSupabaseServerClient: async () => ({ auth: { verifyOtp } }),
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  getSupabaseAdmin: () => ({ rpc }),
 }));
 
 import { POST } from "./route";
@@ -24,10 +29,24 @@ function request(
 
 describe("POST /api/auth/verify", () => {
   beforeEach(() => {
-    resetMemoryRateLimitForTests();
+    rateHits.map.clear();
+    rpc.mockReset();
+    rpc.mockImplementation(
+      async (
+        fn: string,
+        args: { p_bucket: string; p_limit: number },
+      ) => {
+        if (fn !== "take_auth_rate_limit") return { data: null, error: { message: "no" } };
+        const next = (rateHits.map.get(args.p_bucket) ?? 0) + 1;
+        rateHits.map.set(args.p_bucket, next);
+        return { data: next <= args.p_limit, error: null };
+      },
+    );
     verifyOtp.mockReset();
     verifyOtp.mockResolvedValue({ data: {}, error: { message: "bad" } });
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://local.example.invalid");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
   });
 
   afterEach(() => {

@@ -71,14 +71,14 @@ describe("runQuoteAnalysis", () => {
     );
   });
 
-  it("books actual cost when only one token count is known, null when none are", async () => {
+  it("books the reservation when either token count is missing", async () => {
     const one = harness(async () => ({
       object: { isQuotation: true, items: [] },
       inputTokens: null,
       outputTokens: 10,
     }));
     await one.run();
-    expect(one.finish.mock.calls[0]?.[0].actualMicroUsd).toBe(5);
+    expect(one.finish.mock.calls[0]?.[0].actualMicroUsd).toBeNull();
     resetMemoryRateLimitForTests();
     const none = harness(async () => ({
       object: { isQuotation: true, items: [] },

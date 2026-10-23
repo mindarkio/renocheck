@@ -1,13 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetMemoryRateLimitForTests } from "@/lib/memory-rate-limit";
 
 const signInWithOtp = vi.hoisted(() => vi.fn());
+const rpc = vi.hoisted(() => vi.fn());
+const rateHits = vi.hoisted(() => ({ map: new Map<string, number>() }));
 
 vi.mock("@/lib/supabase/server", () => ({
   isSupabaseAuthConfigured: () => true,
   createSupabaseServerClient: async () => ({
     auth: { signInWithOtp },
   }),
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  getSupabaseAdmin: () => ({ rpc }),
 }));
 
 import { POST } from "./route";
@@ -30,10 +35,24 @@ function request(
 
 describe("POST /api/auth/otp", () => {
   beforeEach(() => {
-    resetMemoryRateLimitForTests();
+    rateHits.map.clear();
+    rpc.mockReset();
+    rpc.mockImplementation(
+      async (
+        fn: string,
+        args: { p_bucket: string; p_limit: number },
+      ) => {
+        if (fn !== "take_auth_rate_limit") return { data: null, error: { message: "no" } };
+        const next = (rateHits.map.get(args.p_bucket) ?? 0) + 1;
+        rateHits.map.set(args.p_bucket, next);
+        return { data: next <= args.p_limit, error: null };
+      },
+    );
     signInWithOtp.mockReset();
     signInWithOtp.mockResolvedValue({ data: {}, error: null });
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://local.example.invalid");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
   });
 
   afterEach(() => {
@@ -43,6 +62,13 @@ describe("POST /api/auth/otp", () => {
 
   it("does not create accounts or send mail while the feature flag is off", async () => {
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "");
+    expect((await POST(request())).status).toBe(503);
+    expect(signInWithOtp).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("does not send a code when the durable limiter is down", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "down" } });
     expect((await POST(request())).status).toBe(503);
     expect(signInWithOtp).not.toHaveBeenCalled();
   });

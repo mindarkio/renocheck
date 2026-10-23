@@ -66,6 +66,20 @@ describe("quote analysis parser", () => {
   it("rejects a shape the model was not asked for", () => {
     expect(parseQuoteModelObject({ isQuotation: true }, ids).kind).toBe("invalid");
   });
+
+  it("rejects more items than the checklist", () => {
+    const full = ids.map((id) => ({ id, status: "missing" as const }));
+    expect(parseQuoteModelObject({ isQuotation: true, items: full }, ids).kind).toBe("quotation");
+    expect(
+      parseQuoteModelObject(
+        {
+          isQuotation: true,
+          items: [...full, { id: ids[0], status: "clear" }],
+        },
+        ids,
+      ).kind,
+    ).toBe("invalid");
+  });
 });
 
 describe("quote daily budget decision", () => {
