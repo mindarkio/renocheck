@@ -9,6 +9,7 @@ import {
   parseAnalyticsDays,
   type SearchAnalyticsView,
 } from "@/lib/admin/search-analytics";
+import { fetchReturnAnalytics } from "@/lib/admin/return-analytics";
 import { connection } from "next/server";
 
 export const metadata: Metadata = {
@@ -44,9 +45,10 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const days = parseAnalyticsDays(params.days);
   const view = parseView(params.view);
 
-  const [result, gemini] = await Promise.all([
+  const [result, gemini, returns] = await Promise.all([
     fetchSearchAnalytics(days),
     fetchGeminiUsageCard(),
+    fetchReturnAnalytics(days),
   ]);
   if (!result.ok) {
     return (
@@ -56,6 +58,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
         view={view}
         errorMessage="讀取數據出錯，請遲啲再試"
         gemini={gemini}
+        returns={returns}
       />
     );
   }
@@ -66,6 +69,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
       days={days}
       view={view}
       gemini={gemini}
+      returns={returns}
     />
   );
 }

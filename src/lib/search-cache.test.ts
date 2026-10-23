@@ -4,6 +4,7 @@ import {
   isReportCrLookupDegraded,
   isReportLookupDegraded,
   LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS,
+  logSearchEvent,
   setCachedReport,
 } from "./search-cache";
 import { CR_ESERVICES_URL } from "./report-trust-copy-zh";
@@ -238,5 +239,76 @@ describe("setCachedReport ttlMs", () => {
         report,
       }),
     );
+  });
+});
+
+describe("logSearchEvent", () => {
+  const anonId = "12345678-1234-4234-8234-123456789abc";
+  const fingerprint = "ab".repeat(16);
+
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("stores only fingerprint, cache hit, and anon id", async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    const supabase = {
+      from: vi.fn(() => ({ insert })),
+    } as unknown as SupabaseClient;
+
+    await logSearchEvent(supabase, fingerprint, true, anonId);
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0]).toEqual({
+      fingerprint,
+      cache_hit: true,
+      anon_id: anonId,
+    });
+  });
+
+  it("retries without anon id when the column is not migrated yet", async () => {
+    const insert = vi
+      .fn()
+      .mockResolvedValueOnce({
+        error: {
+          code: "PGRST204",
+          message:
+            "Could not find the 'anon_id' column of 'search_events' in the schema cache",
+        },
+      })
+      .mockResolvedValueOnce({ error: null });
+    const supabase = {
+      from: vi.fn(() => ({ insert })),
+    } as unknown as SupabaseClient;
+
+    await expect(
+      logSearchEvent(supabase, fingerprint, false, anonId),
+    ).resolves.toBeUndefined();
+    expect(insert).toHaveBeenNthCalledWith(2, {
+      fingerprint,
+      cache_hit: false,
+    });
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when the insert fails for another reason", async () => {
+    const insert = vi.fn().mockResolvedValue({
+      error: { code: "57014", message: "statement timeout" },
+    });
+    const supabase = {
+      from: vi.fn(() => ({ insert })),
+    } as unknown as SupabaseClient;
+
+    await expect(
+      logSearchEvent(supabase, fingerprint, false, "not-a-uuid"),
+    ).resolves.toBeUndefined();
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert.mock.calls[0][0]).not.toHaveProperty("anon_id");
+    expect(insert.mock.calls[0][0]).not.toHaveProperty("ip");
+    expect(insert.mock.calls[0][0]).not.toHaveProperty("user_agent");
   });
 });

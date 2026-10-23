@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+
+vi.mock("@/lib/usage-events-client", () => ({
+  sendUsageEvent: vi.fn(),
+}));
+
 import { QuoteSelfCheck } from "./QuoteSelfCheck";
 import {
   QUOTE_CHECK_ITEMS,
@@ -14,6 +19,7 @@ import {
   buildQuoteReplyMessage,
   clearQuoteCheckSelections,
 } from "@/lib/quote-selfcheck";
+import { sendUsageEvent } from "@/lib/usage-events-client";
 
 afterEach(() => {
   cleanup();
@@ -196,6 +202,31 @@ describe("QuoteSelfCheck", () => {
       buildQuoteReplyMessage({ demolition: "missing", electrical: "vague" }),
     );
     expect(setItem).toHaveBeenCalled();
+  });
+
+  it("sends page, full-checklist, and reply-copy events", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<QuoteSelfCheck />);
+    await waitFor(() => {
+      expect(sendUsageEvent).toHaveBeenCalledWith("quote_page");
+    });
+
+    for (const item of QUOTE_CHECK_ITEMS) {
+      fireEvent.click(
+        within(group(new RegExp(item.label))).getByRole("radio", { name: "唔適用" }),
+      );
+    }
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_all_ticked");
+    expect(
+      vi.mocked(sendUsageEvent).mock.calls.filter((call) => call[0] === "quote_all_ticked"),
+    ).toHaveLength(1);
+
+    const firstItem = QUOTE_CHECK_ITEMS[0];
+    if (!firstItem) throw new Error("checklist empty");
+    fireEvent.click(radio(new RegExp(firstItem.label), "冇提及"));
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_COPY_BUTTON_ZH }));
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_copy_reply");
   });
 });
 

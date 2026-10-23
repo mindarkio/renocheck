@@ -51,6 +51,7 @@ import {
 import { summaryZhForLegalLookupDegraded } from "./search-pipeline-legal-summary";
 import { isLegalEventsEnabled } from "./legal-events-config";
 import { lookupCompaniesRegistryForSearch } from "./cr-registry-lookup";
+import { isSyntheticProbeTerm } from "./synthetic-probe";
 
 export type SearchPipelineResult = {
   fingerprint: string;
@@ -75,7 +76,18 @@ export const LLM_RESERVE_MS = 20_000;
 export type SearchPipelineOptions = {
   /** Dev only: bypass search_cache read */
   skipCache?: boolean;
+  /** Random browser id. Omitted for ZZQ probes and when the column is absent. */
+  anonId?: string | null;
 };
+
+function searchEventAnonId(
+  input: NormalizedSearchInput,
+  anonId: string | null | undefined,
+): string | null {
+  if (!anonId) return null;
+  if (isSyntheticProbeTerm(input.companyName ?? "")) return null;
+  return anonId;
+}
 
 export async function runSearchPipeline(
   input: NormalizedSearchInput,
@@ -104,7 +116,12 @@ export async function runSearchPipeline(
   if (!options?.skipCache) {
     const cached = await getCachedReport(supabase, fingerprint);
     if (cached && !isReportLookupDegraded(cached)) {
-      await logSearchEvent(supabase, fingerprint, true);
+      await logSearchEvent(
+        supabase,
+        fingerprint,
+        true,
+        searchEventAnonId(input, options?.anonId),
+      );
       return {
         fingerprint,
         report: cached,
@@ -358,7 +375,12 @@ export async function runSearchPipeline(
     ttlMs: lookupDegraded ? LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS : undefined,
     skipIfHealthyCacheExists: lookupDegraded,
   });
-  await logSearchEvent(supabase, fingerprint, false);
+  await logSearchEvent(
+    supabase,
+    fingerprint,
+    false,
+    searchEventAnonId(input, options?.anonId),
+  );
 
   console.info(
     JSON.stringify({

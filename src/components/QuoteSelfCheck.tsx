@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
+import { sendUsageEvent } from "@/lib/usage-events-client";
 import {
   QUOTE_CHECK_ITEMS,
   QUOTE_CHECKLIST_HEADING_ZH,
@@ -73,9 +74,26 @@ export function QuoteSelfCheck() {
   const [notice, setNotice] = useState<QuoteNotice>("idle");
   const replyRef = useRef<HTMLTextAreaElement>(null);
   const checklistHeadingRef = useRef<HTMLHeadingElement>(null);
-
+  const pageSent = useRef(false);
   const message = buildQuoteReplyMessage(selections);
   const selectedCount = QUOTE_CHECK_ITEMS.filter((item) => selections[item.id]).length;
+  const previousSelected = useRef(selectedCount);
+
+  useEffect(() => {
+    if (pageSent.current) return;
+    pageSent.current = true;
+    sendUsageEvent("quote_page");
+  }, []);
+
+  useEffect(() => {
+    if (
+      previousSelected.current < QUOTE_CHECK_ITEMS.length &&
+      selectedCount === QUOTE_CHECK_ITEMS.length
+    ) {
+      sendUsageEvent("quote_all_ticked");
+    }
+    previousSelected.current = selectedCount;
+  }, [selectedCount]);
 
   function choose(id: QuoteCheckItemId, status: QuoteCheckStatus) {
     setNotice("idle");
@@ -84,6 +102,7 @@ export function QuoteSelfCheck() {
 
   async function copyMessage() {
     if (!message) return;
+    sendUsageEvent("quote_copy_reply");
     setNotice("idle");
     try {
       if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");

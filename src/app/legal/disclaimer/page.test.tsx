@@ -38,12 +38,15 @@ afterEach(() => cleanup());
 const QUOTE_SELF_CHECK_PRIVACY_ZH =
   "本網站部分工具（例如報價自查）只會將閣下的選擇儲存於閣下裝置的瀏覽器內，不會傳送至本網站伺服器。";
 
+const ANON_ID_PRIVACY_ZH =
+  "本網站會於閣下瀏覽器內儲存一個隨機識別碼，僅用於統計重複使用情況，該識別碼不會與閣下的姓名、聯絡資料或 IP 地址連結。";
+
 describe("disclaimer page feedback notice", () => {
-  it("publishes the approved §七 notice at 1.2.2 without changing the report version", () => {
-    expect(DISCLAIMER_VERSION).toBe("1.2.2");
+  it("publishes the approved §七 notice at 1.2.3 without changing the report version", () => {
+    expect(DISCLAIMER_VERSION).toBe("1.2.3");
     expect(REPORT_VERSION).toBe("2.7.0");
     render(<DisclaimerPage />);
-    expect(screen.getByText("版本 1.2.2")).toBeTruthy();
+    expect(screen.getByText("版本 1.2.3")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "七、個人資料（私隱）" })).toBeTruthy();
     const notice = document.getElementById("feedback-privacy");
     expect(notice?.textContent).toBe(FEEDBACK_PRIVACY_NOTICE_ZH);
@@ -62,9 +65,17 @@ describe("disclaimer page feedback notice", () => {
     const sentenceAt = text.indexOf(QUOTE_SELF_CHECK_PRIVACY_ZH);
     expect(sentenceAt).toBeGreaterThan(text.indexOf("你的權利"));
     expect(text.indexOf("資料保護主任")).toBeGreaterThan(sentenceAt);
+    const anonAt = text.indexOf(ANON_ID_PRIVACY_ZH);
+    expect(anonAt).toBeGreaterThan(sentenceAt);
+    expect(text.indexOf("資料保護主任")).toBeGreaterThan(anonAt);
+    expect(text.split(ANON_ID_PRIVACY_ZH)).toHaveLength(2);
+    assertClean(ANON_ID_PRIVACY_ZH);
     expect(text.indexOf("閣下於報告頁提交的評分")).toBeGreaterThan(sentenceAt);
     expect(document.getElementById("feedback-privacy")?.textContent ?? "").not.toContain(
       QUOTE_SELF_CHECK_PRIVACY_ZH,
+    );
+    expect(document.getElementById("feedback-privacy")?.textContent ?? "").not.toContain(
+      ANON_ID_PRIVACY_ZH,
     );
     assertClean(QUOTE_SELF_CHECK_PRIVACY_ZH);
   });

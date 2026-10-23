@@ -10,6 +10,10 @@ import {
   type SearchAnalyticsView,
   type TermRow,
 } from "@/lib/admin/search-analytics";
+import {
+  emptyReturnAnalytics,
+  type ReturnAnalytics,
+} from "@/lib/admin/return-analytics";
 
 const VIEW_TABS: { id: SearchAnalyticsView; label: string }[] = [
   { id: "all", label: "全部" },
@@ -31,6 +35,7 @@ type Props = {
   view: SearchAnalyticsView;
   errorMessage?: string | null;
   gemini?: GeminiUsageCardResult;
+  returns?: ReturnAnalytics;
 };
 
 export function AdminDashboardView({
@@ -39,6 +44,7 @@ export function AdminDashboardView({
   view,
   errorMessage,
   gemini,
+  returns = emptyReturnAnalytics(),
 }: Props) {
   const errored = Boolean(errorMessage);
   const rows = data.views[view] ?? data.terms;
@@ -226,6 +232,8 @@ export function AdminDashboardView({
       </div>
 
       {gemini ? <GeminiUsageSection gemini={gemini} /> : null}
+
+      {errored ? null : <ReturnAnalyticsSection data={returns} />}
     </div>
   );
 }
@@ -303,6 +311,88 @@ function GeminiUsageSection({ gemini }: { gemini: GeminiUsageCardResult }) {
         ) : null}
       </div>
     </section>
+  );
+}
+
+function ReturnAnalyticsSection({ data }: { data: ReturnAnalytics }) {
+  return (
+    <section className="min-w-0 border-t border-border pt-6" aria-label="重複使用">
+      <h2 className="mb-3 text-sm font-semibold text-primary">重複使用</h2>
+      <p className="mb-3 break-words text-[13px] text-muted-foreground">
+        呢啲數字會少計：換裝置或瀏覽器、清除瀏覽器儲存、或者用 WhatsApp／IG 內置瀏覽器，都會當成另一部裝置。
+      </p>
+      {data.searchAnon === "pending" || data.usageEvents === "pending" ? (
+        <p className="mb-3 break-words text-sm text-muted-foreground">
+          資料庫變更尚未套用，未有欄位或資料表嘅數字暫時係 0。
+        </p>
+      ) : null}
+      {data.truncated ? (
+        <p className="mb-3 text-sm text-muted-foreground">數據太多，只計咗最近 50,000 筆</p>
+      ) : null}
+      {data.readError ? (
+        <p className="text-sm text-muted-foreground">讀取重複使用數據出錯，請遲啲再試</p>
+      ) : (
+        <div className="min-w-0 space-y-6">
+          <div className="min-w-0 overflow-x-auto">
+            <h3 className="mb-2 text-sm font-medium text-foreground">每週新裝置同再來裝置</h3>
+            <table className="w-full min-w-[20rem] text-left text-sm">
+              <thead>
+                <tr className="text-left text-xs text-muted-foreground">
+                  <th className="py-1 pr-2 font-medium">週開始（香港時間）</th>
+                  <th className="py-1 pr-2 font-medium">新裝置</th>
+                  <th className="py-1 font-medium">再來裝置</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.weeks.map((week) => (
+                  <tr key={week.weekStart} className="border-t border-border">
+                    <td className="py-1 pr-2">{week.weekStart}</td>
+                    <td className="py-1 pr-2">{week.newDevices}</td>
+                    <td className="py-1">{week.returningDevices}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-medium text-foreground">隔幾耐再來</h3>
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <CountItem label="1 日內" value={data.intervals.within1Day} />
+              <CountItem label="7 日內（超過 1 日）" value={data.intervals.within7Days} />
+              <CountItem label="30 日內（超過 7 日）" value={data.intervals.within30Days} />
+              <CountItem label="超過 30 日" value={data.intervals.over30Days} />
+            </dl>
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-medium text-foreground">再來嘅人做過咩</h3>
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <CountItem label="再搜同一間公司" value={data.returnerActions.sameCompany} />
+              <CountItem label="再搜另一間公司" value={data.returnerActions.differentCompany} />
+              <CountItem label="用過報價自查" value={data.returnerActions.usedQuote} />
+            </dl>
+          </div>
+          <div>
+            <h3 className="mb-2 text-sm font-medium text-foreground">使用次數</h3>
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <CountItem label="報價自查頁" value={data.funnel.quotePage} />
+              <CountItem label="20 項都揀咗" value={data.funnel.quoteAllTicked} />
+              <CountItem label="複製回覆訊息" value={data.funnel.quoteCopyReply} />
+              <CountItem label="官方連結" value={data.funnel.reportOfficialLink} />
+              <CountItem label="分享報告" value={data.funnel.reportShare} />
+            </dl>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CountItem({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="text-sm text-foreground">{value}</dd>
+    </div>
   );
 }
 

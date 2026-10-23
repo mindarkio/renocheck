@@ -4,9 +4,11 @@ import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { sendUsageEvent } from "@/lib/usage-events-client";
 import type { RiskReport } from "@/lib/report-schema";
 import { ReportCard } from "./ReportCard";
 import { ReportFeedback } from "./ReportFeedback";
+import { ReportShareButton } from "./ReportShareButton";
 import { ReportSidebarToc } from "./ReportSidebarToc";
 import {
   reportGridClass,
@@ -121,7 +123,20 @@ export function ReportView({
           </div>
         )}
 
-        {report && <ReportCard report={report} />}
+        {report ? (
+          <div className={`${reportReadingColumnClass} mb-3`}>
+            <ReportShareButton fingerprint={fingerprint} />
+          </div>
+        ) : null}
+
+        {report && (
+          <ReportCard
+            report={report}
+            onOfficialLinkClick={() => {
+              sendUsageEvent("report_official_link", { fingerprint });
+            }}
+          />
+        )}
 
         {report && feedbackEnabled ? (
           <ReportFeedback key={fingerprint} fingerprint={fingerprint} />

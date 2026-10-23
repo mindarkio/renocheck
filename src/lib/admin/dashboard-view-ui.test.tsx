@@ -54,6 +54,40 @@ describe("AdminDashboardView UI (YUI)", () => {
     expect(screen.getByRole("link", { name: "7 日" }).getAttribute("aria-current")).toBeNull();
   });
 
+  it("shows returning-user counts and the undercount note", () => {
+    const { container } = render(
+      <AdminDashboardView
+        data={emptyData()}
+        days={7}
+        view="all"
+        returns={{
+          weeks: [{ weekStart: "2026-06-15", newDevices: 2, returningDevices: 1 }],
+          intervals: { within1Day: 3, within7Days: 1, within30Days: 0, over30Days: 4 },
+          returnerActions: { sameCompany: 1, differentCompany: 2, usedQuote: 1 },
+          funnel: {
+            quotePage: 5,
+            quoteAllTicked: 1,
+            quoteCopyReply: 2,
+            reportOfficialLink: 4,
+            reportShare: 1,
+          },
+          truncated: false,
+          searchAnon: "pending",
+          usageEvents: "ready",
+          readError: false,
+        }}
+      />,
+    );
+    const text = container.textContent ?? "";
+    expect(text).toContain("呢啲數字會少計");
+    expect(text).toContain("WhatsApp／IG");
+    expect(text).toContain("資料庫變更尚未套用");
+    expect(text).toContain("2026-06-15");
+    expect(text).toContain("再搜同一間公司");
+    expect(text).toContain("20 項都揀咗");
+    expect(text).not.toContain("SENTINEL");
+  });
+
   it("shows empty states for table and daily (heading kept) with genuine zero KPIs", () => {
     const { container } = render(
       <AdminDashboardView data={emptyData()} days={7} view="all" />,
@@ -79,6 +113,7 @@ describe("AdminDashboardView UI (YUI)", () => {
     expect(text).not.toMatch(/0%/);
     expect(text).not.toContain("0 次");
     expect(text).toContain("按類型：公司名 —未能讀取・電話 —未能讀取・BR —未能讀取");
+    expect(text).not.toContain("呢啲數字會少計");
     // 5 KPI cards + 3 input types; each dash is aria-hidden with an sr-only label.
     expect(screen.getAllByText("未能讀取")).toHaveLength(8);
     const dashes = [...container.querySelectorAll("span")].filter((s) => s.textContent === "—");

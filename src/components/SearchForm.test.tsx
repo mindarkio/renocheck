@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SearchForm } from "./SearchForm";
 import { ServiceBanner } from "./ServiceBanner";
+import { ANON_ID_STORAGE_KEY, isAnonId, resetAnonIdForTests } from "@/lib/anon-id";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -22,6 +23,8 @@ function jsonResponse(status: number, error: string) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  localStorage.clear();
+  resetAnonIdForTests();
 });
 
 describe("ServiceBanner", () => {
@@ -163,4 +166,25 @@ describe("SearchForm pause and errors", () => {
       expect(text).not.toContain("AI Gateway");
     },
   );
+
+  it("sends the localStorage anonymous id with the search and does not use a cookie", async () => {
+    const fetchMock = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<ReturnType<typeof jsonResponse>>
+    >(async () => jsonResponse(400, "invalid_input"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<SearchForm variant="landing" />);
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "示例裝修有限公司" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "查閱公開資料摘要" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? "{}")) as {
+      anonId?: string;
+      companyName?: string;
+    };
+    expect(isAnonId(payload.anonId)).toBe(true);
+    expect(payload.companyName).toBe("示例裝修有限公司");
+    expect(localStorage.getItem(ANON_ID_STORAGE_KEY)).toBe(payload.anonId);
+    expect(document.cookie).not.toContain(payload.anonId ?? "");
+  });
 });
