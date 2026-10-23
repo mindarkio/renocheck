@@ -13,7 +13,7 @@ import {
 import { GuideDisclaimer } from "@/components/GuideDisclaimer";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbJsonLd } from "@/lib/breadcrumb-jsonld";
-import { GUIDES, getGuide, guideFaqJsonLd } from "@/lib/guides";
+import { GUIDES, getGuide, guideFaqJsonLd, relatedGuides } from "@/lib/guides";
 import { OG_IMAGE, pageMetadata } from "@/lib/site-metadata";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -80,7 +80,7 @@ export default async function GuidePage({ params }: PageProps) {
 
   const base = getSiteUrl();
   const url = `${base}/guides/${guide.slug}`;
-  const related = GUIDES.filter((g) => g.slug !== guide.slug).slice(0, 3);
+  const related = relatedGuides(guide.slug);
   const faqLd = guideFaqJsonLd(guide);
   const jsonLd = {
     "@context": "https://schema.org",

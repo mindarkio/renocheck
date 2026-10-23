@@ -609,3 +609,16 @@ export const GUIDES: Guide[] = [
 export function getGuide(slug: string): Guide | undefined {
   return GUIDES.find((g) => g.slug === slug);
 }
+
+/** Other guides, newest `dateModified` first. Same-day ties use later entries first. */
+export function relatedGuides(slug: string, limit = 3): Guide[] {
+  return GUIDES.map((guide, index) => ({ guide, index }))
+    .filter(({ guide }) => guide.slug !== slug)
+    .sort((a, b) => {
+      const byDate = b.guide.dateModified.localeCompare(a.guide.dateModified);
+      if (byDate !== 0) return byDate;
+      return b.index - a.index;
+    })
+    .slice(0, limit)
+    .map(({ guide }) => guide);
+}

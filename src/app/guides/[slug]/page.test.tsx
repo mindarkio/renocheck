@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { GUIDES } from "@/lib/guides";
+import { GUIDES, relatedGuides } from "@/lib/guides";
 import GuidePage from "./page";
 
 const STATIC_ROUTES = new Set([
@@ -48,6 +48,14 @@ describe("guide page render", () => {
       const faq = graph.find((node) => node["@type"] === "FAQPage") as
         | { mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> }
         | undefined;
+      const relatedHtml = html.split("相關指南").at(-1) ?? "";
+      const relatedHrefs = [...relatedHtml.matchAll(/href="(\/guides\/[^"]+)"/g)].map(
+        ([, href]) => href,
+      );
+      expect(relatedHrefs).toEqual(
+        relatedGuides(guide.slug).map((item) => `/guides/${item.slug}`),
+      );
+      expect(relatedHrefs).not.toContain(`/guides/${guide.slug}`);
       const dts = [...html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>/g)].map(([, v]) => text(v ?? ""));
       const dds = [...html.matchAll(/<dd[^>]*>([\s\S]*?)<\/dd>/g)].map(([, v]) => text(v ?? ""));
       if (!guide.faqs?.length) {

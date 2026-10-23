@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import sitemap from "@/app/sitemap";
-import { GUIDES, getGuide, guideFaqJsonLd, type Guide } from "@/lib/guides";
+import { GUIDES, getGuide, guideFaqJsonLd, relatedGuides, type Guide } from "@/lib/guides";
 import { getSiteUrl } from "@/lib/site-url";
 
 const NEW_GUIDES = [
@@ -124,5 +124,17 @@ describe("2026-10-23 SEO guides", () => {
       .filter((line) => line.startsWith("- https://"))
       .map((line) => line.split(" ")[1]);
     expect(new Set(llmsUrls).size).toBe(llmsUrls.length);
+  });
+
+  it("related guides skip the current page and lead with newer guides", () => {
+    const oldest = GUIDES[0];
+    const related = relatedGuides(oldest.slug);
+    expect(related.map((guide) => guide.slug)).not.toContain(oldest.slug);
+    expect(related).toHaveLength(3);
+    const newestDate = GUIDES.map((guide) => guide.dateModified).sort().at(-1);
+    expect(related.every((guide) => guide.dateModified === newestDate)).toBe(true);
+    const fromNewest = relatedGuides(related[0]?.slug ?? "");
+    expect(fromNewest.map((guide) => guide.slug)).not.toContain(related[0]?.slug);
+    expect(fromNewest.some((guide) => guide.dateModified === newestDate)).toBe(true);
   });
 });
