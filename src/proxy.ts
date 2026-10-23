@@ -6,6 +6,10 @@ import {
   getAdminEnvPin,
   verifySessionToken,
 } from "@/lib/admin/auth";
+import {
+  isAuthSessionPath,
+  refreshSupabaseSession,
+} from "@/lib/supabase/proxy-session";
 
 const GUIDE_PATHS = new Set(GUIDES.map((g) => `/guides/${g.slug}`));
 
@@ -39,8 +43,11 @@ function adminGate(request: NextRequest, path: string): NextResponse {
   return NextResponse.next();
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const path = request.nextUrl.pathname.replace(/\/$/, "");
+  if (isAuthSessionPath(path)) {
+    return refreshSupabaseSession(request);
+  }
   if (path === "/admin" || path.startsWith("/admin/")) {
     return adminGate(request, path);
   }
@@ -54,5 +61,14 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/report/:path*", "/guides/:path+", "/admin", "/admin/:path*"],
+  matcher: [
+    "/report/:path*",
+    "/guides/:path+",
+    "/admin",
+    "/admin/:path*",
+    "/account",
+    "/login",
+    "/quote/upload",
+    "/quote/analyses/:path*",
+  ],
 };

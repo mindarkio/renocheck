@@ -33,13 +33,20 @@ const nextConfig: NextConfig = {
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
       },
-      {
-        source: "/quote/analyses/:path*",
+      ...[
+        "/quote/analyses/:path*",
+        "/account",
+        "/login",
+        "/quote/upload",
+        "/api/auth/:path*",
+        "/api/quote/:path*",
+      ].map((source) => ({
+        source,
         headers: [
           { key: "Cache-Control", value: "private, no-store" },
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
-      },
+      })),
     ];
   },
   cacheComponents: true,

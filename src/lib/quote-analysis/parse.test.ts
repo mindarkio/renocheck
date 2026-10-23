@@ -37,6 +37,24 @@ describe("quote analysis parser", () => {
     expect(parsed.items.some((item) => item.id === "arithmetic")).toBe(false);
   });
 
+  it("rejects unknown ids and keeps the first status for a repeated id", () => {
+    expect(
+      parseQuoteModelObject({ isQuotation: true, items: [{ id: "x_unknown", status: "clear" }] }, ids)
+        .kind,
+    ).toBe("invalid");
+    const parsed = parseQuoteModelObject(
+      {
+        isQuotation: true,
+        items: [
+          { id: "demolition", status: "vague" },
+          { id: "demolition", status: "clear" },
+        ],
+      },
+      ids,
+    );
+    expect(parsed.kind === "quotation" && parsed.items[0]?.status).toBe("vague");
+  });
+
   it("treats an empty non-quote as not a quotation", () => {
     const parsed = parseQuoteModelObject(
       { isQuotation: false, items: [] },

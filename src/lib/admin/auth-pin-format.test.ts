@@ -28,10 +28,10 @@ describe("admin PIN format (digits only)", () => {
     expect(getAdminAuthConfig()).not.toBeNull();
   });
 
-  it("proxy returns 404 for /admin when env PIN is invalid", () => {
+  it("proxy returns 404 for /admin when env PIN is invalid", async () => {
     vi.stubEnv("ADMIN_SESSION_SECRET", randomTestSecret());
     vi.stubEnv("ADMIN_DASHBOARD_PIN", "abcd");
-    const res = proxy(new NextRequest("https://renocheck.test/admin"));
+    const res = await proxy(new NextRequest("https://renocheck.test/admin"));
     expect(res.status).toBe(404);
   });
 });

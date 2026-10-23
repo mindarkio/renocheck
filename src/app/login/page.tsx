@@ -16,6 +16,7 @@ import {
 } from "@/lib/quote-analysis/copy";
 import { safeNextPath } from "@/lib/request-guards";
 import { contentLinkClass } from "@/lib/ui-surfaces";
+import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import { isSupabaseAuthConfigured } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -33,7 +34,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
   await connection();
   const params = await searchParams;
   const nextPath = safeNextPath(params.next);
-  const ready = isSupabaseAuthConfigured();
+  const ready = isQuoteAnalysisFlagOn() && isSupabaseAuthConfigured();
 
   return (
     <ContentPage>

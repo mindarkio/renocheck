@@ -47,4 +47,17 @@ describe("PDF validation", () => {
       reason: "pages",
     });
   });
+
+  it("needs the full %PDF- prefix and at least one page object", () => {
+    expect(inspectPdf(new TextEncoder().encode("%PXXX /Type /Page"), "application/pdf")).toEqual({
+      ok: false,
+      reason: "magic",
+    });
+    expect(inspectPdf(pdf("/Type /Pages"), "application/pdf")).toEqual({
+      ok: false,
+      reason: "unreadable",
+    });
+    const six = Array.from({ length: 6 }, () => "/Type /Page").join("\n");
+    expect(inspectPdf(pdf(six), "APPLICATION/PDF")).toEqual({ ok: true, pageCount: 6 });
+  });
 });

@@ -97,6 +97,49 @@ describe("POST /api/quote/analyze", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
+  it("refuses cross-site posts", async () => {
+    const res = await POST(
+      new Request("http://localhost/api/quote/analyze", {
+        method: "POST",
+        headers: { origin: "https://evil.example" },
+        body: new FormData(),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(mocks.getAuthUser).not.toHaveBeenCalled();
+  });
+
+  it("answers flag-off and signed-out callers before reading the body", async () => {
+    const plain = () =>
+      new Request("http://localhost/api/quote/analyze", {
+        method: "POST",
+        headers: { origin: "http://localhost", "content-type": "text/plain" },
+        body: "x",
+      });
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "0");
+    expect((await POST(plain())).status).toBe(503);
+    expect(mocks.getAuthUser).not.toHaveBeenCalled();
+    enableAzure();
+    mocks.getAuthUser.mockResolvedValue(null);
+    expect((await POST(plain())).status).toBe(401);
+  });
+
+  it("rejects a declared body over the limit", async () => {
+    const res = await POST(
+      new Request("http://localhost/api/quote/analyze", {
+        method: "POST",
+        headers: {
+          origin: "http://localhost",
+          "content-type": "multipart/form-data; boundary=x",
+          "content-length": "4500001",
+        },
+        body: "--x--",
+      }),
+    );
+    expect(res.status).toBe(413);
+    expect(mocks.begin).not.toHaveBeenCalled();
+  });
+
   it("returns 503 when Azure env is missing", async () => {
     vi.stubEnv("AZURE_OPENAI_API_KEY", "");
     const res = await POST(request({ acknowledged: true }));

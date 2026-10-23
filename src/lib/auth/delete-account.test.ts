@@ -4,9 +4,12 @@ import { deleteAccountAndAnalyses } from "@/lib/auth/delete-account";
 
 const USER = "11111111-1111-4111-8111-111111111111";
 
-function admin(options?: { failTable?: string }) {
+function admin(options?: { failTable?: string; failDeleteUser?: boolean }) {
   const tables: string[] = [];
-  const deleteUser = vi.fn(async () => ({ data: { user: null }, error: null }));
+  const deleteUser = vi.fn(async () => ({
+    data: { user: null },
+    error: options?.failDeleteUser ? { message: "no" } : null,
+  }));
   const client = {
     from(table: string) {
       tables.push(table);
@@ -40,5 +43,24 @@ describe("delete account", () => {
     const { client, deleteUser } = admin({ failTable: "quote_analyses" });
     await expect(deleteAccountAndAnalyses(client, USER)).resolves.toBe(false);
     expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("stops at the first failed table and reports a failed auth delete", async () => {
+    const claims = admin({ failTable: "quote_analysis_claims" });
+    await expect(deleteAccountAndAnalyses(claims.client, USER)).resolves.toBe(false);
+    expect(claims.tables).toEqual(["quote_analysis_claims"]);
+    expect(claims.deleteUser).not.toHaveBeenCalled();
+    const auth = admin({ failDeleteUser: true });
+    await expect(deleteAccountAndAnalyses(auth.client, USER)).resolves.toBe(false);
+  });
+
+  it("refuses the production project outside Vercel production", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://lvrasvtilgzwtfsfjbzd.supabase.co");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    const { client, tables, deleteUser } = admin();
+    await expect(deleteAccountAndAnalyses(client, USER)).resolves.toBe(false);
+    expect(tables).toEqual([]);
+    expect(deleteUser).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 });

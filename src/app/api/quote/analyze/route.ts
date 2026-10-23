@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { clientIp, sameOrigin } from "@/lib/request-guards";
-import { QUOTE_PDF_SIZE_ZH, QUOTE_PDF_TYPE_ZH } from "@/lib/quote-analysis/copy";
+import { isQuoteAnalysisAvailable } from "@/lib/quote-analysis/config";
+import {
+  QUOTE_AUTH_REQUIRED_ZH,
+  QUOTE_PDF_SIZE_ZH,
+  QUOTE_PDF_TYPE_ZH,
+  QUOTE_UNAVAILABLE_API_ZH,
+} from "@/lib/quote-analysis/copy";
 import { completeQuotePdf } from "@/lib/quote-analysis/provider";
 import { runQuoteAnalysis } from "@/lib/quote-analysis/run";
 import { supabaseQuoteStore } from "@/lib/quote-analysis/store";
@@ -16,8 +22,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
+  // Flag and session first, so a disabled or anonymous caller never gets its body parsed.
+  if (!isQuoteAnalysisAvailable()) {
+    return NextResponse.json(
+      { error: "quote_unavailable", message: QUOTE_UNAVAILABLE_API_ZH },
+      { status: 503 },
+    );
+  }
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json(
+      { error: "auth_required", message: QUOTE_AUTH_REQUIRED_ZH },
+      { status: 401 },
+    );
+  }
+
+  // Vercel also caps request bodies at 4.5 MB before the function runs.
   const declared = Number(req.headers.get("content-length") ?? 0);
-  if (Number.isFinite(declared) && declared > MAX_DECLARED_BYTES) {
+  if (!Number.isFinite(declared) || declared > MAX_DECLARED_BYTES) {
     return NextResponse.json(
       { error: "invalid_pdf", message: QUOTE_PDF_SIZE_ZH },
       { status: 413 },
@@ -46,9 +68,8 @@ export async function POST(req: Request) {
   const bytes =
     file instanceof File ? new Uint8Array(await file.arrayBuffer()) : null;
   const mediaType = file instanceof File ? file.type : "";
-  const user = await getAuthUser();
   const result = await runQuoteAnalysis({
-    userId: user?.id ?? null,
+    userId: user.id,
     acknowledged: form.get("acknowledged") === "1",
     mediaType,
     bytes,

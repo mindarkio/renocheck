@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
 
 /**
  * Removes quote rows first, then the auth user.
@@ -10,6 +11,11 @@ export async function deleteAccountAndAnalyses(
   admin: SupabaseClient,
   userId: string,
 ): Promise<boolean> {
+  try {
+    assertNotProdDbOutsideProd();
+  } catch {
+    return false;
+  }
   const claims = await admin
     .from("quote_analysis_claims")
     .delete()

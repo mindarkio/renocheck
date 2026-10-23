@@ -37,11 +37,15 @@ describe("quote Azure provider", () => {
     expect(result.inputTokens).toBe(12);
     expect(QUOTE_PROVIDER_OPTIONS.azure.store).toBe(false);
     const call = generateObject.mock.calls[0]?.[0] as {
+      maxOutputTokens: number;
+      abortSignal?: AbortSignal;
       maxRetries: number;
       providerOptions: { azure: { store: boolean } };
       messages: Array<{ content: Array<{ filename?: string }> }>;
     };
     expect(call.maxRetries).toBe(0);
+    expect(call.maxOutputTokens).toBe(4000);
+    expect(call.abortSignal).toBeInstanceOf(AbortSignal);
     expect(call.providerOptions.azure.store).toBe(false);
     const file = call.messages[0]?.content.find((part) => part.filename);
     expect(file?.filename).toBe("quote.pdf");
@@ -68,5 +72,24 @@ describe("quote Azure provider", () => {
       body: JSON.stringify({ store: false, filename: "quote.pdf" }),
     });
     expect(inner).toHaveBeenCalledOnce();
+  });
+
+  it("refuses background, chained, file-id and unreadable bodies", async () => {
+    for (const body of [
+      { store: false, background: true },
+      { store: false, previous_response_id: "r" },
+      { store: false, input: [{ content: [{ file_id: "f" }] }] },
+    ]) {
+      expect(() => assertQuoteProviderBody(JSON.stringify(body))).toThrow();
+    }
+    const inner = vi.fn(async () => new Response("ok"));
+    const guarded = createGuardedFetch(inner as typeof fetch);
+    await expect(
+      guarded("https://quote.example.invalid/openai/v1/responses", {
+        method: "POST",
+        body: new Blob(["{}"]),
+      }),
+    ).rejects.toThrow(/quote_provider_body/);
+    expect(inner).not.toHaveBeenCalled();
   });
 });

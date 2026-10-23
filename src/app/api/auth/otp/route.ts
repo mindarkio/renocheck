@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { normalizeLoginEmail } from "@/lib/auth/email";
 import { takeMemoryRateLimit } from "@/lib/memory-rate-limit";
+import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import { clientIp, sameOrigin } from "@/lib/request-guards";
 import {
   LOGIN_EMAIL_INVALID_ZH,
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   if (!sameOrigin(req)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  if (!isSupabaseAuthConfigured()) {
+  if (!isQuoteAnalysisFlagOn() || !isSupabaseAuthConfigured()) {
     return NextResponse.json(
       { error: "unavailable", message: LOGIN_UNAVAILABLE_ZH },
       { status: 503 },

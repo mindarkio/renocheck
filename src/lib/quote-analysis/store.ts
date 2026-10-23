@@ -1,5 +1,6 @@
 import "server-only";
 
+import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { QUOTE_MODEL_ID } from "@/lib/quote-analysis/config";
 import type { StoredQuoteItem } from "@/lib/quote-analysis/schema";
@@ -28,8 +29,18 @@ export type QuoteStore = {
   finish(input: QuoteFinishInput): Promise<{ analysisId: string | null }>;
 };
 
+function quoteDbAllowed(): boolean {
+  try {
+    assertNotProdDbOutsideProd();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const supabaseQuoteStore: QuoteStore = {
   async begin(input) {
+    if (!quoteDbAllowed()) return { ok: false, reason: "unavailable" };
     const admin = getSupabaseAdmin();
     if (!admin) return { ok: false, reason: "unavailable" };
     const { data, error } = await admin.rpc("begin_quote_analysis", {
@@ -52,6 +63,7 @@ export const supabaseQuoteStore: QuoteStore = {
   },
 
   async finish(input) {
+    if (!quoteDbAllowed()) return { analysisId: null };
     const admin = getSupabaseAdmin();
     if (!admin) return { analysisId: null };
     const { data, error } = await admin.rpc("finish_quote_analysis", {

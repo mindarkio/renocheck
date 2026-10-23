@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(async () => ({ error: null })),
   deleteUser: vi.fn(async () => ({ data: { user: null }, error: null })),
   tables: [] as string[],
+  failTable: null as string | null,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -24,7 +25,9 @@ vi.mock("@/lib/supabase/admin", () => ({
         mocks.tables.push(table);
         return {
           delete: () => ({
-            eq: async () => ({ error: null }),
+            eq: async () => ({
+              error: mocks.failTable === table ? { message: "no" } : null,
+            }),
           }),
         };
       },
@@ -56,6 +59,27 @@ describe("POST /api/auth/account", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("refuses cross-site posts", async () => {
+    const res = await POST(
+      new Request("http://localhost/api/auth/account", {
+        method: "POST",
+        headers: { origin: "https://evil.example", "content-type": "application/json" },
+        body: JSON.stringify({ confirm: "delete" }),
+      }),
+    );
+    expect(res.status).toBe(403);
+    expect(mocks.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("keeps the session when the rows cannot be removed", async () => {
+    mocks.failTable = "quote_analysis_claims";
+    const res = await POST(request({ confirm: "delete" }));
+    mocks.failTable = null;
+    expect(res.status).toBe(503);
+    expect(mocks.deleteUser).not.toHaveBeenCalled();
+    expect(mocks.signOut).not.toHaveBeenCalled();
   });
 
   it("rejects account deletion without the confirmation", async () => {

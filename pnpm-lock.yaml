@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@ai-sdk/azure':
-        specifier: ^4.0.100
+        specifier: 4.0.100
         version: 4.0.100(zod@3.25.76)
       '@ai-sdk/gateway':
         specifier: ^4.0.111

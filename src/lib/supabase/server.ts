@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
 
 export type AuthUser = { id: string; email: string | null };
 
@@ -18,6 +19,11 @@ export async function createSupabaseServerClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   if (!url || !key) return null;
+  try {
+    assertNotProdDbOutsideProd();
+  } catch {
+    return null;
+  }
   const cookieStore = await cookies();
   return createServerClient(url, key, {
     cookies: {

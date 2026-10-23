@@ -110,6 +110,7 @@ begin
     select id, reserved_micro_usd
       from public.quote_analysis_claims
      where status = 'claimed'
+       and day_hkt = v_day
        and created_at < pg_catalog.now() - interval '180 seconds'
      for update
   ), released as (

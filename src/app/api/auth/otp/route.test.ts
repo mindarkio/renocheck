@@ -12,13 +12,17 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import { POST } from "./route";
 
-function request(email = "person@example.com") {
+function request(
+  email = "person@example.com",
+  origin = "http://localhost",
+  ip = "203.0.113.50",
+) {
   return new Request("http://localhost/api/auth/otp", {
     method: "POST",
     headers: {
-      origin: "http://localhost",
+      origin,
       "content-type": "application/json",
-      "x-forwarded-for": "203.0.113.50",
+      "x-forwarded-for": ip,
     },
     body: JSON.stringify({ email }),
   });
@@ -29,10 +33,31 @@ describe("POST /api/auth/otp", () => {
     resetMemoryRateLimitForTests();
     signInWithOtp.mockReset();
     signInWithOtp.mockResolvedValue({ data: {}, error: null });
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
+  });
+
+  it("does not create accounts or send mail while the feature flag is off", async () => {
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "");
+    expect((await POST(request())).status).toBe(503);
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("refuses cross-site posts", async () => {
+    expect((await POST(request(undefined, "https://evil.example"))).status).toBe(403);
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("rate limits one address across many emails", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect((await POST(request(`p${i}@example.com`))).status).toBe(200);
+    }
+    expect((await POST(request("p9@example.com"))).status).toBe(429);
+    expect(signInWithOtp).toHaveBeenCalledTimes(5);
   });
 
   it("asks Supabase for a code and does not call Resend or fetch", async () => {
