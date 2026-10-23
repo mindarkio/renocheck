@@ -241,11 +241,11 @@ export const CR_IDENTITY_FIELD_LABELS_ZH = {
   registeredOfficeAddress: "註冊辦事處地址",
 } as const;
 export const CR_IDENTITY_AMBIGUOUS_ZH =
-  "公司註冊處開放數據有多於一間名稱相近的公司，本報告未能確定是哪一間，所以不顯示公司資料。可以用商業登記號碼再查一次。";
+  "公司註冊處開放數據有多於一間名稱相近的公司，本報告未能確定是哪一間，故不顯示公司資料。請以商業登記號碼再次查詢。";
 export const CR_IDENTITY_NOT_FOUND_ZH =
   "公司註冊處開放數據（存續本地公司）找不到與此名稱完全對應的紀錄。";
 export const CR_IDENTITY_INCONCLUSIVE_ZH =
-  "公司註冊處開放數據有結果，但未能確定與此名稱是同一間公司，所以不顯示公司資料。";
+  "公司註冊處開放數據有結果，但未能確定與此名稱屬同一公司，故不顯示公司資料。";
 
 export const OFFICIAL_VERIFY_SECTION_HEADING_ZH = "官方來源";
 
