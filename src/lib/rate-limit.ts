@@ -1,6 +1,9 @@
 /** In-memory, per server instance. Not shared across processes. */
 const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 5;
+/** POST /api/search. Do not raise this for usage events. */
+export const SEARCH_MAX_PER_WINDOW = 5;
+/** POST /api/usage. Separate key, so it does not spend the search budget. */
+export const USAGE_MAX_PER_WINDOW = 30;
 /** Caps memory on a long-lived instance; expired keys go first, then oldest. */
 const MAX_KEYS = 10_000;
 
@@ -8,7 +11,10 @@ type Entry = { count: number; resetAt: number };
 
 const buckets = new Map<string, Entry>();
 
-export function checkRateLimit(key: string): boolean {
+export function checkRateLimit(
+  key: string,
+  maxPerWindow = SEARCH_MAX_PER_WINDOW,
+): boolean {
   const now = Date.now();
   const entry = buckets.get(key);
 
@@ -18,7 +24,7 @@ export function checkRateLimit(key: string): boolean {
     return true;
   }
 
-  if (entry.count >= MAX_PER_WINDOW) return false;
+  if (entry.count >= maxPerWindow) return false;
   entry.count += 1;
   return true;
 }

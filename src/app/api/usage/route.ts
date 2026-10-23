@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, USAGE_MAX_PER_WINDOW } from "@/lib/rate-limit";
 import { usageEventBodySchema } from "@/lib/usage-event";
 import { recordUsageEvent } from "@/lib/usage-event-store";
 
@@ -36,7 +36,7 @@ function sameOrigin(req: Request): boolean {
 }
 
 /**
- * Same window as POST /api/search: 5 requests / 60s per IP, in memory only.
+ * 30 requests / 60s per IP, in memory only. Search stays at 5 / 60s.
  * The key is separate so these lightweight posts do not use up the search budget.
  * IP is not written next to the anonymous id.
  */
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
   }
 
   const ip = clientIp(req);
-  if (!checkRateLimit(`usage:${ip}`)) {
+  if (!checkRateLimit(`usage:${ip}`, USAGE_MAX_PER_WINDOW)) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 

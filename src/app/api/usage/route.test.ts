@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkRateLimit, resetRateLimitForTests } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  resetRateLimitForTests,
+  SEARCH_MAX_PER_WINDOW,
+  USAGE_MAX_PER_WINDOW,
+} from "@/lib/rate-limit";
 
 const ANON = "12345678-1234-4234-8234-123456789abc";
 const FP = "cd".repeat(16);
@@ -90,15 +95,21 @@ describe("POST /api/usage", () => {
     expect(admin.insert).not.toHaveBeenCalled();
   });
 
-  it("rate limits with the same 5-per-minute window as search", async () => {
-    for (let i = 0; i < 5; i += 1) {
+  it("allows 30 usage events per minute without spending the search limit", async () => {
+    expect(USAGE_MAX_PER_WINDOW).toBe(30);
+    expect(SEARCH_MAX_PER_WINDOW).toBe(5);
+    for (let i = 0; i < USAGE_MAX_PER_WINDOW; i += 1) {
       const res = await POST(request({ anonId: ANON, eventType: "quote_page" }));
       expect(res.status).toBe(204);
     }
     const blocked = await POST(request({ anonId: ANON, eventType: "quote_page" }));
     expect(blocked.status).toBe(429);
     expect(await blocked.json()).toEqual({ error: "rate_limited" });
-    expect(admin.insert).toHaveBeenCalledTimes(5);
+    expect(admin.insert).toHaveBeenCalledTimes(USAGE_MAX_PER_WINDOW);
+    for (let i = 0; i < SEARCH_MAX_PER_WINDOW; i += 1) {
+      expect(checkRateLimit("203.0.113.40")).toBe(true);
+    }
+    expect(checkRateLimit("203.0.113.40")).toBe(false);
   });
 
   it("skips the insert when the table does not exist yet", async () => {
@@ -196,10 +207,4 @@ describe("POST /api/usage", () => {
     expect(admin.insert).not.toHaveBeenCalled();
   });
 
-  it("does not use up the search rate limit", async () => {
-    for (let i = 0; i < 5; i += 1) {
-      await POST(request({ anonId: ANON, eventType: "quote_page" }));
-    }
-    expect(checkRateLimit("203.0.113.40")).toBe(true);
-  });
 });
