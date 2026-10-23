@@ -95,4 +95,40 @@ describe("POST /api/search service pause", () => {
     expect(mocks.runSearchPipeline).toHaveBeenCalledTimes(1);
     vi.unstubAllEnvs();
   });
+
+  it("forwards a valid anon id and drops an invalid one without failing the search", async () => {
+    const anonId = "12345678-1234-4234-8234-123456789abc";
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const ok = await POST(
+      new Request("http://localhost/api/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ companyName: "示例裝修有限公司", anonId }),
+      }),
+    );
+    expect(ok.status).toBe(200);
+    expect(mocks.runSearchPipeline).toHaveBeenCalledWith(
+      expect.objectContaining({ companyName: "示例裝修有限公司" }),
+      expect.objectContaining({ anonId }),
+    );
+    expect(info.mock.calls.join(" ")).not.toContain(anonId);
+
+    mocks.runSearchPipeline.mockClear();
+    const ignored = await POST(
+      new Request("http://localhost/api/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          companyName: "示例裝修有限公司",
+          anonId: "not-a-uuid",
+        }),
+      }),
+    );
+    expect(ignored.status).toBe(200);
+    expect(mocks.runSearchPipeline).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ anonId: null }),
+    );
+    info.mockRestore();
+  });
 });

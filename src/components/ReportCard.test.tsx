@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, afterEach } from "vitest";
+import { describe, expect, it, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ReportCard } from "./ReportCard";
 import { REPORT_VERSION } from "@/lib/constants";
@@ -1004,5 +1004,17 @@ describe("ReportCard report trust (PR-BC)", () => {
     assertClean(header?.textContent ?? "");
     expect(screen.queryByText("判詞庫未對照")).toBeNull();
     expect(container.textContent ?? "").not.toMatch(/公開判詞 ·/);
+  });
+
+  it("notifies when an official verify link is clicked", () => {
+    const onOfficialLinkClick = vi.fn();
+    render(
+      <ReportCard report={degradedReport()} onOfficialLinkClick={onOfficialLinkClick} />,
+    );
+    fireEvent.click(screen.getByRole("link", { name: /公司註冊處電子服務網站/ }));
+    expect(onOfficialLinkClick).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("link", { name: /公司註冊處電子服務網站/ }).textContent).toContain(
+      "公司註冊處電子服務網站（公司查冊）",
+    );
   });
 });

@@ -319,6 +319,34 @@ describe("runSearchPipeline cache + legal degraded", () => {
     expect(synthesizeRiskReport).not.toHaveBeenCalled();
   });
 
+  it("passes a valid anon id into the search event and drops it for ZZQ probes", async () => {
+    getCachedReport.mockResolvedValue(baseLlmReport());
+    const anonId = "12345678-1234-4234-8234-123456789abc";
+    await runSearchPipeline(
+      { matchType: "company_name", companyName: "示例裝修有限公司" },
+      { anonId },
+    );
+    expect(logSearchEvent).toHaveBeenCalledWith(
+      supabase,
+      expect.any(String),
+      true,
+      anonId,
+    );
+    expect(synthesizeRiskReport).not.toHaveBeenCalled();
+
+    logSearchEvent.mockClear();
+    await runSearchPipeline(
+      { matchType: "company_name", companyName: "ZZQ_probe 示例" },
+      { anonId },
+    );
+    expect(logSearchEvent).toHaveBeenCalledWith(
+      supabase,
+      expect.any(String),
+      true,
+      null,
+    );
+  });
+
   it("returns service_paused on a cache miss without calling search or the LLM", async () => {
     vi.mocked(getServiceStatus).mockReturnValue({
       paused: true,

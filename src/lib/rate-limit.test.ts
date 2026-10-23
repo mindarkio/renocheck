@@ -3,6 +3,8 @@ import {
   checkRateLimit,
   rateLimitKeyCountForTests,
   resetRateLimitForTests,
+  SEARCH_MAX_PER_WINDOW,
+  USAGE_MAX_PER_WINDOW,
 } from "./rate-limit";
 
 describe("search rate limit", () => {
@@ -20,7 +22,8 @@ describe("search rate limit", () => {
     vi.setSystemTime(new Date("2026-06-01T00:00:00.000Z"));
     const key = "198.51.100.20";
 
-    for (let i = 0; i < 5; i++) expect(checkRateLimit(key)).toBe(true);
+    expect(SEARCH_MAX_PER_WINDOW).toBe(5);
+    for (let i = 0; i < SEARCH_MAX_PER_WINDOW; i++) expect(checkRateLimit(key)).toBe(true);
     expect(checkRateLimit(key)).toBe(false);
 
     vi.setSystemTime(new Date("2026-06-01T00:01:00.001Z"));
@@ -46,5 +49,19 @@ describe("search rate limit", () => {
     checkRateLimit("new");
     expect(rateLimitKeyCountForTests()).toBe(2);
     expect(checkRateLimit("fresh")).toBe(false);
+  });
+
+  it("honours a higher per-call maximum without changing the search default", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-01T00:00:00.000Z"));
+    expect(USAGE_MAX_PER_WINDOW).toBe(30);
+    for (let i = 0; i < USAGE_MAX_PER_WINDOW; i++) {
+      expect(checkRateLimit("usage:203.0.113.40", USAGE_MAX_PER_WINDOW)).toBe(true);
+    }
+    expect(checkRateLimit("usage:203.0.113.40", USAGE_MAX_PER_WINDOW)).toBe(false);
+    for (let i = 0; i < SEARCH_MAX_PER_WINDOW; i++) {
+      expect(checkRateLimit("203.0.113.40")).toBe(true);
+    }
+    expect(checkRateLimit("203.0.113.40")).toBe(false);
   });
 });

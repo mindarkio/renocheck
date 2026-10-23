@@ -297,16 +297,19 @@ function ReportExternalLink({
   href,
   children,
   className,
+  onClick,
 }: {
   href: string;
   children: ReactNode;
   className?: string;
+  onClick?: () => void;
 }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={onClick}
       className={`inline-flex min-h-11 items-center ${reportExternalLinkTouchClass} ${className ?? ""}`}
     >
       {children}
@@ -340,7 +343,13 @@ function ReportBlock({
   );
 }
 
-export function ReportCard({ report }: { report: RiskReport }) {
+export function ReportCard({
+  report,
+  onOfficialLinkClick,
+}: {
+  report: RiskReport;
+  onOfficialLinkClick?: () => void;
+}) {
   const highlights = report.signals.highlights ?? [];
   const contractQuestions = DEFAULT_CONTRACT_CHECKLIST_ZH;
   const actionable = report.signals.actionableClauses ?? [];
@@ -1042,6 +1051,7 @@ export function ReportCard({ report }: { report: RiskReport }) {
           <li key={item.id}>
             <ReportExternalLink
               href={item.url}
+              onClick={onOfficialLinkClick}
               className="font-medium text-primary underline-offset-2 hover:underline"
             >
               {item.labelZh}

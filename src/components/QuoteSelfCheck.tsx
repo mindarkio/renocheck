@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
+import { sendUsageEvent } from "@/lib/usage-events-client";
 import {
   QUOTE_CHECK_ITEMS,
   QUOTE_CHECKLIST_HEADING_ZH,
@@ -73,17 +74,31 @@ export function QuoteSelfCheck() {
   const [notice, setNotice] = useState<QuoteNotice>("idle");
   const replyRef = useRef<HTMLTextAreaElement>(null);
   const checklistHeadingRef = useRef<HTMLHeadingElement>(null);
-
+  const pageSent = useRef(false);
   const message = buildQuoteReplyMessage(selections);
   const selectedCount = QUOTE_CHECK_ITEMS.filter((item) => selections[item.id]).length;
 
+  useEffect(() => {
+    if (pageSent.current) return;
+    pageSent.current = true;
+    sendUsageEvent("quote_page");
+  }, []);
+
   function choose(id: QuoteCheckItemId, status: QuoteCheckStatus) {
     setNotice("idle");
+    // Count only the click that completes the list. Restoring a finished list
+    // on load, or a change from another tab, is not a new completion.
+    const wasComplete = selectedCount === QUOTE_CHECK_ITEMS.length;
+    const nowComplete = QUOTE_CHECK_ITEMS.every(
+      (item) => item.id === id || Boolean(selections[item.id]),
+    );
     updateQuoteCheckSelection(id, status);
+    if (!wasComplete && nowComplete) sendUsageEvent("quote_all_ticked");
   }
 
   async function copyMessage() {
     if (!message) return;
+    sendUsageEvent("quote_copy_reply");
     setNotice("idle");
     try {
       if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");

@@ -7,6 +7,7 @@ import {
   parsedSearchQueryLabel,
   toSearchInputBody,
 } from "@/lib/parse-unified-search-query";
+import { getOrCreateAnonId } from "@/lib/anon-id";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
 import { SearchProgressModal } from "./SearchProgress";
 
@@ -87,10 +88,11 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
     setProgressStartedAt(Date.now());
 
     try {
+      const anonId = getOrCreateAnonId();
       const res = await fetch("/api/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(anonId ? { ...body, anonId } : body),
       });
 
       if (res.status === 429) {

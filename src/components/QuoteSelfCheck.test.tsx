@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
+
+vi.mock("@/lib/usage-events-client", () => ({
+  sendUsageEvent: vi.fn(),
+}));
+
 import { QuoteSelfCheck } from "./QuoteSelfCheck";
 import {
   QUOTE_CHECK_ITEMS,
@@ -13,7 +20,9 @@ import {
   QUOTE_SELF_CHECK_STORAGE_KEY,
   buildQuoteReplyMessage,
   clearQuoteCheckSelections,
+  updateQuoteCheckSelection,
 } from "@/lib/quote-selfcheck";
+import { sendUsageEvent } from "@/lib/usage-events-client";
 
 afterEach(() => {
   cleanup();
@@ -197,5 +206,69 @@ describe("QuoteSelfCheck", () => {
     );
     expect(setItem).toHaveBeenCalled();
   });
-});
 
+  it("sends page, full-checklist, and reply-copy events", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<QuoteSelfCheck />);
+    await waitFor(() => {
+      expect(sendUsageEvent).toHaveBeenCalledWith("quote_page");
+    });
+
+    for (const item of QUOTE_CHECK_ITEMS) {
+      fireEvent.click(
+        within(group(new RegExp(item.label))).getByRole("radio", { name: "唔適用" }),
+      );
+    }
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_all_ticked");
+    expect(
+      vi.mocked(sendUsageEvent).mock.calls.filter((call) => call[0] === "quote_all_ticked"),
+    ).toHaveLength(1);
+
+    const firstItem = QUOTE_CHECK_ITEMS[0];
+    if (!firstItem) throw new Error("checklist empty");
+    fireEvent.click(radio(new RegExp(firstItem.label), "冇提及"));
+    expect(
+      vi.mocked(sendUsageEvent).mock.calls.filter((call) => call[0] === "quote_all_ticked"),
+    ).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_COPY_BUTTON_ZH }));
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_copy_reply");
+  });
+
+  it("does not count a finished checklist restored on page load", async () => {
+    vi.mocked(sendUsageEvent).mockClear();
+    for (const item of QUOTE_CHECK_ITEMS) updateQuoteCheckSelection(item.id, "na");
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(<QuoteSelfCheck />);
+    document.body.appendChild(container);
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    await act(async () => {
+      root = hydrateRoot(container, <QuoteSelfCheck />);
+    });
+    await waitFor(() => {
+      expect(sendUsageEvent).toHaveBeenCalledWith("quote_page");
+    });
+    const firstItem = QUOTE_CHECK_ITEMS[0];
+    if (!firstItem) throw new Error("checklist empty");
+    expect(radio(new RegExp(firstItem.label), "唔適用").checked).toBe(true);
+    expect(
+      vi.mocked(sendUsageEvent).mock.calls.filter((call) => call[0] === "quote_all_ticked"),
+    ).toHaveLength(0);
+    act(() => root?.unmount());
+    container.remove();
+  });
+
+  it("does not count a list finished in another tab", async () => {
+    vi.mocked(sendUsageEvent).mockClear();
+    render(<QuoteSelfCheck />);
+    await waitFor(() => {
+      expect(sendUsageEvent).toHaveBeenCalledWith("quote_page");
+    });
+    act(() => {
+      for (const item of QUOTE_CHECK_ITEMS) updateQuoteCheckSelection(item.id, "na");
+    });
+    expect(
+      vi.mocked(sendUsageEvent).mock.calls.filter((call) => call[0] === "quote_all_ticked"),
+    ).toHaveLength(0);
+  });
+});

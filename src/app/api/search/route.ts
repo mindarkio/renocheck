@@ -4,7 +4,16 @@ import { normalizeSearchInput } from "@/lib/normalize-search-input";
 import { runSearchPipeline } from "@/lib/search-pipeline";
 import { SearchPipelineError } from "@/lib/search-pipeline-error";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isAnonId } from "@/lib/anon-id";
 import { isSyntheticProbeTerm } from "@/lib/synthetic-probe";
+
+function anonIdFromBody(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("anonId" in body)) {
+    return null;
+  }
+  const value = (body as { anonId?: unknown }).anonId;
+  return isAnonId(value) ? value.toLowerCase() : null;
+}
 
 export const maxDuration = 60;
 
@@ -42,10 +51,12 @@ export async function POST(req: Request) {
     (body as { refresh?: boolean }).refresh === true;
 
   const input = normalizeSearchInput(parsed.data);
+  const anonId = anonIdFromBody(body);
 
   try {
     const result = await runSearchPipeline(input, {
       skipCache: refresh,
+      anonId,
     });
     console.info(
       JSON.stringify({

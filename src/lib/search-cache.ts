@@ -1,9 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isAnonId } from "./anon-id";
 import type { NormalizedSearchInput } from "./normalize-search-input";
 import { REPORT_VERSION } from "./constants";
 import type { RiskReport } from "./report-schema";
 import { riskReportSchema } from "./report-schema";
 import { applyRiskBandMaxCapToReport } from "./risk-band-calibration";
+import { isMissingAnonIdColumn } from "./usage-event";
 
 export function isReportLegalLookupDegraded(report: RiskReport): boolean {
   const status = report.official.legalLookupStatus;
@@ -78,9 +80,34 @@ export async function logSearchEvent(
   supabase: SupabaseClient,
   fingerprint: string,
   cacheHit: boolean,
+  anonId?: string | null,
 ): Promise<void> {
-  await supabase.from("search_events").insert({
-    fingerprint,
-    cache_hit: cacheHit,
-  });
+  const base = { fingerprint, cache_hit: cacheHit };
+  const id = anonId && isAnonId(anonId) ? anonId.toLowerCase() : null;
+  const payload = id ? { ...base, anon_id: id } : base;
+  try {
+    const { error } = await supabase.from("search_events").insert(payload);
+    if (!error) return;
+
+    if (id && isMissingAnonIdColumn(error)) {
+      const retry = await supabase.from("search_events").insert(base);
+      if (!retry.error) return;
+      console.warn(
+        JSON.stringify({
+          event: "search_event_skipped",
+          code: retry.error.code ?? "insert_failed",
+        }),
+      );
+      return;
+    }
+
+    console.warn(
+      JSON.stringify({
+        event: "search_event_skipped",
+        code: error.code ?? "insert_failed",
+      }),
+    );
+  } catch {
+    console.warn(JSON.stringify({ event: "search_event_skipped", code: "insert_threw" }));
+  }
 }
