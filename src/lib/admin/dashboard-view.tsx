@@ -357,7 +357,7 @@ function ReturnAnalyticsSection({ data }: { data: ReturnAnalytics }) {
           <div>
             <h3 className="mb-2 text-sm font-medium text-foreground">隔幾耐再來</h3>
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <CountItem label="1 日內" value={data.intervals.within1Day} />
+              <CountItem label="1 日內（相隔 30 分鐘以上）" value={data.intervals.within1Day} />
               <CountItem label="7 日內（超過 1 日）" value={data.intervals.within7Days} />
               <CountItem label="30 日內（超過 7 日）" value={data.intervals.within30Days} />
               <CountItem label="超過 30 日" value={data.intervals.over30Days} />

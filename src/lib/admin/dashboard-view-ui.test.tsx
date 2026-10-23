@@ -85,6 +85,13 @@ describe("AdminDashboardView UI (YUI)", () => {
     expect(text).toContain("2026-06-15");
     expect(text).toContain("再搜同一間公司");
     expect(text).toContain("20 項都揀咗");
+    const valueOf = (label: string) => screen.getByText(label).nextElementSibling?.textContent;
+    expect(valueOf("1 日內（相隔 30 分鐘以上）")).toBe("3");
+    expect(valueOf("7 日內（超過 1 日）")).toBe("1");
+    expect(valueOf("30 日內（超過 7 日）")).toBe("0");
+    expect(valueOf("超過 30 日")).toBe("4");
+    expect(valueOf("20 項都揀咗")).toBe("1");
+    expect(valueOf("複製回覆訊息")).toBe("2");
     expect(text).not.toContain("SENTINEL");
   });
 

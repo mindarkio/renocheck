@@ -50,13 +50,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
+  const declared = Number(req.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "invalid_input" }, { status: 413 });
+  }
+
   let raw: string;
   try {
     raw = await req.text();
   } catch {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   }
-  if (raw.length > MAX_BODY_BYTES) {
+  if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
     return NextResponse.json({ error: "invalid_input" }, { status: 413 });
   }
 

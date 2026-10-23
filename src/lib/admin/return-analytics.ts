@@ -19,6 +19,8 @@ const PAGE_SIZE = 1000;
 const ROW_CAP = 50_000;
 const CACHE_CHUNK = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** Visits closer together than this are one sitting, not a return. */
+export const RETURN_MIN_GAP_MS = 30 * 60 * 1000;
 
 export type ReturnSearchRow = {
   anonId: string | null;
@@ -153,8 +155,9 @@ type Visit = {
  * ZZQ probe fingerprints are dropped, same as search KPIs.
  * Weekly new/returning uses every remaining event.
  * Return gaps use searches and /quote page views only, so a click in the
- * same sitting is not a return.
- * Interval buckets do not overlap: ≤1 day, then ≤7 days, then ≤30 days.
+ * same sitting is not a return. Visits less than RETURN_MIN_GAP_MS apart are
+ * also one sitting: no gap and no return action is counted for them.
+ * Interval buckets do not overlap: 30 min to 1 day, then ≤7 days, then ≤30 days.
  */
 export function aggregateReturnAnalytics(
   searches: ReturnSearchRow[],
@@ -250,7 +253,7 @@ export function aggregateReturnAnalytics(
     const priorSearches = new Set<string>();
     let prevAt: number | null = null;
     for (const visit of visits) {
-      if (prevAt != null && inRange(visit.at)) {
+      if (prevAt != null && inRange(visit.at) && visit.at - prevAt >= RETURN_MIN_GAP_MS) {
         const gap = visit.at - prevAt;
         if (gap <= DAY_MS) result.intervals.within1Day += 1;
         else if (gap <= 7 * DAY_MS) result.intervals.within7Days += 1;

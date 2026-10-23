@@ -59,4 +59,16 @@ describe("ReportShareButton", () => {
     expect(sendUsageEvent).toHaveBeenCalledWith("report_share", { fingerprint: FP });
     expect(screen.getByRole("status").textContent).toBe("");
   });
+
+  it("says the copy failed when share and clipboard both fail", async () => {
+    const share = vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    Object.assign(navigator, { share, clipboard: { writeText } });
+    render(<ReportShareButton fingerprint={FP} />);
+    fireEvent.click(screen.getByRole("button", { name: REPORT_SHARE_BUTTON_ZH }));
+    await waitFor(() => {
+      expect(screen.getByRole("status").textContent).toBe(REPORT_SHARE_FAILED_ZH);
+    });
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/report/${FP}`);
+  });
 });

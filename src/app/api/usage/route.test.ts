@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetRateLimitForTests } from "@/lib/rate-limit";
+import { checkRateLimit, resetRateLimitForTests } from "@/lib/rate-limit";
 
 const ANON = "12345678-1234-4234-8234-123456789abc";
 const FP = "cd".repeat(16);
@@ -138,5 +138,68 @@ describe("POST /api/usage", () => {
     );
     expect(res.status).toBe(403);
     expect(admin.insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a post with no Origin header", async () => {
+    const req = new Request("http://localhost/api/usage", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.40" },
+      body: JSON.stringify({ anonId: ANON, eventType: "quote_page" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(403);
+    expect(admin.insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a body over 1 KB, counted in bytes", async () => {
+    const big = await POST(
+      request({ anonId: ANON, eventType: "quote_page", pad: "x".repeat(2000) }),
+    );
+    expect(big.status).toBe(413);
+    const wide = await POST(
+      request({ anonId: ANON, eventType: "quote_page", pad: "字".repeat(400) }),
+    );
+    expect(wide.status).toBe(413);
+    expect(admin.insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects bad JSON, an unknown event, a non-v4 id, and a bad fingerprint", async () => {
+    const badJson = new Request("http://localhost/api/usage", {
+      method: "POST",
+      headers: { origin: "http://localhost", "x-forwarded-for": "203.0.113.41" },
+      body: "{",
+    });
+    expect((await POST(badJson)).status).toBe(400);
+    expect(
+      (await POST(request({ anonId: ANON, eventType: "search" }, { "x-forwarded-for": "203.0.113.42" }))).status,
+    ).toBe(400);
+    expect(
+      (
+        await POST(
+          request(
+            { anonId: "12345678-1234-1234-8234-123456789abc", eventType: "quote_page" },
+            { "x-forwarded-for": "203.0.113.43" },
+          ),
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await POST(
+          request(
+            { anonId: ANON, eventType: "report_share", fingerprint: "zz" },
+            { "x-forwarded-for": "203.0.113.44" },
+          ),
+        )
+      ).status,
+    ).toBe(400);
+    expect(admin.insert).not.toHaveBeenCalled();
+  });
+
+  it("does not use up the search rate limit", async () => {
+    for (let i = 0; i < 5; i += 1) {
+      await POST(request({ anonId: ANON, eventType: "quote_page" }));
+    }
+    expect(checkRateLimit("203.0.113.40")).toBe(true);
   });
 });

@@ -20,6 +20,7 @@ describe("anonymous id", () => {
     expect(isAnonId(STORED)).toBe(true);
     expect(isAnonId(STORED.toUpperCase())).toBe(true);
     expect(isAnonId("12345678-1234-1234-8234-123456789abc")).toBe(false);
+    expect(isAnonId("12345678-1234-4234-c234-123456789abc")).toBe(false);
     expect(isAnonId("not-a-uuid")).toBe(false);
     expect(isAnonId(null)).toBe(false);
     expect(canonicalAnonId(STORED.toUpperCase())).toBe(STORED);

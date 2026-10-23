@@ -18,12 +18,13 @@ export function ReportShareButton({ fingerprint }: { fingerprint: string }) {
   const [notice, setNotice] = useState<"idle" | "copied" | "failed">("idle");
 
   async function onShare() {
+    // Clear first so a second identical result is announced again.
+    setNotice("idle");
     sendUsageEvent("report_share", { fingerprint });
     const url = reportUrl(fingerprint);
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ url });
-        setNotice("idle");
         return;
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;

@@ -152,6 +152,62 @@ describe("return analytics buckets", () => {
   });
 });
 
+describe("return analytics edges", () => {
+  it("starts the week on Monday 00:00 Hong Kong time", () => {
+    expect(hkWeekStartKey("2026-06-14T15:59:59.000Z")).toBe("2026-06-08");
+    expect(hkWeekStartKey("2026-06-14T16:00:00.000Z")).toBe("2026-06-15");
+  });
+
+  it("treats visits under 30 minutes apart as one sitting", () => {
+    const start = Date.parse("2026-06-18T00:00:00.000Z");
+    const minute = 60_000;
+    const at = (ms: number) => new Date(start + ms).toISOString();
+    const rows: ReturnSearchRow[] = [
+      { anonId: A, fingerprint: "fp-1", createdAt: at(0) },
+      { anonId: A, fingerprint: "fp-2", createdAt: at(10 * minute) },
+      { anonId: A, fingerprint: "fp-1", createdAt: at(39 * minute) },
+      { anonId: B, fingerprint: "fp-3", createdAt: at(0) },
+      { anonId: B, fingerprint: "fp-3", createdAt: at(30 * minute) },
+    ];
+    const usage: ReturnUsageRow[] = [
+      { anonId: A, eventType: "quote_page", fingerprint: null, createdAt: at(45 * minute) },
+    ];
+    const result = aggregateReturnAnalytics(rows, usage, [], new Date(start + 60 * minute), 7);
+    expect(result.intervals).toEqual({
+      within1Day: 1,
+      within7Days: 0,
+      within30Days: 0,
+      over30Days: 0,
+    });
+    expect(result.returnerActions).toEqual({
+      sameCompany: 1,
+      differentCompany: 0,
+      usedQuote: 0,
+    });
+  });
+
+  it("counts only events inside the selected range, start included", () => {
+    const now = new Date("2026-06-17T04:00:00.000Z");
+    const rows: ReturnSearchRow[] = [
+      { anonId: A, fingerprint: "fp-1", createdAt: "2026-06-01T02:00:00.000Z" },
+      { anonId: A, fingerprint: "fp-1", createdAt: "2026-06-05T02:00:00.000Z" },
+    ];
+    const usage: ReturnUsageRow[] = [
+      { anonId: B, eventType: "quote_page", fingerprint: null, createdAt: "2026-06-10T15:59:59.999Z" },
+      { anonId: B, eventType: "quote_page", fingerprint: null, createdAt: "2026-06-10T16:00:00.000Z" },
+    ];
+    const result = aggregateReturnAnalytics(rows, usage, [], now, 7);
+    expect(result.funnel.quotePage).toBe(1);
+    expect(result.intervals).toEqual({
+      within1Day: 0,
+      within7Days: 0,
+      within30Days: 0,
+      over30Days: 0,
+    });
+    expect(result.returnerActions.sameCompany).toBe(0);
+  });
+});
+
 describe("fetchReturnAnalytics degradation", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
