@@ -1,6 +1,6 @@
 import { CR_ESERVICES_URL } from "../report-trust-copy-zh";
 import { crStringField } from "./row-fields";
-import type { CrApiLocalRow } from "./types";
+import type { CrApiLocalRow, CrCandidateName } from "./types";
 import {
   isIncorporationUnderOneYearAt,
   parseCrIncorporationDateToIso,
@@ -80,5 +80,41 @@ export function inconclusiveCrSnapshot(
     retrievedAt,
     hints: [],
     icrisHomeUrl: CR_ESERVICES_URL,
+  };
+}
+
+function candidateNameFromRow(row: CrApiLocalRow): CrCandidateName | null {
+  const nameZhRaw = crStringField(row.Chinese_Company_Name);
+  const nameZh =
+    nameZhRaw && nameZhRaw !== "NULL" ? nameZhRaw.slice(0, 200) : undefined;
+  const nameEnRaw = crStringField(row.English_Company_Name);
+  const nameEn =
+    nameEnRaw && nameEnRaw !== "NULL" ? nameEnRaw.slice(0, 200) : undefined;
+  const brRaw = crStringField(row.Brn);
+  const brNo = brRaw ? brRaw.slice(0, 32) : undefined;
+  if (!nameZh && !nameEn && !brNo) return null;
+  return {
+    ...(brNo ? { brNo } : {}),
+    ...(nameZh ? { nameZh } : {}),
+    ...(nameEn ? { nameEn } : {}),
+  };
+}
+
+/** Grade D snapshot. `matched` stays false. Null when the rows have no display fields. */
+export function candidateCrSnapshot(
+  rows: CrApiLocalRow[],
+  retrievedAt: string,
+): import("./types").CrMappedSnapshot | null {
+  const candidateNames = rows
+    .map(candidateNameFromRow)
+    .filter((name): name is CrCandidateName => name !== null)
+    .slice(0, 2);
+  if (candidateNames.length === 0) return null;
+  return {
+    matched: false,
+    retrievedAt,
+    hints: [],
+    icrisHomeUrl: CR_ESERVICES_URL,
+    candidateNames,
   };
 }

@@ -192,6 +192,8 @@ interface RiskReport {
 
 （實作以 `src/lib/report-schema.ts` 為準。）
 
+`official.companiesRegistry`（可選）可帶 `candidateNames`（最多 2 間）。呢個係公司註冊處前綴搜尋得返 1–2 行、但未達 B/C 嘅候選：`matched` 維持 false，唔當搵到，亦唔改評級。
+
 **評級原則（Prompt，非法律定性）：**
 
 - **A/B：** 官方牌照匹配良好 + 無／極少相關負面公開討論  

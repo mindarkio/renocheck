@@ -2,7 +2,14 @@ import { Building2 } from "lucide-react";
 import { CopyCompanyNameButton } from "@/components/CopyCompanyNameButton";
 import { officialVerifyCopyName } from "@/lib/official-verify-links";
 import { formatReportGeneratedAtHkt } from "@/lib/format-report-generated-at";
-import type { RiskReport } from "@/lib/report-schema";
+import type {
+  CompaniesRegistryCandidate,
+  RiskReport,
+} from "@/lib/report-schema";
+import {
+  CR_CANDIDATE_LIST_EXPLAINER_ZH,
+  CR_CANDIDATE_LIST_HEADING_ZH,
+} from "@/lib/cr-register/candidate-copy";
 import {
   CR_DATA_ATTRIBUTION_ZH,
   CR_IDENTITY_AMBIGUOUS_ZH,
@@ -25,6 +32,36 @@ const reportBlockClass =
   "border-t border-border/60 px-5 py-2 lg:px-8 lg:py-8";
 const reportBodyClass = reportBodyTextClass;
 const reportMetaClass = reportMetaTextClass;
+
+function CrCandidateList({ names }: { names: CompaniesRegistryCandidate[] }) {
+  return (
+    <div>
+      <h3 className="text-sm font-medium text-foreground">
+        {CR_CANDIDATE_LIST_HEADING_ZH}
+      </h3>
+      <p className={`${reportBodyClass} mt-1`}>
+        {CR_CANDIDATE_LIST_EXPLAINER_ZH}
+      </p>
+      <ul className={`${reportBodyClass} mt-2 list-disc space-y-1 pl-5`}>
+        {names.map((candidate, index) => {
+          const title = [candidate.nameZh, candidate.nameEn]
+            .map((part) => part?.trim())
+            .filter(Boolean)
+            .join(" ");
+          const br = candidate.brNo?.trim();
+          return (
+            <li key={`${br ?? "row"}-${index}`}>
+              {title}
+              {br
+                ? `${title ? " " : ""}（${CR_IDENTITY_FIELD_LABELS_ZH.brNo} ${br}）`
+                : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 function CrSourceAttribution({ retrievedAt }: { retrievedAt: string }) {
   return (
@@ -153,11 +190,15 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
         cr.matched !== true &&
         !cr.matchAmbiguous ? (
           <>
-            <p className={reportBodyClass}>
-              {cr.hints.includes("not_found_in_active_list")
-                ? CR_IDENTITY_NOT_FOUND_ZH
-                : CR_IDENTITY_INCONCLUSIVE_ZH}
-            </p>
+            {cr.candidateNames && cr.candidateNames.length > 0 ? (
+              <CrCandidateList names={cr.candidateNames} />
+            ) : (
+              <p className={reportBodyClass}>
+                {cr.hints.includes("not_found_in_active_list")
+                  ? CR_IDENTITY_NOT_FOUND_ZH
+                  : CR_IDENTITY_INCONCLUSIVE_ZH}
+              </p>
+            )}
             <p className={reportMetaClass}>
               <CrSourceAttribution retrievedAt={cr.retrievedAt} />
             </p>

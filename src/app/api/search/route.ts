@@ -4,6 +4,7 @@ import { normalizeSearchInput } from "@/lib/normalize-search-input";
 import { runSearchPipeline } from "@/lib/search-pipeline";
 import { SearchPipelineError } from "@/lib/search-pipeline-error";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isSyntheticProbeTerm } from "@/lib/synthetic-probe";
 
 export const maxDuration = 60;
 
@@ -24,6 +25,13 @@ export async function POST(req: Request) {
 
   const parsed = searchInputSchema.safeParse(body);
   if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  }
+
+  if (
+    process.env.NODE_ENV === "production" &&
+    isSyntheticProbeTerm(parsed.data.companyName ?? "")
+  ) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   }
 

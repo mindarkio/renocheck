@@ -76,7 +76,9 @@ describe("pickMatchedRows (M3)", () => {
       label,
     );
     expect(pick).not.toBe("ambiguous");
-    if (pick === "ambiguous" || pick === null) throw new Error("expected match");
+    if (pick === "ambiguous" || pick === null || pick.tier === "D") {
+      throw new Error("expected match");
+    }
     expect(pick.tier).toBe("B");
     expect(pick.row.Brn).toBe("C2222222");
   });
@@ -102,5 +104,43 @@ describe("pickMatchedRows (M3)", () => {
     }
     expect(tierForRow(rows[0]!, cLabel)).toBe("C");
     expect(pickMatchedRows(rows, cLabel)).toBe(null);
+  });
+
+  it("1–2 rows that are not B/C are grade D candidates, not a match", () => {
+    const one = pickMatchedRows(
+      [row("C9000001", "OTHER WORKS LIMITED", "其他工程有限公司")],
+      "完全唔同有限公司",
+    );
+    expect(one).toMatchObject({ tier: "D" });
+    if (!one || one === "ambiguous" || one.tier !== "D") {
+      throw new Error("expected D");
+    }
+    expect(one.rows).toHaveLength(1);
+    expect(one.rows[0]?.Brn).toBe("C9000001");
+
+    const two = pickMatchedRows(
+      [
+        row("C9000001", "OTHER WORKS LIMITED", "其他工程有限公司"),
+        row("C9000002", "ELSE WORKS LIMITED", "別家工程有限公司"),
+      ],
+      "完全唔同有限公司",
+    );
+    if (!two || two === "ambiguous" || two.tier !== "D") {
+      throw new Error("expected D");
+    }
+    expect(two.rows).toHaveLength(2);
+  });
+
+  it("three non-matching rows are not candidates and not a match", () => {
+    expect(
+      pickMatchedRows(
+        [
+          row("C9000001", "OTHER WORKS LIMITED", "其他工程有限公司"),
+          row("C9000002", "ELSE WORKS LIMITED", "別家工程有限公司"),
+          row("C9000003", "THIRD WORKS LIMITED", "第三工程有限公司"),
+        ],
+        "完全唔同有限公司",
+      ),
+    ).toBe(null);
   });
 });

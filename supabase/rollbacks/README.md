@@ -18,3 +18,4 @@ Pair each file with the matching migration under `supabase/migrations/`. Run on 
 | `20261017145500_official_legal_events_hearing_guard_search_path.down.sql` | `20261017145500_official_legal_events_hearing_guard_search_path.sql` |
 | `20261018140000_mwc_contractors_service_role_only.down.sql` | `20261018140000_mwc_contractors_service_role_only.sql` |
 | `20261020180000_report_feedback.down.sql` | `20261020180000_report_feedback.sql` |
+| `20261023180000_mwc_company_name_en.down.sql` | `20261023180000_mwc_company_name_en.sql` |

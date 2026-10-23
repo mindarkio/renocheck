@@ -16,13 +16,22 @@ function emptyData(): SearchAnalyticsAggregate {
       cacheHitCount: 0,
       noMatchPct: 0,
       noMatchCount: 0,
+      crMatchedPct: 0,
+      crMatchedCount: 0,
       ambiguousPct: 0,
       ambiguousCount: 0,
       byInputType: { company_name: 0, phone: 0, br: 0, unknown: 0 },
       missingCacheRow: 0,
     },
     terms: [],
-    views: { all: [], none: [], ambiguous: [], mwc_authoritative: [], short: [] },
+    views: {
+      all: [],
+      none: [],
+      cr_matched: [],
+      ambiguous: [],
+      mwc_authoritative: [],
+      short: [],
+    },
     daily: Array.from({ length: 7 }, (_, i) => ({
       day: `2026-06-${String(i + 1).padStart(2, "0")}`,
       searches: 0,
@@ -38,6 +47,8 @@ describe("AdminDashboardView UI (YUI)", () => {
     render(<AdminDashboardView data={emptyData()} days={30} view="none" />);
     const day30 = screen.getByRole("link", { name: "30 日" });
     const tabNone = screen.getByRole("link", { name: "搵唔到" });
+    expect(screen.getByRole("link", { name: "公司註冊處搵到" })).toBeTruthy();
+    expect(screen.getAllByText("公司註冊處搵到").length).toBeGreaterThanOrEqual(2);
     expect(day30.getAttribute("aria-current")).toBe("page");
     expect(tabNone.getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "7 日" }).getAttribute("aria-current")).toBeNull();
@@ -68,10 +79,10 @@ describe("AdminDashboardView UI (YUI)", () => {
     expect(text).not.toMatch(/0%/);
     expect(text).not.toContain("0 次");
     expect(text).toContain("按類型：公司名 —未能讀取・電話 —未能讀取・BR —未能讀取");
-    // 4 KPI cards + 3 input types; each dash is aria-hidden with an sr-only label.
-    expect(screen.getAllByText("未能讀取")).toHaveLength(7);
+    // 5 KPI cards + 3 input types; each dash is aria-hidden with an sr-only label.
+    expect(screen.getAllByText("未能讀取")).toHaveLength(8);
     const dashes = [...container.querySelectorAll("span")].filter((s) => s.textContent === "—");
-    expect(dashes).toHaveLength(7);
+    expect(dashes).toHaveLength(8);
     for (const d of dashes) expect(d.getAttribute("aria-hidden")).toBe("true");
   });
 

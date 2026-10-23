@@ -10,6 +10,7 @@ import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { assertCacheFileFresh } from "../src/lib/cause-list/cache-ttl";
 import { BD_REGISTER_CSV_PATH } from "../src/lib/bd-register/paths";
+import { mwcStoredNames } from "../src/lib/mwc-import-names";
 import { parseBdRegistryExpiryDate } from "../src/lib/mwc-registry-display";
 import { normalizeHongKongPhone } from "../src/lib/normalize-phone";
 
@@ -42,24 +43,16 @@ function loadEnvLocal() {
   }
 }
 
-function stripHtml(s: string): string {
-  return s.replace(/<br\s*\/?>/gi, " ").replace(/\s+/g, " ").trim();
-}
-
 function displayName(row: CsvRow): string {
-  const parts = [
-    row.CHINESE_COMPANY_NAME,
-    row.ENGLISH_COMPANY_NAME,
-    row.CHINESE_NAME,
-    row.ENGLISH_NAME,
-  ]
-    .map((p) => stripHtml(p ?? ""))
-    .filter(Boolean);
-  return parts[0] ?? row.REGISTRATION_NUMBER ?? "Unknown";
+  return mwcStoredNames(row).company_name;
 }
 
 function pickPhone(row: CsvRow): string | null {
   return normalizeHongKongPhone(row.TELEPHONE_NO);
+}
+
+function stripHtml(s: string): string {
+  return s.replace(/<br\s*\/?>/gi, " ").replace(/\s+/g, " ").trim();
 }
 
 function pickPrimarySignatory(row: CsvRow): string | null {
@@ -123,14 +116,18 @@ async function main() {
 
   const sourceUpdatedAt = statSync(CSV_PATH).mtime.toISOString();
 
-  const records = deduped.map((row) => ({
-    company_name: displayName(row),
-    phone: pickPhone(row),
-    registration_no: row.REGISTRATION_NUMBER.trim(),
-    expiry_date: parseBdRegistryExpiryDate(row.EXPIRY_DATE ?? ""),
-    primary_signatory_name: pickPrimarySignatory(row),
-    source_updated_at: sourceUpdatedAt,
-  }));
+  const records = deduped.map((row) => {
+    const names = mwcStoredNames(row);
+    return {
+      company_name: names.company_name,
+      company_name_en: names.company_name_en,
+      phone: pickPhone(row),
+      registration_no: row.REGISTRATION_NUMBER.trim(),
+      expiry_date: parseBdRegistryExpiryDate(row.EXPIRY_DATE ?? ""),
+      primary_signatory_name: pickPrimarySignatory(row),
+      source_updated_at: sourceUpdatedAt,
+    };
+  });
 
   console.log(
     `CSV rows: ${allRows.length}, MWC/MWC(W): ${mwcRows.length}, deduped: ${records.length}`,
