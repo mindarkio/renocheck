@@ -206,6 +206,41 @@ describe("return analytics edges", () => {
     });
     expect(result.returnerActions.sameCompany).toBe(0);
   });
+
+  it("keeps funnel counts after anon_id is cleared", () => {
+    const now = new Date("2026-06-17T04:00:00.000Z");
+    const usage: ReturnUsageRow[] = [
+      {
+        anonId: null,
+        eventType: "quote_page",
+        fingerprint: null,
+        createdAt: "2026-06-16T04:00:00.000Z",
+      },
+      {
+        anonId: null,
+        eventType: "report_share",
+        fingerprint: null,
+        createdAt: "2026-06-16T05:00:00.000Z",
+      },
+    ];
+    const result = aggregateReturnAnalytics([], usage, [], now, 7);
+    expect(result.funnel.quotePage).toBe(1);
+    expect(result.funnel.reportShare).toBe(1);
+    expect(result.weeks.every((week) => week.newDevices === 0 && week.returningDevices === 0)).toBe(
+      true,
+    );
+    expect(result.returnerActions).toEqual({
+      sameCompany: 0,
+      differentCompany: 0,
+      usedQuote: 0,
+    });
+    expect(result.intervals).toEqual({
+      within1Day: 0,
+      within7Days: 0,
+      within30Days: 0,
+      over30Days: 0,
+    });
+  });
 });
 
 describe("fetchReturnAnalytics degradation", () => {

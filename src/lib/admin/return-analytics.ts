@@ -205,12 +205,14 @@ export function aggregateReturnAnalytics(
   }
 
   for (const row of usage) {
-    if (!row.anonId || !isUsageEventType(row.eventType)) continue;
+    if (!isUsageEventType(row.eventType)) continue;
     if (row.fingerprint && probes.has(row.fingerprint)) continue;
     const at = eventMs(row.createdAt);
     if (at == null) continue;
-    presence.push({ anonId: row.anonId, at });
+    // A 90-day purge nulls anon_id and keeps the row, so the funnel count stays.
     if (inRange(at)) result.funnel[FUNNEL_KEY[row.eventType]] += 1;
+    if (!row.anonId) continue;
+    presence.push({ anonId: row.anonId, at });
     if (row.eventType === "quote_page") {
       addVisit(row.anonId, { at, kind: "quote_page", fingerprint: null });
     }
