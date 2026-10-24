@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { randomInt } from "node:crypto";
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { AdminDashboardView } from "@/lib/admin/dashboard-view";
 import {
   aggregateSearchAnalytics,
@@ -15,6 +15,16 @@ import {
 const SENTINEL = "SENTINEL_TERM_MUST_NOT_RENDER";
 /** Generated at runtime; never committed. */
 const digits8 = () => String(randomInt(20_000_000, 99_999_999));
+const RENDER_NOW = "2026-06-15T12:00:00.000Z";
+
+/** Every run of 4+ digits, sorted. The dashboard chrome prints dates such as 2026-06-15. */
+function digitRuns(html: string): string[] {
+  return (html.match(/\d{4,}/g) ?? []).sort();
+}
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("admin term privacy (PR #32 review)", () => {
   it("masks phone / BR digit runs, e-mail and HKID in company-name terms", () => {
@@ -33,28 +43,40 @@ describe("admin term privacy (PR #32 review)", () => {
   });
 
   it("render: phone/BR sentinel rows and digits typed into the name box never reach HTML", () => {
-    const now = new Date("2026-06-15T12:00:00.000Z");
-    const d = digits8();
+    const now = new Date(RENDER_NOW);
+    const day = RENDER_NOW.slice(0, 10);
     const events: SearchEventRow[] = [
-      { fingerprint: "fp-a", cache_hit: false, created_at: "2026-06-15T08:00:00.000Z" },
-      { fingerprint: "fp-p", cache_hit: true, created_at: "2026-06-15T09:00:00.000Z" },
-      { fingerprint: "fp-b", cache_hit: false, created_at: "2026-06-15T10:00:00.000Z" },
+      { fingerprint: "fp-a", cache_hit: false, created_at: `${day}T08:00:00.000Z` },
+      { fingerprint: "fp-p", cache_hit: true, created_at: `${day}T09:00:00.000Z` },
+      { fingerprint: "fp-b", cache_hit: false, created_at: `${day}T10:00:00.000Z` },
     ];
-    const cache: SearchCacheAnalyticsRow[] = [
-      { fingerprint: "fp-a", term: `甲乙工程 ${d}`, match_type: "company_name", outcome: "user_only", matched_name: null },
+    const cacheFor = (term: string): SearchCacheAnalyticsRow[] => [
+      { fingerprint: "fp-a", term, match_type: "company_name", outcome: "user_only", matched_name: null },
       { fingerprint: "fp-p", term: SENTINEL, match_type: "phone", outcome: null, matched_name: SENTINEL },
       { fingerprint: "fp-b", term: SENTINEL, match_type: "br", outcome: null, matched_name: SENTINEL },
     ];
-    const data = aggregateSearchAnalytics(events, cache, now, 7);
-    for (const view of ["all", "none", "short"] as const) {
-      const { container, unmount } = render(<AdminDashboardView data={data} days={7} view={view} />);
+    const renderHtml = (term: string, view: "all" | "none" | "short") => {
+      const data = aggregateSearchAnalytics(events, cacheFor(term), now, 7);
+      const { container } = render(<AdminDashboardView data={data} days={7} view={view} />);
       const html = container.innerHTML;
-      expect(html).not.toContain(SENTINEL);
-      expect(html).not.toContain(d);
-      expect(html).not.toContain(d.slice(0, 4));
-      unmount();
+      cleanup();
+      return { html, data };
+    };
+    // A random number, plus one that starts with the fixture year (what a "skip dates" masker would miss).
+    const yearLike = `${day.slice(0, 4)}${String(randomInt(1000, 10_000))}`;
+    for (const d of [digits8(), yearLike]) {
+      for (const view of ["all", "none", "short"] as const) {
+        const { html, data } = renderHtml(`甲乙工程 ${d}`, view);
+        // Same digits as a render of the already-masked term: no whole, prefix or suffix leak,
+        // whatever year the fixture uses.
+        const { html: baseline } = renderHtml("甲乙工程 [號碼]", view);
+        expect(html).not.toContain(SENTINEL);
+        expect(html).not.toContain(d);
+        expect(digitRuns(html)).toEqual(digitRuns(baseline));
+        if (view !== "short") expect(html).toContain("甲乙工程 [號碼]");
+        expect(data.kpi.byInputType).toMatchObject({ phone: 1, br: 1, company_name: 1 });
+      }
     }
-    expect(data.kpi.byInputType).toMatchObject({ phone: 1, br: 1, company_name: 1 });
   });
 
   it("range starts at HK midnight of the oldest day, so daily totals equal the KPI total", () => {
@@ -72,7 +94,7 @@ describe("admin term privacy (PR #32 review)", () => {
   });
 
   it("error state does not also claim there is no data", () => {
-    const data = aggregateSearchAnalytics([], [], new Date(), 30);
+    const data = aggregateSearchAnalytics([], [], new Date(RENDER_NOW), 30);
     const { container } = render(
       <AdminDashboardView data={data} days={30} view="all" errorMessage="讀取數據出錯，請遲啲再試" />,
     );
