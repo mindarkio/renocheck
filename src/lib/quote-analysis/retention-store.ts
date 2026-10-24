@@ -8,8 +8,14 @@ type DbError = { code?: string; message?: string } | null;
 /** The migration that adds the function has not been applied yet. */
 export function isMissingQuoteRetentionFunction(error: DbError): boolean {
   if (!error) return false;
-  if (error.code === "PGRST202" || error.code === "42883") return true;
-  return /purge_quote_analysis_retention/i.test(error.message ?? "");
+  if (error.code === "PGRST202") return true;
+  // 42883 is also raised for an undefined function *inside* the body; only the
+  // purge function itself being absent counts as "not migrated yet". Any other
+  // error that merely names the function (e.g. 42501 permission denied) is a failure.
+  return (
+    error.code === "42883" &&
+    /function public\.purge_quote_analysis_retention\(\) does not exist/i.test(error.message ?? "")
+  );
 }
 
 export type QuoteRetentionPurgeResult =

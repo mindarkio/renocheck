@@ -73,6 +73,21 @@ describe("takeAuthRateLimit", () => {
     );
     expect(rpc).toHaveBeenCalledTimes(2);
   });
+
+  it("rejects bad input and non-boolean replies without trusting them", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://local.example.invalid");
+    rpc.mockResolvedValue({ data: true, error: null });
+    for (const bad of [
+      { key: "", limit: 5, windowMs: 1_000 },
+      { key: "k", limit: 0, windowMs: 1_000 },
+      { key: "k", limit: 5, windowMs: 0 },
+    ]) {
+      expect(await takeAuthRateLimit(bad)).toBe("unavailable");
+    }
+    expect(rpc).not.toHaveBeenCalled();
+    rpc.mockResolvedValueOnce({ data: "true", error: null });
+    expect(await takeAuthRateLimit({ key: "k", limit: 5, windowMs: 1_000 })).toBe("unavailable");
+  });
 });
 
 describe("auth rate limit migration", () => {

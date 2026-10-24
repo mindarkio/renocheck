@@ -61,14 +61,16 @@ export default async function AccountPage() {
                 {ACCOUNT_DELETE_CLOSED_ZH.split("hello@renocheck.homes")[1]}
               </p>
             )}
-            <p className="mt-4 text-sm">
-              <Link
-                href="/login?next=/account"
-                className={`inline-flex min-h-11 items-center ${contentLinkClass}`}
-              >
-                {ACCOUNT_SIGN_IN_LINK_ZH}
-              </Link>
-            </p>
+            {isQuoteAnalysisFlagOn() ? (
+              <p className="mt-4 text-sm">
+                <Link
+                  href="/login?next=/account"
+                  className={`inline-flex min-h-11 items-center ${contentLinkClass}`}
+                >
+                  {ACCOUNT_SIGN_IN_LINK_ZH}
+                </Link>
+              </p>
+            ) : null}
           </>
         )}
       </ContentCard>

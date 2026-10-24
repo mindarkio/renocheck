@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DisclaimerPage from "./page";
 import { DISCLAIMER_VERSION, REPORT_VERSION } from "@/lib/constants";
 import { FEEDBACK_PRIVACY_NOTICE_ZH } from "@/lib/feedback-copy-zh";
-import { QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH } from "@/lib/quote-analysis/copy";
+import {
+  QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH,
+  QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH,
+} from "@/lib/quote-analysis/copy";
 
 vi.mock("next/server", () => ({
   connection: vi.fn(async () => {}),
@@ -101,6 +104,7 @@ describe("disclaimer page feedback notice", () => {
     await renderDisclaimer();
     const heading = screen.getByRole("heading", { name: "七、個人資料（私隱）" });
     const text = heading.closest("section")?.textContent ?? "";
+    expect(document.getElementById("quote-analysis-closed")).toBeNull();
     const quote = document.getElementById("quote-analysis-privacy");
     expect(quote?.textContent).toBe(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH);
     expect(text.indexOf(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH)).toBeGreaterThan(
@@ -118,6 +122,9 @@ describe("disclaimer page feedback notice", () => {
     expect(DISCLAIMER_VERSION).toBe("1.2.4");
     expect(document.getElementById("quote-analysis-privacy")).toBeNull();
     expect(document.body.textContent ?? "").not.toContain("Microsoft Azure");
+    const closed = document.getElementById("quote-analysis-closed");
+    expect(closed?.textContent).toBe(QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH);
+    expect(closed?.querySelector("a")?.getAttribute("href")).toBe("mailto:hello@renocheck.homes");
     expect(document.getElementById("feedback-privacy")).toBeTruthy();
   });
 });

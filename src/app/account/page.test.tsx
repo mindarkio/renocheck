@@ -28,11 +28,13 @@ describe("account page when signed out", () => {
     render(await AccountPage());
     expect(document.body.textContent).toContain(ACCOUNT_DELETE_CLOSED_ZH);
     expect(document.querySelector("a[href='mailto:hello@renocheck.homes']")).toBeTruthy();
+    expect(document.querySelector("a[href='/login?next=/account']")).toBeNull();
   });
 
   it("does not add the closed-login sentence when the flag is on", async () => {
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
     render(await AccountPage());
     expect(document.body.textContent).not.toContain(ACCOUNT_DELETE_CLOSED_ZH);
+    expect(document.querySelector("a[href='/login?next=/account']")).toBeTruthy();
   });
 });

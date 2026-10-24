@@ -16,6 +16,7 @@ describe("quote analysis retention purge", () => {
     expect(fn).toContain("delete from public.quote_spend_daily");
     expect(fn.match(/interval '180 days'/g)).toHaveLength(3);
     expect(fn).toContain("::date - 30");
+    expect(fn).toContain("delete from public.auth_otp_rate_limits\n   where reset_at <= pg_catalog.now();");
     expect(fn).toContain("security invoker");
     expect(fn).toContain("set search_path = ''");
     expect(fn.toLowerCase()).not.toContain("security definer");

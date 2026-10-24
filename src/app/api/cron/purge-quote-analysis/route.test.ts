@@ -79,6 +79,23 @@ describe("GET /api/cron/purge-quote-analysis", () => {
     });
   });
 
+  it("treats permission or inner-function errors as failures, not pending", async () => {
+    for (const error of [
+      { code: "42501", message: "permission denied for function purge_quote_analysis_retention" },
+      { code: "42883", message: "function pg_catalog.timezone(text, integer) does not exist" },
+      { message: "purge_quote_analysis_retention failed" },
+      { code: "XX000", message: "function public.purge_quote_analysis_retention() does not exist" },
+    ]) {
+      admin.rpc.mockResolvedValueOnce({ data: null, error });
+      expect((await GET(authed())).status).toBe(503);
+    }
+    admin.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: "42883", message: "function public.purge_quote_analysis_retention() does not exist" },
+    });
+    expect(await (await GET(authed())).json()).toMatchObject({ ok: true, pending: true });
+  });
+
   it("returns 503 when the purge fails for another reason", async () => {
     admin.rpc.mockResolvedValue({
       data: null,

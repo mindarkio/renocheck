@@ -70,6 +70,9 @@ describe("POST /api/auth/otp", () => {
   it("does not send a code when the durable limiter is down", async () => {
     rpc.mockResolvedValueOnce({ data: null, error: { message: "down" } });
     expect((await POST(request())).status).toBe(503);
+    rpc.mockResolvedValueOnce({ data: true, error: null });
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "down" } });
+    expect((await POST(request())).status).toBe(503);
     expect(signInWithOtp).not.toHaveBeenCalled();
   });
 

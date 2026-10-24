@@ -59,6 +59,15 @@ describe("POST /api/auth/verify", () => {
     expect(verifyOtp).not.toHaveBeenCalled();
   });
 
+  it("does not verify when the durable limiter is down", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "down" } });
+    expect((await POST(request())).status).toBe(503);
+    rpc.mockResolvedValueOnce({ data: true, error: null });
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "down" } });
+    expect((await POST(request())).status).toBe(503);
+    expect(verifyOtp).not.toHaveBeenCalled();
+  });
+
   it("refuses cross-site posts", async () => {
     expect((await POST(request(undefined, "https://evil.example"))).status).toBe(403);
     expect(verifyOtp).not.toHaveBeenCalled();

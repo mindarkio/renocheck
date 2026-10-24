@@ -25,6 +25,11 @@ export function hasPdfMagic(bytes: Uint8Array): boolean {
 /**
  * Best-effort page count. Counts `/Type /Page` and ignores `/Type /Pages`.
  * No PDF parser dependency. Encrypted files are rejected.
+ *
+ * Accepted limitation (PR #40 review L3): page objects inside compressed
+ * object streams (/ObjStm) are not visible to this scan, so such PDFs are
+ * rejected as unreadable or can exceed the 6-page limit. Cost is still booked
+ * from actual token usage, and the 4 MB cap and daily budget bound the impact.
  */
 export function inspectPdf(bytes: Uint8Array, mediaType: string): PdfCheck {
   if (mediaType.toLowerCase() !== "application/pdf") {

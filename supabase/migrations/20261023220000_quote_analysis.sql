@@ -419,6 +419,11 @@ begin
    where day_hkt < (pg_catalog.timezone('Asia/Hong_Kong', pg_catalog.now()))::date - 30;
   get diagnostics v_spend = row_count;
 
+  -- Expired OTP / verify allowances (hashed buckets). Normally removed on the
+  -- next take_auth_rate_limit call; this covers idle periods (e.g. flag off).
+  delete from public.auth_otp_rate_limits
+   where reset_at <= pg_catalog.now();
+
   return query select v_analyses, v_claims, v_spend;
 end;
 $$;

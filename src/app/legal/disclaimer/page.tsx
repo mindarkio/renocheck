@@ -13,7 +13,10 @@ import {
 import { DISCLAIMER_VERSION } from "@/lib/constants";
 import { FEEDBACK_PRIVACY_NOTICE_ZH } from "@/lib/feedback-copy-zh";
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
-import { QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH } from "@/lib/quote-analysis/copy";
+import {
+  QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH,
+  QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH,
+} from "@/lib/quote-analysis/copy";
 export const metadata: Metadata = pageMetadata({
   path: "/legal/disclaimer",
   title: "免責聲明與資料來源",
@@ -138,7 +141,14 @@ export default async function DisclaimerPage() {
             </p>
             {showQuoteAnalysis ? (
               <p id="quote-analysis-privacy">{QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH}</p>
-            ) : null}
+            ) : (
+              // The deletion-by-email route only matters while the feature is closed.
+              <p id="quote-analysis-closed">
+                {QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH.split("hello@renocheck.homes")[0]}
+                <a href="mailto:hello@renocheck.homes">hello@renocheck.homes</a>
+                {QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH.split("hello@renocheck.homes")[1]}
+              </p>
+            )}
           </ContentSection>
 
           <ContentSection title="八、責任限制">
