@@ -149,6 +149,9 @@ export default async function DisclaimerPage() {
                 {QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH.split("hello@renocheck.homes")[1]}
               </p>
             )}
+            <p>
+              本網站於顯示報告前，會以自動規則遮蔽報告文字中第三者的個人資料，惟或有遺漏或誤遮之處。
+            </p>
           </ContentSection>
 
           <ContentSection title="八、責任限制">

@@ -3,6 +3,10 @@
  * UI-only constants — not written to RiskReport; no REPORT_VERSION bump.
  */
 
+/** Shown under 查證摘要. Explains public-response placeholders; not stored on the report. */
+export const THIRD_PARTY_REDACTION_NOTICE_ZH =
+  "為保障私隱，報告引述嘅網上內容入面第三者嘅姓名、電話、地址等，已用 [姓名]、[電話]、[地址] 等代替。公司名稱同官方登記資料照原樣顯示。";
+
 /** Verified HTTP 200 on 2026-10-18 (RenoCheck smoke). See docs/bd-register/sources.md */
 export const CR_ESERVICES_URL = "https://www.e-services.cr.gov.hk/";
 export const ICRIS_HOME_URL = CR_ESERVICES_URL;
@@ -316,6 +320,7 @@ export function collectReportTrustCopyStrings(): string[] {
     UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
     LEGAL_EVENT_SOURCE_LINK_LABEL_ZH,
     OFFICIAL_VERIFY_SECTION_HEADING_ZH,
+    THIRD_PARTY_REDACTION_NOTICE_ZH,
     COPY_COMPANY_NAME_BUTTON_ZH,
     COPY_COMPANY_NAME_DONE_ZH,
     ICRIS_SELF_SERVICE_NOTE_ZH,
