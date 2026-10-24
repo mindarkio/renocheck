@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { randomInt } from "node:crypto";
-import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { AdminDashboardView } from "@/lib/admin/dashboard-view";
 import {
   aggregateSearchAnalytics,
@@ -13,8 +13,25 @@ import {
 } from "@/lib/admin/search-analytics";
 
 const SENTINEL = "SENTINEL_TERM_MUST_NOT_RENDER";
-/** Generated at runtime; never committed. */
-const digits8 = () => String(randomInt(20_000_000, 99_999_999));
+/**
+ * The 15 Jun 2026 fixture prints "2026" in the daily table and the HK timestamp.
+ * That is the only 4-digit run in the chrome. A draw whose digits include it
+ * makes `not.toContain(slice(0, 4))` fail even though maskAdminTerm replaced the
+ * number with 「[號碼]」. About 1 in 7,400 draws used to start with 2026.
+ * Still generated at runtime so a phone-like literal is never committed.
+ */
+const FIXTURE_DIGIT_RUN = "2026";
+const digits8 = () => {
+  let digits = "";
+  do {
+    digits = String(randomInt(20_000_000, 99_999_999));
+  } while (digits.includes(FIXTURE_DIGIT_RUN));
+  return digits;
+};
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("admin term privacy (PR #32 review)", () => {
   it("masks phone / BR digit runs, e-mail and HKID in company-name terms", () => {
@@ -47,12 +64,14 @@ describe("admin term privacy (PR #32 review)", () => {
     ];
     const data = aggregateSearchAnalytics(events, cache, now, 7);
     for (const view of ["all", "none", "short"] as const) {
-      const { container, unmount } = render(<AdminDashboardView data={data} days={7} view={view} />);
+      const { container } = render(<AdminDashboardView data={data} days={7} view={view} />);
       const html = container.innerHTML;
       expect(html).not.toContain(SENTINEL);
       expect(html).not.toContain(d);
       expect(html).not.toContain(d.slice(0, 4));
-      unmount();
+      expect(html).toContain(FIXTURE_DIGIT_RUN);
+      if (view !== "short") expect(html).toContain("甲乙工程 [號碼]");
+      cleanup();
     }
     expect(data.kpi.byInputType).toMatchObject({ phone: 1, br: 1, company_name: 1 });
   });
@@ -72,7 +91,7 @@ describe("admin term privacy (PR #32 review)", () => {
   });
 
   it("error state does not also claim there is no data", () => {
-    const data = aggregateSearchAnalytics([], [], new Date(), 30);
+    const data = aggregateSearchAnalytics([], [], new Date("2026-06-15T12:00:00.000Z"), 30);
     const { container } = render(
       <AdminDashboardView data={data} days={30} view="all" errorMessage="讀取數據出錯，請遲啲再試" />,
     );

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { BrandMenuMark } from "@/components/BrandMenuMark";
 import {
@@ -21,39 +21,91 @@ const HOME_NAV = [
   { href: "/legal/disclaimer", label: "免責聲明" },
 ] as const;
 
-const navLinkClass =
-  "rounded-md hover:underline hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+/** Solid primary on the page background. `ring-primary/30` is about 1.6:1 and fails WCAG 1.4.11. */
+const headerFocusRingClass =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+const navLinkClass = `rounded-md hover:underline hover:text-foreground ${headerFocusRingClass}`;
 
 function isCurrentNav(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-const homeMenuLinkClass =
-  "rounded-md text-white hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
+/** Solid white on the navy sheet. `ring-white/50` over `bg-primary/85` is about 2.4:1. */
+const menuFocusRingClass =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white";
+
+const homeMenuLinkClass = `rounded-md text-white hover:text-white hover:underline ${menuFocusRingClass}`;
+
+const MENU_ID = "site-nav-menu";
 
 const menuButtonClass = (menuOpen: boolean) =>
-  `inline-flex min-h-11 min-w-11 items-center justify-center rounded-md transition-[color,transform,opacity] duration-200 ease-out active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 sm:hidden ${
+  `inline-flex min-h-11 min-w-11 items-center justify-center rounded-md transition-[color,transform,opacity] duration-200 ease-out active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 sm:hidden ${
     menuOpen
-      ? "fixed right-4 top-3 z-[130] text-white focus-visible:ring-white/50"
-      : "text-foreground/85 hover:text-foreground focus-visible:ring-primary/30"
+      ? `fixed right-4 top-3 z-[130] text-white ${menuFocusRingClass}`
+      : `text-foreground/85 hover:text-foreground ${headerFocusRingClass}`
   }`;
 
-function useMobileNavMenu() {
+function menuFocusables(button: HTMLButtonElement | null): HTMLElement[] {
+  const dialog = document.getElementById(MENU_ID);
+  const links = dialog ? [...dialog.querySelectorAll<HTMLElement>("a[href]")] : [];
+  return button ? [button, ...links] : links;
+}
+
+function useMobileNavMenu(buttonRef: RefObject<HTMLButtonElement | null>) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const wasOpen = useRef(false);
+
+  useLayoutEffect(() => {
+    // Move focus only after an open or a close. The first paint must not steal focus.
+    if (menuOpen || wasOpen.current) buttonRef.current?.focus();
+    wasOpen.current = menuOpen;
+  }, [menuOpen, buttonRef]);
 
   useEffect(() => {
     if (!menuOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusables = menuFocusables(buttonRef.current);
+      if (focusables.length === 0) return;
+      const current = document.activeElement;
+      const index = focusables.findIndex(
+        (el) => el === current || (current instanceof Node && el.contains(current)),
+      );
+      event.preventDefault();
+      const nextIndex = event.shiftKey
+        ? index <= 0
+          ? focusables.length - 1
+          : index - 1
+        : index < 0 || index >= focusables.length - 1
+          ? 0
+          : index + 1;
+      focusables[nextIndex]?.focus();
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      const focusables = menuFocusables(buttonRef.current);
+      if (focusables.length === 0) return;
+      const target = event.target;
+      if (target instanceof Node && focusables.some((el) => el === target || el.contains(target))) {
+        return;
+      }
+      focusables[0]?.focus();
     };
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("focusin", onFocusIn);
     return () => {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("focusin", onFocusIn);
     };
-  }, [menuOpen]);
+  }, [menuOpen, buttonRef]);
 
   return { menuOpen, setMenuOpen, closeMenu: () => setMenuOpen(false) };
 }
@@ -119,8 +171,8 @@ function DesktopNavLinks() {
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu();
-  const menuId = "site-nav-menu";
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu(menuButtonRef);
 
   // Segment match only: /administrator or /admin-foo are public (404) paths and keep the header.
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return null;
@@ -141,7 +193,7 @@ export function SiteHeader() {
           <Link
             href="/"
             data-testid="site-header-logo"
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-md ${headerFocusRingClass} ${
               menuOpen ? "invisible" : ""
             }`}
           >
@@ -163,10 +215,11 @@ export function SiteHeader() {
           <div className="flex items-center gap-2">
             <DesktopNavLinks />
             <button
+              ref={menuButtonRef}
               type="button"
               className={menuButtonClass(menuOpen)}
               aria-expanded={menuOpen}
-              aria-controls={menuId}
+              aria-controls={MENU_ID}
               aria-label={menuOpen ? "關閉選單" : "開啟選單"}
               onClick={() => setMenuOpen((open) => !open)}
             >
@@ -182,7 +235,7 @@ export function SiteHeader() {
       </header>
       <MobileNavMenuPortal
         open={menuOpen}
-        menuId={menuId}
+        menuId={MENU_ID}
         onNavigate={closeMenu}
       />
     </>
