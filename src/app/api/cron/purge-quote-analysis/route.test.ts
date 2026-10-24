@@ -96,6 +96,27 @@ describe("GET /api/cron/purge-quote-analysis", () => {
     expect(await (await GET(authed())).json()).toMatchObject({ ok: true, pending: true });
   });
 
+  it("keeps the pending check narrow against near-miss function errors", async () => {
+    admin.rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "42883",
+        message: "FUNCTION PUBLIC.PURGE_QUOTE_ANALYSIS_RETENTION() DOES NOT EXIST",
+      },
+    });
+    expect(await (await GET(authed())).json()).toMatchObject({ ok: true, pending: true });
+
+    for (const message of [
+      "function purge_quote_analysis_retention() does not exist",
+      "function public.purge_quote_analysis_retention does not exist",
+      "function publicXpurge_quote_analysis_retention() does not exist",
+      "function public.purge_quote_analysis_retention() is missing",
+    ]) {
+      admin.rpc.mockResolvedValueOnce({ data: null, error: { code: "42883", message } });
+      expect((await GET(authed())).status).toBe(503);
+    }
+  });
+
   it("returns 503 when the purge fails for another reason", async () => {
     admin.rpc.mockResolvedValue({
       data: null,

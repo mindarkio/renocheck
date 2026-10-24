@@ -8,6 +8,7 @@ import {
   ACCOUNT_DELETE_CONFIRM_LABEL_ZH,
   ACCOUNT_DELETE_CONFIRM_WORD_ZH,
   ACCOUNT_DELETE_ERROR_ZH,
+  ACCOUNT_DELETE_HINT_ZH,
   ACCOUNT_SIGN_OUT_ZH,
 } from "@/lib/quote-analysis/copy";
 
@@ -74,6 +75,9 @@ export function AccountActions() {
         {ACCOUNT_SIGN_OUT_ZH}
       </button>
       <form onSubmit={deleteAccount} className="space-y-3">
+        <p id="delete-account-hint" className="text-sm leading-relaxed text-muted-foreground">
+          {ACCOUNT_DELETE_HINT_ZH}
+        </p>
         <label htmlFor="delete-confirm" className="block text-sm text-foreground">
           {ACCOUNT_DELETE_CONFIRM_LABEL_ZH}
         </label>
@@ -88,7 +92,9 @@ export function AccountActions() {
             setTyped(event.target.value);
             setError(null);
           }}
-          aria-describedby={error ? "delete-account-error" : undefined}
+          aria-describedby={
+            error ? "delete-account-hint delete-account-error" : "delete-account-hint"
+          }
           className={fieldClass}
         />
         {error ? (

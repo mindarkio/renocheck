@@ -41,6 +41,11 @@ describe("quote analysis copy and flag", () => {
     expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
       "直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。",
     );
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
+      "分析完成後，本服務保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。",
+    );
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).not.toContain("本服務只保留");
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain("只限 PDF");
     expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).not.toContain("直至閣下刪除帳戶");
     expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
       "如報價單上載分析未開放，閣下可電郵至 hello@renocheck.homes 要求刪除帳戶。",

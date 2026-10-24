@@ -5,6 +5,7 @@ import {
   ACCOUNT_DELETE_ACK_ZH,
   ACCOUNT_DELETE_BUTTON_ZH,
   ACCOUNT_DELETE_CONFIRM_LABEL_ZH,
+  ACCOUNT_DELETE_HINT_ZH,
 } from "@/lib/quote-analysis/copy";
 import { AccountActions } from "./AccountActions";
 
@@ -23,6 +24,12 @@ describe("account deletion confirmation", () => {
     render(<AccountActions />);
     const button = screen.getByRole("button", { name: ACCOUNT_DELETE_BUTTON_ZH });
     const input = screen.getByLabelText(ACCOUNT_DELETE_CONFIRM_LABEL_ZH);
+    const hint = screen.getByText(ACCOUNT_DELETE_HINT_ZH);
+    expect(hint.tagName).toBe("P");
+    expect(hint.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.queryByRole("checkbox")).toBeNull();
     expect((button as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.change(input, { target: { value: "delete" } });

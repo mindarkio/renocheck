@@ -96,6 +96,27 @@ describe("GET /api/cron/purge-anon-ids", () => {
     expect(await (await GET(authed())).json()).toMatchObject({ ok: true, pending: true });
   });
 
+  it("keeps the pending check narrow against near-miss function errors", async () => {
+    admin.rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "42883",
+        message: "FUNCTION PUBLIC.PURGE_RETURNING_USER_ANON_IDS() DOES NOT EXIST",
+      },
+    });
+    expect(await (await GET(authed())).json()).toMatchObject({ ok: true, pending: true });
+
+    for (const message of [
+      "function purge_returning_user_anon_ids() does not exist",
+      "function public.purge_returning_user_anon_ids does not exist",
+      "function publicXpurge_returning_user_anon_ids() does not exist",
+      "function public.purge_returning_user_anon_ids() is missing",
+    ]) {
+      admin.rpc.mockResolvedValueOnce({ data: null, error: { code: "42883", message } });
+      expect((await GET(authed())).status).toBe(503);
+    }
+  });
+
   it("returns 503 when the purge fails for another reason", async () => {
     admin.rpc.mockResolvedValue({
       data: null,
