@@ -38,3 +38,10 @@ MVP 曾要求 MWC(W) 個人承建商在報告以 `陳** 師傅` 脫敏，避免 
 
 - 法律／PDPO 意見要求對非名冊來源的個人姓名另作處理（與本 DEC 範圍分開）。
 - 若將論壇 UGC 全名寫入報告（現為 MVP out of scope）— 需新 DEC，**不得**沿用本 DEC 作為 UGC 真名依據。
+
+## Amendment (PR #44, S5 third-party redaction notice)
+
+- 報告文字中第三者的個人資料，於公開回應前以自動規則遮蔽（PR #42 `redactReportForPublicResponse`）；公司名稱同官方登記資料照原樣顯示。
+- 查證摘要下加遮蔽說明（`THIRD_PARTY_REDACTION_NOTICE_ZH`）；`/legal/disclaimer` §七 加一句，`DISCLAIMER_VERSION` 1.2.4 → 1.2.5。
+- `RISK_REPORT_SYSTEM_PROMPT` 加不寫第三者個人資料規則。RiskReport 結構不變，`REPORT_VERSION` 保持 2.7.0；舊 prompt 產生的快取最長 7 日，顯示時同樣經上述遮蔽。
+- 文案經 Aaron 批准（PR #44）。

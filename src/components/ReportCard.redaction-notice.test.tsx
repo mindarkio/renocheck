@@ -11,6 +11,10 @@ afterEach(() => {
   cleanup();
 });
 
+// Approved S5 copy, pinned as a literal so a constant edit cannot pass silently.
+const APPROVED_NOTICE_ZH =
+  "為保障私隱，報告引述嘅網上內容入面第三者嘅姓名、電話、地址等，已用 [姓名]、[電話]、[地址] 等代替。公司名稱同官方登記資料照原樣顯示。";
+
 function report(withHighlight: boolean): RiskReport {
   const evaluation = buildEvaluationStub({
     overallGrade: "C",
@@ -56,6 +60,7 @@ function report(withHighlight: boolean): RiskReport {
 
 describe("ReportCard third-party redaction notice", () => {
   it("renders the approved notice under the AI summary", () => {
+    expect(THIRD_PARTY_REDACTION_NOTICE_ZH).toBe(APPROVED_NOTICE_ZH);
     render(<ReportCard report={report(false)} />);
     const summaryRegion = document.getElementById("summary-heading")?.parentElement;
     expect(summaryRegion?.textContent).toContain("查證摘要");
@@ -75,6 +80,7 @@ describe("ReportCard third-party redaction notice", () => {
     const notice = screen.getByText(THIRD_PARTY_REDACTION_NOTICE_ZH);
     const cited = document.getElementById("highlights-heading");
     expect(cited).toBeTruthy();
+    expect((document.body.textContent ?? "").split(APPROVED_NOTICE_ZH)).toHaveLength(2);
     expect(
       notice.compareDocumentPosition(cited!) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

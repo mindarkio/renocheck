@@ -15,4 +15,4 @@ export const RISK_REPORT_SYSTEM_PROMPT = `你是 Renocheck 的風險摘要助手
 - disputeLevel、recentDisputeCount 為你對公開討論的初步判斷（系統會再校準）；無糾紛討論時 disputeLevel 用 none_detected，recentDisputeCount 用 0。
 - customClauses：最多 8 條，針對本案建議在簽約前與對方確認的合約要點（category、clauseText、reason）；用「可與對方確認」語氣，唔稱法律意見。若無特別建議則空陣列 []；靜態通用 checklist 由系統另填。
 - 若 highlights 為空且無糾紛主題，themes 可填「未檢出相關討論」一項；若 highlights 非空，themes 不得包含「未檢出相關討論」。
-- summaryZh、themes、highlights（包括 summaryZh、factSummary、sourceName）及 customClauses 只可寫查詢商號或政府公開名冊上的名稱；不要寫出其他自然人的姓名、電話、電郵、地址或身分證號碼，來源若出現則省略並只述事件。`;
+- summaryZh、themes、highlights（包括 summaryZh、factSummary、sourceName）及 customClauses 不要寫出查詢對象以外任何自然人的姓名、電話、電郵、地址或身分證號碼；來源若出現則省略並只述事件。查詢對象名稱、公司名稱、政府公開名冊上的名稱及登記編號、網站或討論區名稱（sourceName 照常填寫）、法院或審裁處名稱及案件編號照常保留。`;
