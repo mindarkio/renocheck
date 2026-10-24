@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isSixDigitCode, normalizeLoginEmail } from "@/lib/auth/email";
-import { takeAuthRateLimit } from "@/lib/auth/rate-limit";
+import { rateLimitIp, takeAuthRateLimit } from "@/lib/auth/rate-limit";
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import { clientIp, sameOrigin } from "@/lib/request-guards";
 import {
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
   const ip = clientIp(req);
   const ipLimit = await takeAuthRateLimit({
-    key: `otp-verify-ip:${ip}`,
+    key: `otp-verify-ip:${rateLimitIp(ip)}`,
     limit: 10,
     windowMs: FIFTEEN_MINUTES,
   });

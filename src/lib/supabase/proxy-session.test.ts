@@ -9,7 +9,11 @@ const ssr = vi.hoisted(() => ({
 vi.mock("@supabase/ssr", () => ({ createServerClient: ssr.createServerClient }));
 
 import { config as proxyConfig, proxy } from "@/proxy";
-import { isAuthSessionPath, refreshSupabaseSession } from "@/lib/supabase/proxy-session";
+import {
+  isAuthSessionPath,
+  refreshSupabaseSession,
+  shouldRefreshAuthSession,
+} from "@/lib/supabase/proxy-session";
 
 function req(path: string, cookie?: string) {
   return new NextRequest(`http://localhost${path}`, {
@@ -85,5 +89,40 @@ describe("Supabase session refresh in the proxy", () => {
     vi.stubEnv("VERCEL_ENV", "preview");
     await refreshSupabaseSession(req("/account", "sb-x=1"));
     expect(ssr.createServerClient).not.toHaveBeenCalled();
+  });
+
+  it("does not call Supabase auth for quote pages while the flag is off", async () => {
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "0");
+    expect(shouldRefreshAuthSession("/account")).toBe(true);
+    expect(shouldRefreshAuthSession("/login")).toBe(true);
+    expect(shouldRefreshAuthSession("/quote/upload")).toBe(false);
+    expect(shouldRefreshAuthSession("/quote/analyses/abc")).toBe(false);
+
+    for (const path of ["/quote/upload", "/quote/analyses/abc"]) {
+      ssr.createServerClient.mockClear();
+      const res = await proxy(req(path, "sb-local-auth-token=old"));
+      expect(res.status).not.toBe(404);
+      expect(res.headers.get("x-middleware-next")).toBe("1");
+      expect(ssr.createServerClient).not.toHaveBeenCalled();
+    }
+
+    ssr.createServerClient.mockClear();
+    const account = await proxy(req("/account", "sb-local-auth-token=old"));
+    expect(ssr.createServerClient).toHaveBeenCalledOnce();
+    expect(account.cookies.get("sb-local-auth-token")?.value).toBe("rotated");
+
+    ssr.createServerClient.mockClear();
+    await proxy(req("/login", "sb-local-auth-token=old"));
+    expect(ssr.createServerClient).toHaveBeenCalledOnce();
+  });
+
+  it("refreshes quote pages when the flag is on and a session cookie is present", async () => {
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    expect(shouldRefreshAuthSession("/quote/upload")).toBe(true);
+    expect(shouldRefreshAuthSession("/quote/analyses/abc")).toBe(true);
+    const res = await proxy(req("/quote/analyses/abc", "sb-local-auth-token=old"));
+    expect(res.headers.get("x-middleware-next")).toBe("1");
+    expect(ssr.createServerClient).toHaveBeenCalledOnce();
+    expect(res.cookies.get("sb-local-auth-token")?.value).toBe("rotated");
   });
 });

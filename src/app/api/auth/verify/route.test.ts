@@ -45,6 +45,7 @@ describe("POST /api/auth/verify", () => {
     verifyOtp.mockReset();
     verifyOtp.mockResolvedValue({ data: {}, error: { message: "bad" } });
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    vi.stubEnv("AUTH_RATE_LIMIT_SECRET", "synthetic-auth-rate-limit-secret-value");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://local.example.invalid");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
   });
