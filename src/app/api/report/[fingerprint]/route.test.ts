@@ -60,4 +60,47 @@ describe("GET /api/report/[fingerprint]", () => {
     const body = (await res.json()) as { report: RiskReport };
     expect(body.report.official.legalLookupStatus).toBe("error");
   });
+
+  it("redacts cached third-party text without rewriting the stored report", async () => {
+    const report = degradedReport();
+    report.summaryZh = "陳生話尾數未清，電話 91234567。";
+    report.entity.displayName = "陳生";
+    report.official = {
+      mwcMatched: true,
+      legalLookupStatus: "error",
+      details: { companyName: "陳生", authorizedSignatory: "陳生" },
+    };
+    report.signals.themes = ["學生", "陳生"];
+    report.signals.retrievalEvidence = [
+      {
+        url: "https://example.com/e",
+        title: "李師傅未覆",
+        snippetExcerpt: "電話 91234567",
+        matchedToken: "91234567",
+        matchReason: "phone_anchor",
+      },
+    ];
+    getCachedReport.mockResolvedValue(report);
+
+    const res = await GET(new Request("http://localhost"), {
+      params: Promise.resolve({ fingerprint: "b".repeat(32) }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { report: RiskReport };
+    expect(report.summaryZh).toBe("陳生話尾數未清，電話 91234567。");
+    expect(body.report.summaryZh).toBe("[姓名]話尾數未清，電話 [電話]。");
+    expect(body.report.signals.themes).toEqual(["學生", "[姓名]"]);
+    expect(body.report.signals.retrievalEvidence[0]?.title).toBe("[姓名]未覆");
+    expect(body.report.signals.retrievalEvidence[0]?.snippetExcerpt).toBe(
+      "電話 [電話]",
+    );
+    expect(body.report.signals.retrievalEvidence[0]?.matchedToken).toBe(
+      "[電話]",
+    );
+    expect(body.report.entity.displayName).toBe("陳生");
+    expect(body.report.official.details?.authorizedSignatory).toBe("陳生");
+    expect(body.report.official.details?.companyName).toBe("陳生");
+    expect(body.report.signals.contractChecklist).toEqual(["有無書面合約？"]);
+  });
 });
