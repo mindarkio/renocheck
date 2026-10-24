@@ -8,12 +8,14 @@ import {
   ContentPageTitle,
 } from "@/components/ContentPage";
 import { QUOTE_STATUS_OPTIONS } from "@/lib/quote-selfcheck";
+import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import {
   QUOTE_BACK_TO_CHECKLIST_ZH,
   QUOTE_RESULT_LEAD_ZH,
   QUOTE_RESULT_MISSING_ZH,
   QUOTE_RESULT_ROBOTS,
   QUOTE_RESULT_TITLE_ZH,
+  QUOTE_UNAVAILABLE_ZH,
 } from "@/lib/quote-analysis/copy";
 import {
   quoteFindingText,
@@ -60,6 +62,21 @@ type PageProps = {
 
 export default async function QuoteAnalysisResultPage({ params }: PageProps) {
   await connection();
+  if (!isQuoteAnalysisFlagOn()) {
+    return (
+      <ContentPage>
+        <ContentCard>
+          <ContentPageTitle>{QUOTE_RESULT_TITLE_ZH}</ContentPageTitle>
+          <ContentPageLead>{QUOTE_UNAVAILABLE_ZH}</ContentPageLead>
+          <p className="mt-6 text-sm">
+            <Link href="/quote" className={`inline-flex min-h-11 items-center ${contentLinkClass}`}>
+              {QUOTE_BACK_TO_CHECKLIST_ZH}
+            </Link>
+          </p>
+        </ContentCard>
+      </ContentPage>
+    );
+  }
   const { id: rawId } = await params;
   const id = rawId.toLowerCase();
   const user = UUID_RE.test(id) ? await getAuthUser() : null;

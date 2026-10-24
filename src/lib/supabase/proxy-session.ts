@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
-import { SUPABASE_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/auth-cookie";
+import { supabaseAuthCookieOptions } from "@/lib/supabase/auth-cookie";
 
 /** Pages that read the Supabase session. Keep in step with the proxy matcher. */
 export function isAuthSessionPath(path: string): boolean {
@@ -35,7 +35,7 @@ export async function refreshSupabaseSession(
     return response;
   }
   const supabase = createServerClient(url, key, {
-    cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
+    cookieOptions: supabaseAuthCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

@@ -30,7 +30,22 @@ describe("Supabase auth cookies", () => {
       "https://local.example.invalid",
       "test-anon",
       expect.objectContaining({
-        cookieOptions: expect.objectContaining({ httpOnly: true }),
+        cookieOptions: { httpOnly: true, secure: false },
+      }),
+    );
+  });
+
+  it("sets secure only when NODE_ENV is production", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://local.example.invalid");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon");
+    vi.stubEnv("NODE_ENV", "production");
+    createServerClient.mockReturnValue({ auth: {} });
+    await createSupabaseServerClient();
+    expect(createServerClient).toHaveBeenCalledWith(
+      "https://local.example.invalid",
+      "test-anon",
+      expect.objectContaining({
+        cookieOptions: { httpOnly: true, secure: true },
       }),
     );
   });

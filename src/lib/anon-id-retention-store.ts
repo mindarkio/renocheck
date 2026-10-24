@@ -8,8 +8,13 @@ type DbError = { code?: string; message?: string } | null;
 /** The migration that adds the function has not been applied yet. */
 export function isMissingAnonIdPurgeFunction(error: DbError): boolean {
   if (!error) return false;
-  if (error.code === "PGRST202" || error.code === "42883") return true;
-  return /purge_returning_user_anon_ids/i.test(error.message ?? "");
+  if (error.code === "PGRST202") return true;
+  // 42883 is also raised for an undefined function inside the body. Only this
+  // function being absent counts as not migrated yet.
+  return (
+    error.code === "42883" &&
+    /function public\.purge_returning_user_anon_ids\(\) does not exist/i.test(error.message ?? "")
+  );
 }
 
 export type AnonIdPurgeResult =

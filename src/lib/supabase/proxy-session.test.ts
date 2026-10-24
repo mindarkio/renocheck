@@ -62,10 +62,22 @@ describe("Supabase session refresh in the proxy", () => {
       expect.any(String),
       expect.any(String),
       expect.objectContaining({
-        cookieOptions: expect.objectContaining({ httpOnly: true }),
+        cookieOptions: { httpOnly: true, secure: false },
       }),
     );
     expect(res.cookies.get("sb-local-auth-token")?.value).toBe("rotated");
+  });
+
+  it("marks the session cookie secure in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    await refreshSupabaseSession(req("/account", "sb-local-auth-token=old"));
+    expect(ssr.createServerClient).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({
+        cookieOptions: { httpOnly: true, secure: true },
+      }),
+    );
   });
 
   it("skips the production project outside Vercel production", async () => {

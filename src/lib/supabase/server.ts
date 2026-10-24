@@ -3,7 +3,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
-import { SUPABASE_AUTH_COOKIE_OPTIONS } from "@/lib/supabase/auth-cookie";
+import { supabaseAuthCookieOptions } from "@/lib/supabase/auth-cookie";
 
 export type AuthUser = { id: string; email: string | null };
 
@@ -27,7 +27,7 @@ export async function createSupabaseServerClient() {
   }
   const cookieStore = await cookies();
   return createServerClient(url, key, {
-    cookieOptions: SUPABASE_AUTH_COOKIE_OPTIONS,
+    cookieOptions: supabaseAuthCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();
