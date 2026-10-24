@@ -30,13 +30,17 @@ describe("account deletion confirmation", () => {
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
     expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(hint.id).toBe("delete-account-hint");
+    expect(input.getAttribute("aria-describedby")).toBe("delete-account-hint");
     expect((button as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.change(input, { target: { value: "delete" } });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     fireEvent.submit(button.closest("form")!);
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert").textContent).toBe(ACCOUNT_DELETE_ACK_ZH);
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe(ACCOUNT_DELETE_ACK_ZH);
+    expect(input.getAttribute("aria-describedby")).toBe(`delete-account-hint ${alert.id}`);
 
     fireEvent.change(input, { target: { value: "刪除" } });
     expect((button as HTMLButtonElement).disabled).toBe(false);

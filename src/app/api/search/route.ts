@@ -5,6 +5,7 @@ import { runSearchPipeline } from "@/lib/search-pipeline";
 import { SearchPipelineError } from "@/lib/search-pipeline-error";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isAnonId } from "@/lib/anon-id";
+import { redactReportForPublicResponse } from "@/lib/redact-public-report";
 import { isSyntheticProbeTerm } from "@/lib/synthetic-probe";
 
 function anonIdFromBody(body: unknown): string | null {
@@ -68,7 +69,10 @@ export async function POST(req: Request) {
         web_hits: result.meta.webHitCount,
       }),
     );
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      report: redactReportForPublicResponse(result.report),
+    });
   } catch (e) {
     const code =
       e instanceof SearchPipelineError ? e.code : "search_failed";

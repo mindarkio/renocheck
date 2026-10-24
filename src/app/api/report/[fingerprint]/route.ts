@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getCachedReport } from "@/lib/search-cache";
+import { redactReportForPublicResponse } from "@/lib/redact-public-report";
 import { riskReportSchema } from "@/lib/report-schema";
 
 type RouteContext = { params: Promise<{ fingerprint: string }> };
@@ -26,5 +27,8 @@ export async function GET(_req: Request, context: RouteContext) {
     return NextResponse.json({ error: "invalid_report" }, { status: 500 });
   }
 
-  return NextResponse.json({ fingerprint, report: parsed.data });
+  return NextResponse.json({
+    fingerprint,
+    report: redactReportForPublicResponse(parsed.data),
+  });
 }

@@ -32,7 +32,16 @@ describe("POST /api/search service pause", () => {
     mocks.runSearchPipeline.mockResolvedValue({
       fingerprint: "abc",
       cacheHit: false,
-      report: { reportVersion: "test" },
+      report: {
+        reportVersion: "test",
+        summaryZh: "公開資料有限。",
+        signals: {
+          themes: [],
+          retrievalEvidence: [],
+          actionableClauses: [],
+          contractChecklist: ["有無書面合約？"],
+        },
+      },
       meta: { serpConfigured: true, webHitCount: 0 },
     });
   });
@@ -130,5 +139,80 @@ describe("POST /api/search service pause", () => {
       expect.objectContaining({ anonId: null }),
     );
     info.mockRestore();
+  });
+
+  it("redacts third-party text in the response and leaves registry names", async () => {
+    const report = {
+      reportVersion: "2.7.0",
+      summaryZh: "陳生話尾數未清，電話 91234567。",
+      entity: {
+        displayName: "示例裝修工程有限公司",
+        normalizedPhone: "91234567",
+      },
+      official: {
+        mwcMatched: true,
+        details: {
+          companyName: "示例裝修工程有限公司",
+          authorizedSignatory: "陳生",
+        },
+      },
+      signals: {
+        themes: ["醫生", "陳生"],
+        retrievalEvidence: [
+          {
+            url: "https://example.com/e",
+            title: "陳生投訴",
+            snippetExcerpt: "電話 91234567",
+            matchedToken: "示例裝修工程有限公司",
+          },
+        ],
+        actionableClauses: [],
+        contractChecklist: ["可致電 91234567？"],
+      },
+      disclaimerVersion: "1.2.4",
+      grade: "C",
+    };
+    mocks.runSearchPipeline.mockResolvedValue({
+      fingerprint: "abc",
+      cacheHit: false,
+      report,
+      meta: { serpConfigured: true, webHitCount: 1 },
+    });
+
+    const res = await POST(request());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: {
+        summaryZh: string;
+        entity: { displayName: string; normalizedPhone: string };
+        official: {
+          details: { companyName: string; authorizedSignatory: string };
+        };
+        signals: {
+          themes: string[];
+          contractChecklist: string[];
+          retrievalEvidence: Array<{ title: string; matchedToken: string }>;
+        };
+        disclaimerVersion: string;
+        grade: string;
+      };
+    };
+
+    expect(report.summaryZh).toBe("陳生話尾數未清，電話 91234567。");
+    expect(body.report.summaryZh).toBe("[姓名]話尾數未清，電話 [電話]。");
+    expect(body.report.signals.themes).toEqual(["醫生", "[姓名]"]);
+    expect(body.report.signals.retrievalEvidence[0]?.title).toBe("[姓名]投訴");
+    expect(body.report.signals.retrievalEvidence[0]?.matchedToken).toBe(
+      "示例裝修工程有限公司",
+    );
+    expect(body.report.signals.contractChecklist).toEqual(["可致電 91234567？"]);
+    expect(body.report.entity.displayName).toBe("示例裝修工程有限公司");
+    expect(body.report.entity.normalizedPhone).toBe("91234567");
+    expect(body.report.official.details.authorizedSignatory).toBe("陳生");
+    expect(body.report.official.details.companyName).toBe(
+      "示例裝修工程有限公司",
+    );
+    expect(body.report.disclaimerVersion).toBe("1.2.4");
+    expect(body.report.grade).toBe("C");
   });
 });
