@@ -61,12 +61,15 @@ const QUOTE_SELF_CHECK_PRIVACY_ZH =
 const ANON_ID_PRIVACY_ZH =
   "本網站會於閣下瀏覽器內儲存一個隨機識別碼，並連同使用紀錄傳送至本網站伺服器，僅用於統計重複使用情況。伺服器紀錄中的識別碼會於 90 日後清除（相關使用次數紀錄會以不含識別碼的形式保留）；閣下可隨時清除瀏覽器資料以刪除瀏覽器內的識別碼。該識別碼不會與閣下的姓名、聯絡資料或 IP 地址連結。";
 
+const THIRD_PARTY_REDACTION_DISCLAIMER_ZH =
+  "本網站於顯示報告前，會以自動規則遮蔽報告文字中第三者的個人資料，惟或有遺漏或誤遮之處。";
+
 describe("disclaimer page feedback notice", () => {
-  it("publishes the approved §七 notice at 1.2.4 without changing the report version", async () => {
-    expect(DISCLAIMER_VERSION).toBe("1.2.4");
+  it("publishes the approved §七 notice at 1.2.5 without changing the report version", async () => {
+    expect(DISCLAIMER_VERSION).toBe("1.2.5");
     expect(REPORT_VERSION).toBe("2.7.0");
     await renderDisclaimer();
-    expect(screen.getByText("版本 1.2.4")).toBeTruthy();
+    expect(screen.getByText("版本 1.2.5")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "七、個人資料（私隱）" })).toBeTruthy();
     const notice = document.getElementById("feedback-privacy");
     expect(notice?.textContent).toBe(FEEDBACK_PRIVACY_NOTICE_ZH);
@@ -115,16 +118,43 @@ describe("disclaimer page feedback notice", () => {
     assertClean(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH);
   });
 
-  it("hides the quote-analysis paragraph when the flag is off and keeps version 1.2.4", async () => {
+  it("hides the quote-analysis paragraph when the flag is off and keeps version 1.2.5", async () => {
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "0");
     await renderDisclaimer();
-    expect(screen.getByText("版本 1.2.4")).toBeTruthy();
-    expect(DISCLAIMER_VERSION).toBe("1.2.4");
+    expect(screen.getByText("版本 1.2.5")).toBeTruthy();
+    expect(DISCLAIMER_VERSION).toBe("1.2.5");
     expect(document.getElementById("quote-analysis-privacy")).toBeNull();
     expect(document.body.textContent ?? "").not.toContain("Microsoft Azure");
     const closed = document.getElementById("quote-analysis-closed");
     expect(closed?.textContent).toBe(QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH);
     expect(closed?.querySelector("a")?.getAttribute("href")).toBe("mailto:hello@renocheck.homes");
     expect(document.getElementById("feedback-privacy")).toBeTruthy();
+    const closedSection = screen
+      .getByRole("heading", { name: "七、個人資料（私隱）" })
+      .closest("section");
+    const closedText = closedSection?.textContent ?? "";
+    expect(closedText.endsWith(THIRD_PARTY_REDACTION_DISCLAIMER_ZH)).toBe(true);
+  });
+
+  it("appends the approved third-party redaction sentence at the end of §七", async () => {
+    expect(DISCLAIMER_VERSION).toBe("1.2.5");
+    expect(REPORT_VERSION).toBe("2.7.0");
+    await renderDisclaimer();
+    expect(screen.getByText("版本 1.2.5")).toBeTruthy();
+    expect(screen.getByText(THIRD_PARTY_REDACTION_DISCLAIMER_ZH)).toBeTruthy();
+    const heading = screen.getByRole("heading", { name: "七、個人資料（私隱）" });
+    const section = heading.closest("section");
+    const text = section?.textContent ?? "";
+    expect(text.endsWith(THIRD_PARTY_REDACTION_DISCLAIMER_ZH)).toBe(true);
+    expect(text.indexOf(THIRD_PARTY_REDACTION_DISCLAIMER_ZH)).toBeGreaterThan(
+      text.indexOf(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH),
+    );
+    expect(text.split(THIRD_PARTY_REDACTION_DISCLAIMER_ZH)).toHaveLength(2);
+    const limits = screen.getByRole("heading", { name: "八、責任限制" });
+    expect(
+      (section?.compareDocumentPosition(limits) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    assertClean(THIRD_PARTY_REDACTION_DISCLAIMER_ZH);
   });
 });

@@ -39,6 +39,7 @@ import {
   REPORT_SCOPE_LIMITS_CLOSING_ZH,
   REPORT_SCOPE_LIMITS_HEADING_ZH,
   CR_DATA_ATTRIBUTION_ZH,
+  THIRD_PARTY_REDACTION_NOTICE_ZH,
   mwcMissFallbackBodyParagraphsZh,
   MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
@@ -639,6 +640,9 @@ export function ReportCard({
           </div>
           <p className={`mt-3 ${reportHeroBodyClass}`}>
             {report.summaryZh}
+          </p>
+          <p className={`mt-3 ${reportHeroMetaClass}`} role="note">
+            {THIRD_PARTY_REDACTION_NOTICE_ZH}
           </p>
           {showSaturationNote ? (
             <p
