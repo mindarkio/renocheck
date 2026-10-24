@@ -64,11 +64,10 @@ describe("GET /api/report/[fingerprint]", () => {
   it("redacts cached third-party text without rewriting the stored report", async () => {
     const report = degradedReport();
     report.summaryZh = "陳生話尾數未清，電話 91234567。";
-    report.entity.displayName = "陳生";
     report.official = {
       mwcMatched: true,
       legalLookupStatus: "error",
-      details: { companyName: "陳生", authorizedSignatory: "陳生" },
+      details: { companyName: "示例公司", authorizedSignatory: "陳生" },
     };
     report.signals.themes = ["學生", "陳生"];
     report.signals.retrievalEvidence = [
@@ -98,9 +97,9 @@ describe("GET /api/report/[fingerprint]", () => {
     expect(body.report.signals.retrievalEvidence[0]?.matchedToken).toBe(
       "[電話]",
     );
-    expect(body.report.entity.displayName).toBe("陳生");
+    expect(body.report.entity.displayName).toBe("示例公司");
     expect(body.report.official.details?.authorizedSignatory).toBe("陳生");
-    expect(body.report.official.details?.companyName).toBe("陳生");
+    expect(body.report.official.details?.companyName).toBe("示例公司");
     expect(body.report.signals.contractChecklist).toEqual(["有無書面合約？"]);
   });
 });

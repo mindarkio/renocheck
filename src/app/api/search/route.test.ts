@@ -146,12 +146,15 @@ describe("POST /api/search service pause", () => {
       reportVersion: "2.7.0",
       summaryZh: "陳生話尾數未清，電話 91234567。",
       entity: {
-        displayName: "陳生",
+        displayName: "示例裝修工程有限公司",
         normalizedPhone: "91234567",
       },
       official: {
         mwcMatched: true,
-        details: { companyName: "陳生", authorizedSignatory: "陳生" },
+        details: {
+          companyName: "示例裝修工程有限公司",
+          authorizedSignatory: "陳生",
+        },
       },
       signals: {
         themes: ["醫生", "陳生"],
@@ -203,10 +206,12 @@ describe("POST /api/search service pause", () => {
       "示例裝修工程有限公司",
     );
     expect(body.report.signals.contractChecklist).toEqual(["可致電 91234567？"]);
-    expect(body.report.entity.displayName).toBe("陳生");
+    expect(body.report.entity.displayName).toBe("示例裝修工程有限公司");
     expect(body.report.entity.normalizedPhone).toBe("91234567");
     expect(body.report.official.details.authorizedSignatory).toBe("陳生");
-    expect(body.report.official.details.companyName).toBe("陳生");
+    expect(body.report.official.details.companyName).toBe(
+      "示例裝修工程有限公司",
+    );
     expect(body.report.disclaimerVersion).toBe("1.2.4");
     expect(body.report.grade).toBe("C");
   });

@@ -119,10 +119,10 @@ describe("redactReportForPublicResponse", () => {
     const hearingQuote = `${"合成判詞摘錄，只供測試。".repeat(45)}陳生電話 91234567。`;
     return reportShell({
       entity: {
-        displayName: "陳生",
+        displayName: "示例裝修工程有限公司",
         matchType: "company_name",
-        queryEcho: "陳生",
-        searchLabelUsed: "陳生",
+        queryEcho: "示例裝修工程有限公司",
+        searchLabelUsed: "示例裝修工程有限公司",
         nameAlignment: "mwc_authoritative",
         normalizedPhone: "91234567",
       },
@@ -131,7 +131,7 @@ describe("redactReportForPublicResponse", () => {
       official: {
         mwcMatched: true,
         details: {
-          companyName: "陳生",
+          companyName: "示例裝修工程有限公司",
           registrationNo: "MWC000000",
           authorizedSignatory: "陳生",
           expiryDate: "2099-01-01",
@@ -176,7 +176,7 @@ describe("redactReportForPublicResponse", () => {
             sourceName: "陳生",
             dateHint: "見 91234567",
             factSummary:
-              "家庭醫生建議暫避，大學生指出事件發生於去年。裝修師傅推介物料。",
+              "家庭醫生建議暫避，大學生指出事件發生於去年。裝修師傅推介物料。何生電話 91234567。",
           },
         ],
         retrievalEvidence: [
@@ -191,7 +191,7 @@ describe("redactReportForPublicResponse", () => {
         ],
         actionableClauses: [
           {
-            category: "付款",
+            category: "付款（何生）",
             clauseText: "可與陳生確認。",
             reason: "李師傅未覆",
           },
@@ -239,7 +239,7 @@ describe("redactReportForPublicResponse", () => {
     expect(out.signals.highlights?.[0]).toMatchObject({
       summaryZh: "有帖提到[姓名]話尾數未清，電話 [電話]。",
       factSummary:
-        "家庭醫生建議暫避，大學生指出事件發生於去年。裝修師傅推介物料。",
+        "家庭醫生建議暫避，大學生指出事件發生於去年。裝修師傅推介物料。[姓名]電話 [電話]。",
       sourceName: "[姓名]",
       dateHint: "見 [電話]",
       url: "https://example.com/h",
@@ -251,7 +251,7 @@ describe("redactReportForPublicResponse", () => {
       matchedToken: "示例裝修工程有限公司",
     });
     expect(out.signals.actionableClauses[0]).toEqual({
-      category: "付款",
+      category: "付款（[姓名]）",
       clauseText: "可與[姓名]確認。",
       reason: "[姓名]未覆",
     });
@@ -262,11 +262,11 @@ describe("redactReportForPublicResponse", () => {
     });
     expect(out.premium?.contractChecklist).toEqual(["可致電 91234567？"]);
 
-    expect(out.entity.displayName).toBe("陳生");
-    expect(out.entity.queryEcho).toBe("陳生");
-    expect(out.entity.searchLabelUsed).toBe("陳生");
+    expect(out.entity.displayName).toBe("示例裝修工程有限公司");
+    expect(out.entity.queryEcho).toBe("示例裝修工程有限公司");
+    expect(out.entity.searchLabelUsed).toBe("示例裝修工程有限公司");
     expect(out.entity.normalizedPhone).toBe("91234567");
-    expect(out.official.details?.companyName).toBe("陳生");
+    expect(out.official.details?.companyName).toBe("示例裝修工程有限公司");
     expect(out.official.details?.authorizedSignatory).toBe("陳生");
     expect(out.official.companiesRegistry?.nameZh).toBe("陳生有限公司");
     expect(out.official.companiesRegistry?.nameEn).toBe("Mr Dummy Limited");
@@ -298,5 +298,128 @@ describe("redactReportForPublicResponse", () => {
     );
     expect(out.signals.highlights?.[0]?.summaryZh).toBe("[姓名]".repeat(40));
     expect(out.signals.highlights?.[0]?.summaryZh.length).toBe(160);
+  });
+});
+
+describe("report prose false positives (synthetic)", () => {
+  const KEPT = [
+    "有業主表示工期太長，收費太貴。",
+    "質素太差，拖得太耐，工程太慢，價錢太貴。",
+    "要求項目經理書面確認，公司老闆未有回覆，業主太太投訴噪音。",
+    "該名師傅遲到，負責師傅未有出現，多名師傅同時開工，涉事師傅已被投訴。",
+    "帖文日期 2023-10-12；22/10/2023 有用家留言。",
+    "相關案件 DCCJ 9001/2020 涉及欠款。",
+    "商業登記號碼 31234567 與查詢相符，合約金額 HK$30000000。",
+    "合約第5號條款列明保養期，工程涉及3座及5座，在10樓單位施工。",
+  ];
+  const MASKED: Array<[string, string]> = [
+    ["陳太好嬲，陳經理話跟進，陳太太話已付款。", "[姓名]好嬲，[姓名]話跟進，[姓名]話已付款。"],
+    ["住喺示例街12號3樓嘅業主投訴。", "[地址]嘅業主投訴。"],
+    ["有人話價錢太貴，問過陳生先知。", "有人話價錢太貴，問過[姓名]先知。"],
+    ["黃太建築有限公司被指拖延。", "[姓名]建築有限公司被指拖延。"],
+  ];
+
+  it("keeps report prose that the feedback heuristics would mask", () => {
+    for (const text of KEPT) {
+      expect(text.length).toBeLessThanOrEqual(120);
+      expect(viaSummary(text)).toBe(text);
+      expect(viaHighlight(text)).toBe(text);
+    }
+  });
+
+  it("still masks third-party honorifics, addresses and phones", () => {
+    for (const [raw, expected] of MASKED) {
+      expect(viaSummary(raw)).toBe(expected);
+      expect(viaHighlight(raw)).toBe(expected);
+    }
+  });
+
+  it("does not mask the searched or registry name where it appears in prose", () => {
+    const out = redactReportForPublicResponse(
+      reportShell({
+        entity: {
+          displayName: "陳生裝修工程",
+          matchType: "company_name",
+          queryEcho: "陳生裝修工程 · 91234567",
+          searchLabelUsed: "陳生裝修工程",
+          nameAlignment: "user_only",
+        },
+        official: {
+          mwcMatched: false,
+          companiesRegistry: {
+            lookupStatus: "ok",
+            nameZh: "黃太建築有限公司",
+            retrievedAt: "2026-10-24T00:00:00.000Z",
+            hints: [],
+            icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
+          },
+        },
+        summaryZh: "陳生裝修工程被指拖數，黃太建築有限公司同名，李生電話 91234567。",
+        signals: { themes: ["陳生裝修工程", "何生"] },
+      }),
+    );
+    expect(out.summaryZh).toBe(
+      "陳生裝修工程被指拖數，黃太建築有限公司同名，[姓名]電話 [電話]。",
+    );
+    expect(out.signals.themes).toEqual(["陳生裝修工程", "[姓名]"]);
+  });
+
+  it("strips private-use characters so restore cannot be spoofed", () => {
+    expect(viaSummary("\uE000陳生\uE001")).toBe("[姓名]");
+    expect(viaSummary("\uE0002023-10-12")).toBe("2023-10-12");
+  });
+
+  function proseWith(
+    entity: Partial<RiskReport["entity"]>,
+    official: RiskReport["official"],
+    text: string,
+  ): string {
+    const base = reportShell();
+    return redactReportForPublicResponse({
+      ...base,
+      entity: { ...base.entity, displayName: "其他", searchLabelUsed: "其他", queryEcho: "其他", ...entity },
+      official,
+      summaryZh: text,
+    }).summaryZh;
+  }
+
+  it("takes exempt names from each identity field on its own", () => {
+    const off = { mwcMatched: false } as RiskReport["official"];
+    expect(proseWith({ displayName: "陳生裝修工程" }, off, "陳生裝修工程遲交。")).toBe("陳生裝修工程遲交。");
+    expect(proseWith({ queryEcho: "何生工程 · 91234567" }, off, "何生工程未覆，電話 91234567。")).toBe(
+      "何生工程未覆，電話 [電話]。",
+    );
+    expect(
+      proseWith({}, { mwcMatched: true, details: { companyName: "林太工程有限公司" } }, "林太工程有限公司已註冊。"),
+    ).toBe("林太工程有限公司已註冊。");
+  });
+
+  it("holds longer names first, before other rules, and escapes regex characters", () => {
+    const cr = (nameZh: string): RiskReport["official"] => ({
+      mwcMatched: false,
+      companiesRegistry: {
+        lookupStatus: "ok",
+        nameZh,
+        retrievedAt: "2026-10-24T00:00:00.000Z",
+        hints: [],
+        icrisHomeUrl: "https://www.e-services.cr.gov.hk/",
+      },
+    });
+    expect(proseWith({ displayName: "陳生" }, cr("陳生林太工程有限公司"), "陳生林太工程有限公司")).toBe(
+      "陳生林太工程有限公司",
+    );
+    expect(proseWith({}, cr("眾師傅陳太工程"), "眾師傅陳太工程")).toBe("眾師傅陳太工程");
+    expect(proseWith({}, cr("陳生(香港)工程"), "陳生(香港)工程")).toBe("陳生(香港)工程");
+  });
+
+  it("does not leave half a placeholder at the clamp", () => {
+    const out = redactReportForPublicResponse(
+      reportShell({
+        signals: {
+          highlights: [{ summaryZh: `${"甲".repeat(158)}陳生`, url: "https://example.com/c" }],
+        },
+      }),
+    );
+    expect(out.signals.highlights?.[0]?.summaryZh).toBe("甲".repeat(158));
   });
 });
