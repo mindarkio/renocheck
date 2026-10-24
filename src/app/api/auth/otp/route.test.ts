@@ -51,6 +51,7 @@ describe("POST /api/auth/otp", () => {
     signInWithOtp.mockReset();
     signInWithOtp.mockResolvedValue({ data: {}, error: null });
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    vi.stubEnv("AUTH_RATE_LIMIT_SECRET", "synthetic-auth-rate-limit-secret-value");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://local.example.invalid");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
   });
@@ -74,6 +75,31 @@ describe("POST /api/auth/otp", () => {
     rpc.mockResolvedValueOnce({ data: null, error: { message: "down" } });
     expect((await POST(request())).status).toBe(503);
     expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("does not send a code when the rate-limit secret is missing", async () => {
+    vi.stubEnv("AUTH_RATE_LIMIT_SECRET", "");
+    expect((await POST(request())).status).toBe(503);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("refuses a full limiter table instead of sending uncounted codes", async () => {
+    rpc.mockResolvedValue({ data: false, error: null });
+    expect((await POST(request("new@example.com", undefined, "198.51.100.7"))).status).toBe(429);
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("rate limits one IPv6 /64 across many addresses", async () => {
+    for (let i = 1; i <= 5; i += 1) {
+      const res = await POST(request(`v${i}@example.com`, undefined, `2001:db8:1:2::${i}`));
+      expect(res.status).toBe(200);
+    }
+    expect((await POST(request("v9@example.com", undefined, "2001:db8:1:2:ffff::9"))).status).toBe(
+      429,
+    );
+    expect((await POST(request("w1@example.com", undefined, "2001:db8:1:3::1"))).status).toBe(200);
+    expect(signInWithOtp).toHaveBeenCalledTimes(6);
   });
 
   it("refuses cross-site posts", async () => {
