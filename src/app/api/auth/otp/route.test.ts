@@ -12,20 +12,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
-  getSupabaseAdmin: () => ({
-    rpc,
-    from: () => ({
-      select: () => ({
-        eq: (_column: string, bucket: string) => ({
-          maybeSingle: async () => {
-            const hits = rateHits.map.get(bucket) ?? 0;
-            if (hits < 1) return { data: null, error: null };
-            return { data: { hit_count: hits }, error: null };
-          },
-        }),
-      }),
-    }),
-  }),
+  getSupabaseAdmin: () => ({ rpc }),
 }));
 
 import { POST } from "./route";
@@ -88,6 +75,31 @@ describe("POST /api/auth/otp", () => {
     rpc.mockResolvedValueOnce({ data: null, error: { message: "down" } });
     expect((await POST(request())).status).toBe(503);
     expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("does not send a code when the rate-limit secret is missing", async () => {
+    vi.stubEnv("AUTH_RATE_LIMIT_SECRET", "");
+    expect((await POST(request())).status).toBe(503);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("refuses a full limiter table instead of sending uncounted codes", async () => {
+    rpc.mockResolvedValue({ data: false, error: null });
+    expect((await POST(request("new@example.com", undefined, "198.51.100.7"))).status).toBe(429);
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("rate limits one IPv6 /64 across many addresses", async () => {
+    for (let i = 1; i <= 5; i += 1) {
+      const res = await POST(request(`v${i}@example.com`, undefined, `2001:db8:1:2::${i}`));
+      expect(res.status).toBe(200);
+    }
+    expect((await POST(request("v9@example.com", undefined, "2001:db8:1:2:ffff::9"))).status).toBe(
+      429,
+    );
+    expect((await POST(request("w1@example.com", undefined, "2001:db8:1:3::1"))).status).toBe(200);
+    expect(signInWithOtp).toHaveBeenCalledTimes(6);
   });
 
   it("refuses cross-site posts", async () => {

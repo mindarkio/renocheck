@@ -10,20 +10,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
-  getSupabaseAdmin: () => ({
-    rpc,
-    from: () => ({
-      select: () => ({
-        eq: (_column: string, bucket: string) => ({
-          maybeSingle: async () => {
-            const hits = rateHits.map.get(bucket) ?? 0;
-            if (hits < 1) return { data: null, error: null };
-            return { data: { hit_count: hits }, error: null };
-          },
-        }),
-      }),
-    }),
-  }),
+  getSupabaseAdmin: () => ({ rpc }),
 }));
 
 import { POST } from "./route";

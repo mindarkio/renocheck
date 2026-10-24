@@ -37,6 +37,7 @@ import {
   AUTH_RATE_LIMIT_MAX_ROWS,
   AUTH_RATE_LIMIT_SECRET_MIN_LENGTH,
   authRateLimitBucket,
+  rateLimitIp,
   takeAuthRateLimit,
 } from "@/lib/auth/rate-limit";
 
@@ -50,6 +51,37 @@ const rollback = readFileSync(
 );
 
 const SECRET = "synthetic-auth-rate-limit-secret-value";
+
+describe("rateLimitIp", () => {
+  it("keeps IPv4 and IPv4-mapped IPv6 per address", () => {
+    expect(rateLimitIp("203.0.113.9")).toBe("203.0.113.9");
+    expect(rateLimitIp(" ::FFFF:203.0.113.9 ")).toBe("203.0.113.9");
+    expect(rateLimitIp("unknown")).toBe("unknown");
+  });
+
+  it("groups IPv6 by /64 whatever the spelling", () => {
+    const net = "2001:0db8:0001:0002::/64";
+    expect(rateLimitIp("2001:db8:1:2::1")).toBe(net);
+    expect(rateLimitIp("2001:DB8:1:2:aaaa:bbbb:cccc:dddd")).toBe(net);
+    expect(rateLimitIp("[2001:db8:1:2::ffff]")).toBe(net);
+    expect(rateLimitIp("2001:db8:1:2::1%eth0")).toBe(net);
+    expect(rateLimitIp("2001:db8:1:3::1")).toBe("2001:0db8:0001:0003::/64");
+    expect(rateLimitIp("2001:db8::1")).toBe("2001:0db8:0000:0000::/64");
+    expect(rateLimitIp("::1")).toBe("0000:0000:0000:0000::/64");
+  });
+
+  it("leaves malformed addresses unchanged rather than merging them", () => {
+    for (const raw of [
+      "1::2::3",
+      "2001:db8:1:2:3:4:5:6:7",
+      "2001:db8:1:2:3:4:5",
+      "2001:db8::zz",
+      "1:2:3:4:5:6:7:8::",
+    ]) {
+      expect(rateLimitIp(raw)).toBe(raw);
+    }
+  });
+});
 
 describe("takeAuthRateLimit", () => {
   beforeEach(() => {
@@ -124,7 +156,6 @@ describe("takeAuthRateLimit", () => {
   });
 
   it("fails closed when the database refuses or is the production project", async () => {
-    maybeSingle.mockResolvedValueOnce({ data: { hit_count: 5 }, error: null });
     rpc.mockResolvedValueOnce({ data: false, error: null });
     expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
       "limited",
@@ -146,94 +177,31 @@ describe("takeAuthRateLimit", () => {
     expect(rpc).toHaveBeenCalledTimes(2);
   });
 
-  it("still limits an identity that has used its allowance when the table is full", async () => {
+  it("fails closed when the table is full and never evicts or re-reads rows", async () => {
     rpc.mockResolvedValue({ data: false, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: { hit_count: 5 }, error: null });
-    expect(await takeAuthRateLimit({ key: "otp-email:person@example.com", limit: 5, windowMs: 1_000 })).toBe(
-      "limited",
-    );
+    for (const key of ["otp-ip:203.0.113.10", "otp-email:new@example.com"]) {
+      expect(await takeAuthRateLimit({ key, limit: 5, windowMs: 1_000 })).toBe("limited");
+    }
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(maybeSingle).not.toHaveBeenCalled();
     expect(deleteEq).not.toHaveBeenCalled();
-    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
-  it("admits a new identity when the table is full by freeing one soon-to-expire row", async () => {
-    const victim = "ab".repeat(32);
-    rpc.mockResolvedValueOnce({ data: false, error: null });
-    rpc.mockResolvedValueOnce({ data: true, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: { bucket: victim }, error: null });
-    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.10", limit: 5, windowMs: 1_000 })).toBe(
+  it("accepts a secret of exactly the minimum length", async () => {
+    rpc.mockResolvedValue({ data: true, error: null });
+    vi.stubEnv("AUTH_RATE_LIMIT_SECRET", ` ${"a".repeat(AUTH_RATE_LIMIT_SECRET_MIN_LENGTH)} `);
+    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
       "ok",
     );
-    expect(deleteEq).toHaveBeenCalledWith("bucket", victim);
-    expect(rpc).toHaveBeenCalledTimes(2);
-    const first = rpc.mock.calls[0]?.[1] as { p_bucket: string };
-    const second = rpc.mock.calls[1]?.[1] as { p_bucket: string };
-    expect(second.p_bucket).toBe(first.p_bucket);
-    expect(first.p_bucket).not.toContain("203.0.113.10");
-  });
-
-  it("does not lock everyone out when a full table cannot free a slot", async () => {
-    rpc.mockResolvedValue({ data: false, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: null, error: { message: "read failed" } });
-    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.11", limit: 5, windowMs: 1_000 })).toBe(
-      "ok",
+    const args = rpc.mock.calls[0]?.[1] as { p_bucket: string };
+    expect(args.p_bucket).toBe(
+      authRateLimitBucket("otp-ip:203.0.113.9", "a".repeat(AUTH_RATE_LIMIT_SECRET_MIN_LENGTH)),
     );
-    expect(deleteEq).not.toHaveBeenCalled();
-    expect(rpc).toHaveBeenCalledTimes(1);
-
-    rpc.mockClear();
-    maybeSingle.mockReset();
-    maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: { bucket: "cd".repeat(32) }, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    deleteEq.mockResolvedValueOnce({ error: null });
-    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.12", limit: 5, windowMs: 1_000 })).toBe(
-      "ok",
-    );
-    expect(rpc).toHaveBeenCalledTimes(2);
-  });
-
-  it("stays limited when the freed slot is already this identity's spent allowance", async () => {
-    rpc.mockResolvedValue({ data: false, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: { bucket: "ab".repeat(32) }, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: { hit_count: 5 }, error: null });
-    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.15", limit: 5, windowMs: 1_000 })).toBe(
-      "limited",
-    );
-    expect(rpc).toHaveBeenCalledTimes(2);
-  });
-
-  it("fails closed when the retry after freeing a slot errors", async () => {
-    rpc.mockResolvedValueOnce({ data: false, error: null });
-    rpc.mockResolvedValueOnce({ data: null, error: { message: "down" } });
-    maybeSingle.mockResolvedValueOnce({ data: null, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: { bucket: "ef".repeat(32) }, error: null });
-    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.16", limit: 5, windowMs: 1_000 })).toBe(
+    vi.stubEnv("AUTH_RATE_LIMIT_SECRET", ` ${"a".repeat(AUTH_RATE_LIMIT_SECRET_MIN_LENGTH - 1)} `);
+    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
       "unavailable",
     );
-  });
-
-  it("does not delete this identity's own row when it is still under the allowance", async () => {
-    const own = authRateLimitBucket("otp-ip:203.0.113.13", SECRET);
-    rpc.mockResolvedValue({ data: false, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: { hit_count: 1 }, error: null });
-    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.13", limit: 5, windowMs: 1_000 })).toBe(
-      "ok",
-    );
-    expect(deleteEq).not.toHaveBeenCalled();
-    expect(own).toMatch(/^[0-9a-f]{64}$/);
-  });
-
-  it("fails closed when the allowance lookup errors", async () => {
-    rpc.mockResolvedValueOnce({ data: false, error: null });
-    maybeSingle.mockResolvedValueOnce({ data: null, error: { message: "down" } });
-    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.14", limit: 5, windowMs: 1_000 })).toBe(
-      "unavailable",
-    );
-    expect(deleteEq).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it("rejects bad input and non-boolean replies without trusting them", async () => {
