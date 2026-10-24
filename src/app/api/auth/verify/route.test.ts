@@ -10,7 +10,20 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
-  getSupabaseAdmin: () => ({ rpc }),
+  getSupabaseAdmin: () => ({
+    rpc,
+    from: () => ({
+      select: () => ({
+        eq: (_column: string, bucket: string) => ({
+          maybeSingle: async () => {
+            const hits = rateHits.map.get(bucket) ?? 0;
+            if (hits < 1) return { data: null, error: null };
+            return { data: { hit_count: hits }, error: null };
+          },
+        }),
+      }),
+    }),
+  }),
 }));
 
 import { POST } from "./route";
@@ -45,6 +58,7 @@ describe("POST /api/auth/verify", () => {
     verifyOtp.mockReset();
     verifyOtp.mockResolvedValue({ data: {}, error: { message: "bad" } });
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    vi.stubEnv("AUTH_RATE_LIMIT_SECRET", "synthetic-auth-rate-limit-secret-value");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://local.example.invalid");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
   });

@@ -15,6 +15,8 @@ cp .env.example .env.local
 
 **必須同時有 `NEXT_PUBLIC_SUPABASE_URL` 同 `SUPABASE_SERVICE_ROLE_KEY`**（只填 anon + service role、漏 URL 會令 admin client 係 `null`，`/api/report/...` 503）。可用 `curl -s localhost:3000/api/health` 睇 `supabaseAdmin: true/false`。
 
+**`AUTH_RATE_LIMIT_SECRET`**（伺服器 only，至少 32 個字元）：OTP／驗證碼限流 bucket 嘅 HMAC key。冇設、或者短過 32 字元，`/api/auth/otp` 同 `/api/auth/verify` 會 503。開 `QUOTE_ANALYSIS_ENABLED` 之前要先設。唔好 commit 個 secret。
+
 `search_cache` 開咗 RLS 但 **冇 anon policy** 係刻意設計；server 用 **service role 會 bypass RLS**，唔係 RLS 擋你。若 URL + service role 齊仍 404，先查 migration 有冇 push、cache upsert 有冇 error log。
 
 **LLM：** 設 `GOOGLE_GENERATIVE_AI_API_KEY`（或 `GOOGLE_GENERATIVE_AI_KEY`）；預設 **`gemini-3.5-flash`**（較 `gemini-flash-latest` 通常更快）。請刪 `.env.local` 內已停用的 `gemini-2.0-flash` 或慢的 `gemini-flash-latest`，除非刻意覆寫 `GEMINI_MODEL`。`GET /api/health` → `llmProvider`。
