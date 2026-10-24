@@ -31,20 +31,20 @@ describe("proxy /admin gate", () => {
     expect(proxyConfig.matcher).not.toContain("/faq");
   });
 
-  it("real 404 on /admin paths when env is missing", () => {
+  it("real 404 on /admin paths when env is missing", async () => {
     vi.stubEnv("ADMIN_DASHBOARD_PIN", "");
     vi.stubEnv("ADMIN_SESSION_SECRET", "");
     for (const p of ["/admin", "/admin/", "/admin/login", "/admin/xyz"]) {
-      const res = proxy(req(p));
+      const res = await proxy(req(p));
       expect(res.status).toBe(404);
       expect(res.headers.get("x-robots-tag")).toContain("noindex");
     }
   });
 
-  it("real 307 to /admin/login without a valid session", () => {
+  it("real 307 to /admin/login without a valid session", async () => {
     enable();
     for (const cookie of [undefined, "v1.1.2.3", "garbage"]) {
-      const res = proxy(req("/admin?days=7", cookie));
+      const res = await proxy(req("/admin?days=7", cookie));
       expect(res.status).toBe(307);
       expect(new URL(res.headers.get("location")!).pathname).toBe("/admin/login");
       expect(res.headers.get("cache-control")).toBe("no-store");
@@ -52,11 +52,11 @@ describe("proxy /admin gate", () => {
     }
   });
 
-  it("passes /admin/login and a valid session through", () => {
+  it("passes /admin/login and a valid session through", async () => {
     const pin = enable();
-    expect(proxy(req("/admin/login")).headers.get("x-middleware-next")).toBe("1");
+    expect((await proxy(req("/admin/login"))).headers.get("x-middleware-next")).toBe("1");
     const token = buildSessionToken(getAdminAuthConfig()!, pin, Date.now());
-    const res = proxy(req("/admin", token));
+    const res = await proxy(req("/admin", token));
     expect(res.headers.get("x-middleware-next")).toBe("1");
   });
 });

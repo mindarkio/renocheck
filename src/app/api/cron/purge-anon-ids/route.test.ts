@@ -76,6 +76,47 @@ describe("GET /api/cron/purge-anon-ids", () => {
     });
   });
 
+  it("treats permission or inner-function errors as failures, not pending", async () => {
+    for (const error of [
+      { code: "42501", message: "permission denied for function purge_returning_user_anon_ids" },
+      { code: "42883", message: "function pg_catalog.timezone(text, integer) does not exist" },
+      { message: "purge_returning_user_anon_ids failed" },
+      { code: "XX000", message: "function public.purge_returning_user_anon_ids() does not exist" },
+    ]) {
+      admin.rpc.mockResolvedValueOnce({ data: null, error });
+      expect((await GET(authed())).status).toBe(503);
+    }
+    admin.rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "42883",
+        message: "function public.purge_returning_user_anon_ids() does not exist",
+      },
+    });
+    expect(await (await GET(authed())).json()).toMatchObject({ ok: true, pending: true });
+  });
+
+  it("keeps the pending check narrow against near-miss function errors", async () => {
+    admin.rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "42883",
+        message: "FUNCTION PUBLIC.PURGE_RETURNING_USER_ANON_IDS() DOES NOT EXIST",
+      },
+    });
+    expect(await (await GET(authed())).json()).toMatchObject({ ok: true, pending: true });
+
+    for (const message of [
+      "function purge_returning_user_anon_ids() does not exist",
+      "function public.purge_returning_user_anon_ids does not exist",
+      "function publicXpurge_returning_user_anon_ids() does not exist",
+      "function public.purge_returning_user_anon_ids() is missing",
+    ]) {
+      admin.rpc.mockResolvedValueOnce({ data: null, error: { code: "42883", message } });
+      expect((await GET(authed())).status).toBe(503);
+    }
+  });
+
   it("returns 503 when the purge fails for another reason", async () => {
     admin.rpc.mockResolvedValue({
       data: null,

@@ -9,6 +9,10 @@
     {
       "path": "/api/cron/purge-anon-ids",
       "schedule": "20 18 * * *"
+    },
+    {
+      "path": "/api/cron/purge-quote-analysis",
+      "schedule": "25 18 * * *"
     }
   ]
 }

@@ -141,6 +141,14 @@ Recorded so later PRs do not drop them. Detail is plan §14.4 and §6.4.
 - Before F3 merges: delete this DEC and restore the out-of-scope lines. No schema and no provider account required by this file.
 - After quote rows or feedback rows exist: turn the flags off, then drop tables only with the paired rollback and Aaron's OK (data loss).
 
+## Addendum (2026-10-24)
+
+Aaron approved the PR #40 quote-analysis copy at 09:41 BST. `DISCLAIMER_VERSION` stays 1.2.4. The app version stays 0.9.0.
+
+- **Disclaimer sentence.** In the quote paragraph, 「本服務只保留與該帳戶相連的結構化分析結果」 is now 「本服務保留與該帳戶相連的結構化分析結果」. No other character in that sentence changed. 「只限 PDF」 is unchanged.
+- **Email deletion (D8).** Ops procedure: [`account-deletion-by-email.md`](../runbooks/account-deletion-by-email.md). Act only on a request sent from the account's registered email address, and reply to that address to confirm before deleting.
+- **L3 / ObjStm (D9).** Formally accepted. Page objects inside compressed object streams are not visible to the `/Type /Page` scan. The limitation is already noted in `src/lib/quote-analysis/pdf.ts`. Such PDFs are rejected as unreadable or can exceed 6 pages. Cost is still booked from token usage, and the 4 MB cap and the daily budget bound the impact.
+
 ## Triggers to reconsider
 
 - Aaron rejects the DEC text, the consent text (D3a), or the controller identity.
