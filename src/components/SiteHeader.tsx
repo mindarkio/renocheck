@@ -52,9 +52,32 @@ function menuFocusables(button: HTMLButtonElement | null): HTMLElement[] {
   return button ? [button, ...links] : links;
 }
 
-function useMobileNavMenu(buttonRef: RefObject<HTMLButtonElement | null>) {
+/** Tailwind `sm` (40rem). At or above it the sheet and its button are `display: none`. */
+const DESKTOP_MEDIA = "(min-width: 40rem)";
+
+/** Body children that must stay reachable while the sheet is open. */
+function keepInteractive(el: Element, dialog: Element | null, button: Element | null): boolean {
+  return (
+    el === dialog ||
+    (button !== null && el.contains(button)) ||
+    el.tagName === "SCRIPT" ||
+    el.tagName === "NEXT-ROUTE-ANNOUNCER"
+  );
+}
+
+function useMobileNavMenu(
+  buttonRef: RefObject<HTMLButtonElement | null>,
+  pathname: string,
+) {
   const [menuOpen, setMenuOpen] = useState(false);
   const wasOpen = useRef(false);
+  const [menuPath, setMenuPath] = useState(pathname);
+
+  // Back/forward (or any route change not made from the sheet) closes it and releases the lock.
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    if (menuOpen) setMenuOpen(false);
+  }
 
   useLayoutEffect(() => {
     // Move focus only after an open or a close. The first paint must not steal focus.
@@ -96,14 +119,31 @@ function useMobileNavMenu(buttonRef: RefObject<HTMLButtonElement | null>) {
       }
       focusables[0]?.focus();
     };
+    // The sheet is display:none from `sm` up. Close it so Tab, scroll and the logo are not stuck.
+    const desktop = typeof window.matchMedia === "function" ? window.matchMedia(DESKTOP_MEDIA) : null;
+    const onDesktop = () => {
+      if (desktop?.matches) setMenuOpen(false);
+    };
+    // Screen-reader swipe ignores Tab traps: hide the page behind the sheet from AT and focus.
+    const dialog = document.getElementById(MENU_ID);
+    const inerted = [...document.body.children].filter(
+      (el): el is HTMLElement =>
+        el instanceof HTMLElement &&
+        !el.hasAttribute("inert") &&
+        !keepInteractive(el, dialog, buttonRef.current),
+    );
+    for (const el of inerted) el.setAttribute("inert", "");
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
     document.addEventListener("focusin", onFocusIn);
+    desktop?.addEventListener("change", onDesktop);
     return () => {
       document.body.style.overflow = prevOverflow;
+      for (const el of inerted) el.removeAttribute("inert");
       window.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("focusin", onFocusIn);
+      desktop?.removeEventListener("change", onDesktop);
     };
   }, [menuOpen, buttonRef]);
 
@@ -126,7 +166,6 @@ function MobileNavMenuPortal({
     <div
       id={menuId}
       role="dialog"
-      aria-modal="true"
       aria-label="網站選單"
       className="fixed inset-0 z-[100] flex flex-col bg-primary/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-primary/85 sm:hidden"
     >
@@ -172,7 +211,7 @@ function DesktopNavLinks() {
 export function SiteHeader() {
   const pathname = usePathname();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu(menuButtonRef);
+  const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu(menuButtonRef, pathname);
 
   // Segment match only: /administrator or /admin-foo are public (404) paths and keep the header.
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return null;

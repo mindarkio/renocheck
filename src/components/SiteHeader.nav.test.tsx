@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
 import { SiteHeader } from "./SiteHeader";
@@ -154,5 +154,82 @@ describe("SiteHeader mobile menu focus", () => {
     fireEvent.click(closeButton);
     expect(screen.queryByRole("dialog", { name: "網站選單" })).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "開啟選單" }));
+  });
+});
+
+describe("SiteHeader mobile menu lifecycle (PR #43 review)", () => {
+  it("does not steal focus on first paint", () => {
+    const outside = document.createElement("button");
+    outside.textContent = "頁面內容";
+    document.body.appendChild(outside);
+    outside.focus();
+    render(<SiteHeader />);
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+  });
+
+  it("makes the page behind the sheet inert and releases it, focus and Tab after close", () => {
+    const main = document.createElement("main");
+    const outside = document.createElement("button");
+    outside.textContent = "頁面內容";
+    main.appendChild(outside);
+    document.body.appendChild(main);
+    render(<SiteHeader />);
+    const closeButton = openMenu();
+    expect(main.hasAttribute("inert")).toBe(true);
+    const dialog = screen.getByRole("dialog", { name: "網站選單" });
+    expect(dialog.closest("[inert]")).toBeNull();
+    expect(closeButton.closest("[inert]")).toBeNull();
+    expect(dialog.getAttribute("aria-modal")).toBeNull();
+    const tabWhileOpen = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    closeButton.dispatchEvent(tabWhileOpen);
+    // The trap moves focus itself, so the browser must not move it a second time.
+    expect(tabWhileOpen.defaultPrevented).toBe(true);
+
+    fireEvent.click(closeButton);
+    expect(main.hasAttribute("inert")).toBe(false);
+    outside.focus();
+    expect(document.activeElement).toBe(outside);
+    const tabAfterClose = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    outside.dispatchEvent(tabAfterClose);
+    expect(tabAfterClose.defaultPrevented).toBe(false);
+    main.remove();
+  });
+
+  it("closes and unlocks scroll when the route changes while open", () => {
+    mockPath = "/faq";
+    const { rerender } = render(<SiteHeader />);
+    openMenu();
+    expect(document.body.style.overflow).toBe("hidden");
+    mockPath = "/quote";
+    rerender(<SiteHeader />);
+    expect(screen.queryByRole("dialog", { name: "網站選單" })).toBeNull();
+    expect(document.body.style.overflow).toBe("");
+    expect(screen.getByRole("button", { name: "開啟選單" }).getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("closes when the viewport reaches the sm breakpoint", () => {
+    const listeners = new Set<() => void>();
+    const mql = {
+      matches: false,
+      media: "(min-width: 40rem)",
+      addEventListener: (_: string, fn: () => void) => listeners.add(fn),
+      removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
+    };
+    const original = window.matchMedia;
+    window.matchMedia = ((query: string) =>
+      query === mql.media ? mql : original(query)) as unknown as typeof window.matchMedia;
+    try {
+      render(<SiteHeader />);
+      openMenu();
+      expect(listeners.size).toBe(1);
+      mql.matches = true;
+      act(() => listeners.forEach((fn) => fn()));
+      expect(screen.queryByRole("dialog", { name: "網站選單" })).toBeNull();
+      expect(document.body.style.overflow).toBe("");
+      expect(listeners.size).toBe(0);
+    } finally {
+      window.matchMedia = original;
+    }
   });
 });
