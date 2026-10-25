@@ -68,14 +68,16 @@ const RECRUITMENT =
  * Dispute / victim-hunting named in the question itself.
  * 中伏 is omitted: it appears in group titles such as 中伏經驗.
  */
-const DISPUTE_SEEKING = /糾紛|纠纷|投訴|投诉|苦主|爭議|争议|dispute/iu;
+const DISPUTE_SEEKING = /糾紛|纠纷|投訴|投诉|苦主|爭議|争议|dispute/giu;
+/** 「冇糾紛」「no dispute」deny it; 「有冇糾紛」 (A-not-A question) does not. Text has no spaces. */
+const FLAT_DENIAL = /(?:^|[^有])(?:冇|無|无|沒有|没有|未有|零)$|no$/iu;
 
 /**
  * Negated 推薦. Fillers are the forms already treated as not-praise in grading
  * (唔係好、不太、不值得) plus 冇推薦 / 冇乜推薦. 「有冇人推薦」 is not a match.
  */
 const NEGATED_PRAISE =
-  /(?:唔係好|唔好|不太|不大|唔係幾|不是好|不值得|唔值得|冇乜|没什么|沒什麼)(?:推薦|推荐)|(?<!人)[唔不](?:推薦|推荐)|(?<![人有])(?:冇|無|无|沒有|没有)(?:推薦|推荐)/u;
+  /(?<!唔係|不是|並非|并非)(?:(?:唔係好|唔好|不太|不大|唔太|唔係幾|不是好|不值得|唔值得|冇乜|没什么|沒什麼|唔會|不會|不会|未必|絕不|绝不)(?:推薦|推荐)|(?<!人)[唔不](?:推薦|推荐)|(?<![人有])(?:冇|無|无|沒有|没有)(?:推薦|推荐))(?!都難|都难|不行|唔得|費|费|碼|码|錯|错)/u;
 
 export type PublicLinkDropReason =
   | "weak_entity"
@@ -211,6 +213,14 @@ function hasNegatedPraise(window: string): boolean {
   return NEGATED_PRAISE.test(window);
 }
 
+function seeksDispute(window: string): boolean {
+  for (const m of window.matchAll(DISPUTE_SEEKING)) {
+    const before = window.slice(Math.max(0, m.index - 4), m.index);
+    if (!FLAT_DENIAL.test(before)) return true;
+  }
+  return false;
+}
+
 function signalInWindows(
   windows: string[],
   question: boolean,
@@ -224,7 +234,7 @@ function signalInWindows(
     // news snippet must not hide the ruling.
     if (NEWS_OR_REGISTRY.test(w) || EN_NEWS.test(w)) return "news_or_registry";
     // 「有冇人同X有糾紛？想搵苦主」 names the dispute. A bare usage question does not.
-    if (question && DISPUTE_SEEKING.test(w)) return "dispute_or_experience";
+    if (question && seeksDispute(w)) return "dispute_or_experience";
     if (question) continue;
     if (snippetHasDisputeKeyword(w) || EN_DISPUTE.test(w)) {
       return "dispute_or_experience";

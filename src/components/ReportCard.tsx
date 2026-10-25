@@ -106,6 +106,7 @@ import {
   riskBandRationaleLineZh,
 } from "@/lib/report-risk-band-rationale";
 import { RiskBandMeter } from "./RiskBandMeter";
+import { BOUND_NO_HIGHLIGHT_SUMMARY } from "@/lib/risk-report-calibration-v2";
 import { redactFeedbackComment } from "@/lib/feedback/redact";
 
 /** Third-party SERP text: strip phones, emails, HKID, addresses, honorific names before display. */
@@ -141,10 +142,19 @@ function displayedSummaryZh(
     (report.signals.boundHitCount ?? 0) > 0;
   if (!filteredEmpty) return report.summaryZh;
   // The judgment block says 「詳見上方說明」 and points at this prefix.
-  if (report.summaryZh.startsWith(LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX)) {
-    return `${LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX}${EMPTY_FILTERED_DISCUSSION_ZH}`;
-  }
-  return EMPTY_FILTERED_DISCUSSION_ZH;
+  const degraded = report.summaryZh.startsWith(
+    LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX,
+  );
+  const body = degraded
+    ? report.summaryZh.slice(LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX.length)
+    : report.summaryZh;
+  // Only the no-signal sentence may be swapped. The dispute-keyword sentence
+  // (and any other summary) comes from the full L1 set and must stay, even
+  // when the display filter left no links.
+  if (body !== BOUND_NO_HIGHLIGHT_SUMMARY) return report.summaryZh;
+  return degraded
+    ? `${LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX}${EMPTY_FILTERED_DISCUSSION_ZH}`
+    : EMPTY_FILTERED_DISCUSSION_ZH;
 }
 
 function dataSaturationCaution(

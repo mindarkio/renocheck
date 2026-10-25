@@ -531,6 +531,35 @@ describe("runSearchPipeline cache + legal degraded", () => {
     expect(result.report.signals.boundHitCount).toBe(11);
   });
 
+  it("keeps the dispute-keyword summary when the link filter drops every hit", async () => {
+    vi.mocked(fetchWebSearchHitsForEntity).mockResolvedValueOnce({
+      hits: [
+        {
+          title: "齊來設計 分享",
+          url: "https://www.lihkg.com/thread/101",
+          snippet:
+            "我屋企一年前搵佢哋做全屋，期間一直好順利，點知最後交樓前三日突然話要加錢，之後就拖工兩個月",
+        },
+        {
+          title: "十大裝修公司 1. 甲公司爛尾 2. 齊來設計 3. 乙",
+          url: "https://example.test/list",
+          snippet: "",
+        },
+      ],
+      queriesCompleted: 1,
+    });
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "齊來設計",
+    });
+
+    // ReportCard must not swap this sentence for the empty-discussion line.
+    expect(result.report.signals.retrievalEvidence).toEqual([]);
+    expect(result.report.signals.boundHitCount).toBe(2);
+    expect(result.report.summaryZh).toContain("糾紛／投訴相關字眼");
+  });
+
   it("resolves when cache upsert fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const actual = await vi.importActual<typeof import("./search-cache")>(

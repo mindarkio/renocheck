@@ -338,6 +338,48 @@ describe("classifyPublicLinkHit — review follow-ups", () => {
     ).toEqual({ keep: true, reason: "specific_praise" });
   });
 
+  it("treats 唔會 / 不會 / 唔太 / 未必 推薦 like 唔推薦", () => {
+    for (const title of [
+      "唔會推薦齊來設計",
+      "唔太推薦齊來設計",
+      "不會推薦齊來設計，收費貴",
+      "未必推薦齊來設計",
+    ]) {
+      expect(classifyPublicLinkHit(hit(title), TOKENS).keep).toBe(true);
+    }
+  });
+
+  it("does not read idioms or double negation as negated praise", () => {
+    for (const title of [
+      "唔係唔推薦齊來設計，只係貴少少",
+      "唔推薦都難，齊來設計真係好",
+      "不推薦不行！齊來設計",
+      "無推薦費！齊來設計免費度尺",
+      "冇推薦錯，齊來設計",
+    ]) {
+      expect(classifyPublicLinkHit(hit(title), TOKENS).keep).toBe(false);
+    }
+  });
+
+  it("does not treat a denied dispute in a question as dispute-seeking", () => {
+    expect(
+      classifyPublicLinkHit(hit("齊來設計做嘢好好，冇糾紛，有冇人都係咁覺得？"), TOKENS).keep,
+    ).toBe(false);
+    expect(
+      classifyPublicLinkHit(
+        hit("Has anyone used Brightway Interiors? No dispute so far, any tips?"),
+        ["Brightway Interiors"],
+      ).keep,
+    ).toBe(false);
+    expect(classifyPublicLinkHit(hit("齊來設計有冇糾紛？"), TOKENS).keep).toBe(true);
+    expect(classifyPublicLinkHit(hit("有冇人知點搵齊來設計苦主？"), TOKENS).keep).toBe(true);
+  });
+
+  it("does not read 有冇推薦 / 冇人唔推薦 as negated praise", () => {
+    expect(classifyPublicLinkHit(hit("有冇推薦齊來設計？"), TOKENS).keep).toBe(false);
+    expect(classifyPublicLinkHit(hit("冇人唔推薦齊來設計"), TOKENS).keep).toBe(false);
+  });
+
   it("uses the whole text when only the phone is in the title", () => {
     expect(classifyPublicLinkHit(hit("9123-4567 做到一半爛尾", "裝修討論"), [], "91234567")).toEqual({
       keep: true,
