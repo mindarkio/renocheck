@@ -10,10 +10,10 @@ After an MWC hit, web search used only the Chinese legal name and that name with
 
 ## Decision
 
-Keep the default Serp HTTP budget (Q1×2 + Q2×1 = 3, plus Q3×1 when a phone is present). When a distinctive typed brand and/or a register English name exists, add **one** alias query and drop Q1 from 2 pages to 1. If `SERP_PAGE_COUNT` is already 1, OR the alias into Q2 instead of adding a request.
+Keep the default Serp HTTP budget (Q1×2 + Q2×1 = 3, plus Q3×1 when a phone is present). When a distinctive typed brand and/or a register English name exists, add **one** alias query and drop Q1 from 2 pages to 1. If `SERP_PAGE_COUNT` is already 1, put the alias phrases into Q2's entity part as one flat OR group instead of adding a request.
 
-- Typed text is an alias only when it is a substring of the matched legal name (Chinese or English) and is not a generic fragment (under 4 CJK characters, under 6 Latin characters, or only trade words such as 裝修 / 設計 / 工程).
-- Names containing `+`, `&`, `/`, or parentheses are quoted in Q2 so Google matches them literally.
+- Typed text is an alias only when it is a substring of the matched legal name (Chinese or English), the register lookup was **not ambiguous** (only one row contains the input), and it is not a generic fragment (under 4 CJK characters, under 6 Latin characters, or only trade words such as 裝修 / 設計 / 工程 / 家居 / 建築 / 機電, Simplified forms included, before or after removing「有限公司」). A Latin-only typed alias must equal the whole register English name without its legal suffix (Limited / Ltd). This keeps another firm's posts from binding to the one row we picked.
+- Names containing `+`, `&`, or `/` are quoted in Q2 so Google matches them literally. Parentheses keep the DEC-0003 conjunctive form because `looseEntityCoreTerms` already turns them into spaces.
 - English names are not truncated to 6 characters. L1 and public-link matching are case-insensitive.
 - The register `company_name_en`, when present and not itself only trade words, is an alias phrase and an L1 anchor.
 - When several register rows contain the input, keep a single row: exact match, then prefix match, then shortest `company_name`. `ambiguous` stays true whenever two or more rows match. No picker UI.

@@ -67,6 +67,70 @@ const GENERIC_ALIAS_ATOMS = [
   "ltd",
   "co",
   "hk",
+  // Trade / filler words that also appear in thousands of unrelated pages.
+  "一站式",
+  "建築",
+  "建設",
+  "機電",
+  "水電",
+  "冷氣",
+  "空調",
+  "家居",
+  "全屋",
+  "翻新",
+  "維修",
+  "傢俬",
+  "屋宇",
+  "集團",
+  "企業",
+  "發展",
+  "實業",
+  "貿易",
+  "環球",
+  "亞洲",
+  "中國",
+  "及",
+  // Simplified forms (NFKC does not fold Simplified to Traditional).
+  "装修",
+  "设计",
+  "装饰",
+  "室内",
+  "顾问",
+  "国际",
+  "建筑",
+  "机电",
+  "水电",
+  "冷气",
+  "空调",
+  "维修",
+  "集团",
+  "发展",
+  "实业",
+  "贸易",
+  "环球",
+  "亚洲",
+  "中国",
+  "责任",
+  "renovations",
+  "renovation",
+  "international",
+  "development",
+  "solutions",
+  "holdings",
+  "services",
+  "service",
+  "builders",
+  "building",
+  "trading",
+  "living",
+  "group",
+  "homes",
+  "works",
+  "decor",
+  "home",
+  "asia",
+  "and",
+  "the",
 ] as const;
 
 const GENERIC_ALIAS_ATOMS_BY_LENGTH = [...GENERIC_ALIAS_ATOMS].sort(
@@ -88,16 +152,17 @@ function isUntruncatedLatinName(label: string): boolean {
   return latin >= 4 && han === 0;
 }
 
+/** True when `compact` splits fully into generic atoms (any split, not only greedy). */
 function isOnlyGenericWords(compact: string): boolean {
-  let rest = compact;
-  while (rest.length > 0) {
-    const atom = GENERIC_ALIAS_ATOMS_BY_LENGTH.find((candidate) =>
-      rest.startsWith(candidate),
-    );
-    if (!atom) return false;
-    rest = rest.slice(atom.length);
+  const ok: boolean[] = new Array(compact.length + 1).fill(false);
+  ok[0] = true;
+  for (let i = 0; i < compact.length; i += 1) {
+    if (!ok[i]) continue;
+    for (const atom of GENERIC_ALIAS_ATOMS_BY_LENGTH) {
+      if (compact.startsWith(atom, i)) ok[i + atom.length] = true;
+    }
   }
-  return true;
+  return ok[compact.length] === true;
 }
 
 /**
@@ -117,7 +182,24 @@ export function isGenericSearchAlias(raw: string): boolean {
 export type ExtraSearchPhraseOpts = {
   mwcCompanyName?: string;
   mwcCompanyNameEn?: string;
+  /**
+   * Two or more register rows contain the typed text. The typed fragment is
+   * then shared by several firms, so it must not become a search phrase or an
+   * L1 anchor for the one row we picked.
+   */
+  mwcAmbiguous?: boolean;
 };
+
+/** English legal suffix (Limited / Ltd / Company Limited / Co Ltd). */
+function stripLatinCompanySuffix(label: string): string {
+  return label
+    .replace(/[\s,.]*\b(?:company\s+limited|co\.?,?\s*ltd\.?|limited|ltd\.?)\s*$/iu, "")
+    .trim();
+}
+
+function hasHan(value: string): boolean {
+  return /\p{Script=Han}/u.test(value);
+}
 
 function pushPhrase(out: string[], seen: Set<string>, phrase: string): void {
   const trimmed = phrase.trim();
@@ -144,9 +226,23 @@ export function extraSearchPhrases(
   const seen = new Set<string>();
 
   const typed = input.companyName?.trim();
-  if (typed && legal.length > 0 && !isGenericSearchAlias(typed)) {
+  if (
+    typed &&
+    legal.length > 0 &&
+    !opts?.mwcAmbiguous &&
+    !isGenericSearchAlias(typed) &&
+    !isGenericSearchAlias(stripCompanySuffix(typed))
+  ) {
     const alias = foldSearchAlias(typed);
-    const insideLegal = legal.some((name) => foldSearchAlias(name).includes(alias));
+    // A Latin-only fragment (「Dimensions」「Modern」) is an ordinary English
+    // word far more often than a brand. Only the whole English name without
+    // its legal suffix is distinctive enough.
+    const latinOnly = !hasHan(typed);
+    const englishBrand = opts?.mwcCompanyNameEn?.trim();
+    const insideLegal = latinOnly
+      ? Boolean(englishBrand) &&
+        alias === foldSearchAlias(stripLatinCompanySuffix(englishBrand!))
+      : legal.some((name) => foldSearchAlias(name).includes(alias));
     const alreadySearched = legal.some((name) => {
       const stripped = stripCompanySuffix(name);
       return alias === foldSearchAlias(name) || alias === foldSearchAlias(stripped);

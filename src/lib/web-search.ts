@@ -130,8 +130,13 @@ export function buildWebSearchQueryBroad(
   return `"${entity}" 裝修 (投訴 OR 苦主 OR 爛尾 OR 糾紛 OR 超支)`;
 }
 
-/** Characters Google treats as operators unless the name is quoted. */
-const SERP_LITERAL_SPECIAL = /[+&/()（）]/;
+/**
+ * Characters Google treats as operators or separators unless the name is
+ * quoted. Parentheses are not listed: `looseEntityCoreTerms` already turns
+ * them into spaces, and quoting「名(香港)」would demand an adjacency that forum
+ * copy rarely has (DEC-0003 conjunctive Q2).
+ */
+const SERP_LITERAL_SPECIAL = /[+&/]/;
 
 const LOOSE_RISK = "(投訴 OR 苦主 OR 爛尾 OR 糾紛 OR 超支)";
 
@@ -168,24 +173,45 @@ export function buildWebSearchQueryLoose(
   const entity = normalizeSearchLabelForSerp(
     resolveAuthoritativeSearchLabel(input, opts),
   );
+  return `${looseEntityPart(entity).part} 裝修 ${LOOSE_RISK}`;
+}
+
+/** Entity part of Q2. `single` is false for the conjunctive multi-token form. */
+function looseEntityPart(entity: string): { part: string; single: boolean } {
   const brandPhrase = resolveBrandSerpSearchPhrase(entity);
-  const risk = LOOSE_RISK;
-  if (brandPhrase) {
-    return `${quoteSerpLiteral(brandPhrase)} 裝修 ${risk}`;
-  }
-  // `+`, `&`, `/`, and parentheses must stay inside quotes or Google splits them.
+  if (brandPhrase) return { part: quoteSerpLiteral(brandPhrase), single: true };
+  // `+`, `&`, and `/` must stay inside quotes or Google splits them.
   if (SERP_LITERAL_SPECIAL.test(entity)) {
-    const core = stripCompanySuffixForQuery(entity);
-    return `${quoteSerpLiteral(core)} 裝修 ${risk}`;
+    return { part: quoteSerpLiteral(stripCompanySuffixForQuery(entity)), single: true };
   }
   const core = looseEntityCoreTerms(entity);
   const parts = core.split(/\s+/).filter((p) => p.length >= 2);
   // Multi-token cores (e.g. 源始 國際 設計及裝修): conjunctive quotes reduce off-topic Serp (M3).
   if (parts.length >= 2) {
-    const quoted = parts.slice(0, 3).map((p) => `"${p}"`).join(" ");
-    return `${quoted} 裝修 ${risk}`;
+    return { part: parts.slice(0, 3).map((p) => `"${p}"`).join(" "), single: false };
   }
-  return `${core} 裝修 ${risk}`;
+  return { part: core, single: true };
+}
+
+/**
+ * Q2 with the alias phrases as one flat OR group. Google applies OR to the
+ * neighbouring terms only and ignores grouping parentheses, so
+ * `(Q2) OR (alias)` would not mean "either query".
+ */
+function buildLooseQueryWithAliases(
+  input: { companyName?: string; phone?: string; br?: string },
+  opts: EntityNameOpts | undefined,
+  phrases: string[],
+): string {
+  const entity = normalizeSearchLabelForSerp(
+    resolveAuthoritativeSearchLabel(input, opts),
+  );
+  const { part, single } = looseEntityPart(entity);
+  const head = single ? part : quoteSerpLiteral(looseEntityCoreTerms(entity));
+  const names = [head, ...phrases.map((phrase) => quoteSerpLiteral(phrase))].filter(
+    (name) => name.replace(/"/g, "").trim().length > 0,
+  );
+  return `(${names.join(" OR ")}) 裝修 ${LOOSE_RISK}`;
 }
 
 export type SearchQueryStrategyId = "Q1" | "Q2" | "Q1+Q2";
@@ -205,6 +231,7 @@ export function buildEntitySearchQueries(
 export type EntityNameOpts = {
   mwcCompanyName?: string;
   mwcCompanyNameEn?: string;
+  mwcAmbiguous?: boolean;
 };
 
 export type PlannedWebSearch = {
@@ -252,10 +279,10 @@ export function planEntityWebSearches(
   while (total() > budget && q2Pages > 1) q2Pages -= 1;
   if (total() > budget) runAlias = false;
 
-  let q2 = buildWebSearchQueryLoose(input, opts);
-  if (aliasQuery && !runAlias) {
-    q2 = `(${q2}) OR (${aliasQuery})`;
-  }
+  const q2 =
+    aliasQuery && !runAlias
+      ? buildLooseQueryWithAliases(input, opts, phrases)
+      : buildWebSearchQueryLoose(input, opts);
 
   const planned: PlannedWebSearch[] = [
     { id: "q1", query: buildWebSearchQuery(input, opts), pages: q1Pages },

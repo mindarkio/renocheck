@@ -678,7 +678,31 @@ describe("runSearchPipeline whole-pipeline deadline (PR24 S1)", () => {
       expect.objectContaining({
         mwcCompanyName: "齊來設計居+屋有限公司",
         mwcCompanyNameEn: "Dimensions Interiors Limited",
+        mwcAmbiguous: false,
       }),
+    );
+  });
+
+  it("tells web search when the register match is ambiguous", async () => {
+    vi.mocked(lookupMwcWithMeta).mockResolvedValueOnce({
+      row: {
+        company_name: "齊來設計居+屋有限公司",
+        company_name_en: "Dimensions Interiors Limited",
+        phone: null,
+        registration_no: "MWC-1",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+      ambiguous: true,
+    });
+    await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "齊來設計",
+    });
+    expect(fetchWebSearchHitsForEntity).toHaveBeenCalledWith(
+      expect.objectContaining({ companyName: "齊來設計" }),
+      expect.objectContaining({ mwcAmbiguous: true }),
     );
   });
 

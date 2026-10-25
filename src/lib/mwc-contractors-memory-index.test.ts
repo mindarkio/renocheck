@@ -88,4 +88,21 @@ describe("MwcContractorsMemoryIndex", () => {
     expect(found.row?.registration_no).toBe("MWC-EXACT");
     expect(found.ambiguous).toBe(true);
   });
+
+  it("matches an English register name case-insensitively", () => {
+    const idx = new MwcContractorsMemoryIndex([
+      {
+        company_name: "合成恆偉工程有限公司",
+        company_name_en: "HANG WAI ENGINEERING LIMITED",
+        phone: null,
+        registration_no: "MWC-EN",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+    ]);
+    const found = idx.lookupWithMeta(companyNameOnlySearchInput("hang wai engineering"));
+    expect(found.row?.registration_no).toBe("MWC-EN");
+    expect(found.ambiguous).toBe(false);
+  });
 });

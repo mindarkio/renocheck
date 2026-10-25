@@ -85,6 +85,23 @@ describe("pickRankedMwcRow", () => {
         "齊來設計",
       )?.registration_no,
     ).toBe("MWC-SHORT");
+    // Prefix beats a shorter contains-match.
+    expect(
+      pickRankedMwcRow(
+        [
+          mwc({ company_name: "新齊來設計社", registration_no: "MWC-CONTAINS-SHORT" }),
+          mwc({
+            company_name: "齊來設計居+屋及擴建工程有限公司",
+            registration_no: "MWC-PREFIX-LONG",
+          }),
+        ],
+        "齊來設計",
+      )?.registration_no,
+    ).toBe("MWC-PREFIX-LONG");
+  });
+
+  it("reads a 20-row contains window (DEC-0014)", () => {
+    expect(MWC_NAME_CANDIDATE_LIMIT).toBe(20);
   });
 
   it("matches an English name case-insensitively and does not prefer the shorter row", () => {

@@ -100,8 +100,9 @@ describe("typed brand and register English name queries", () => {
     expect(buildWebSearchQueryLoose({ companyName: "甲/乙工程有限公司" })).toContain(
       '"甲/乙工程"',
     );
-    expect(buildWebSearchQueryLoose({ companyName: "測試(香港)工程有限公司" })).toContain(
-      '"測試(香港)工程"',
+    // Parentheses already become spaces; keep the DEC-0003 conjunctive form.
+    expect(buildWebSearchQueryLoose({ companyName: "測試(香港)工程有限公司" })).toBe(
+      '"測試" "香港" "工程" 裝修 (投訴 OR 苦主 OR 爛尾 OR 糾紛 OR 超支)',
     );
 
     const baseline = planEntityWebSearches({ companyName: "甲公司" });
@@ -146,6 +147,40 @@ describe("typed brand and register English name queries", () => {
     expect(planned.find((step) => step.id === "q2")?.query).toContain(
       '"Dimensions Interiors Limited"',
     );
+    // One flat OR group: Google ignores grouping parentheses around whole queries.
+    expect(planned.find((step) => step.id === "q2")?.query).toBe(
+      '("齊來設計居+屋" OR "齊來設計" OR "Dimensions Interiors Limited") 裝修 (投訴 OR 苦主 OR 爛尾 OR 糾紛 OR 超支)',
+    );
+    expect(
+      planEntityWebSearches(
+        { companyName: "金城裝飾" },
+        { mwcCompanyName: "金城 裝飾工程有限公司" },
+      ).find((step) => step.id === "q2")?.query,
+    ).toBe('("金城 裝飾工程" OR "金城裝飾") 裝修 (投訴 OR 苦主 OR 爛尾 OR 糾紛 OR 超支)');
+  });
+
+  it("never leaves an unbalanced quote in a planned query", () => {
+    const planned = planEntityWebSearches(
+      { companyName: '齊來設計" OR site:example.invalid' },
+      {
+        mwcCompanyName: "齊來設計居+屋有限公司",
+        mwcCompanyNameEn: 'Quote "Inj" Studio Limited',
+      },
+    );
+    for (const step of planned) {
+      expect((step.query.match(/"/g) ?? []).length % 2).toBe(0);
+    }
+    expect(planned.find((step) => step.id === "alias")?.query).toContain(
+      '"Quote Inj Studio Limited"',
+    );
+  });
+
+  it("does not search the typed brand when the register match is ambiguous", () => {
+    const planned = planEntityWebSearches(branded, { ...mwc, mwcAmbiguous: true });
+    const alias = planned.find((step) => step.id === "alias")?.query ?? "";
+    expect(alias).not.toContain('"齊來設計"');
+    expect(alias).toContain('"Dimensions Interiors Limited"');
+    expect(countPlannedSerpRequests(planned)).toBe(3);
   });
 
   it("issues the same number of provider calls with or without the alias", async () => {

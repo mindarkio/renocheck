@@ -150,6 +150,7 @@ export async function runSearchPipeline(
     ? {
         mwcCompanyName: mwc.company_name,
         ...(mwcEnglish ? { mwcCompanyNameEn: mwcEnglish } : {}),
+        mwcAmbiguous: mwcLookup.ambiguous,
       }
     : undefined;
   const searchLabelUsed = resolveAuthoritativeSearchLabel(input, mwcOpts);
