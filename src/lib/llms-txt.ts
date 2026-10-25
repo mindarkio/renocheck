@@ -17,7 +17,7 @@ Contact: hello@renocheck.homes
 
 Renocheck is a Hong Kong homeowner-facing tool that aggregates **public** sources—primarily the Buildings Department Minor Works Contractor (MWC) register and **public web discussion snippets**—into a **risk reference** report when you search by company name, HK phone, or business registration number.
 
-The site is Hong Kong-only and in Traditional Chinese (zh-HK). Reports are public-record summaries, including the MWC register. They are not a credit report, a contractor-matching service, or legal advice.
+The site is Hong Kong-only and in Traditional Chinese (zh-HK). Reports summarise publicly available information—the MWC register and public web discussion snippets—as a risk reference. They are not verified findings, a credit report, a contractor-matching service, or legal advice.
 
 ## What this service is NOT
 

@@ -23,7 +23,7 @@ export function isReportLookupDegraded(report: RiskReport): boolean {
   );
 }
 
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+export const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** When legal lookup degrades, cache report briefly so share links still resolve. */
 export const LEGAL_LOOKUP_DEGRADED_CACHE_TTL_MS = 10 * 60 * 1000;

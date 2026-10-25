@@ -19,6 +19,8 @@ const BRAND_ALTERNATE_NAMES = [
   "renocheck.homes",
 ] as const;
 
+const WEBSITE_NAME = "Renocheck 裝修點評";
+
 export function buildSiteJsonLd(siteUrl: string) {
   const orgId = `${siteUrl}/#org`;
   return {
@@ -27,8 +29,9 @@ export function buildSiteJsonLd(siteUrl: string) {
       {
         "@type": "WebSite" as const,
         "@id": `${siteUrl}/#website`,
-        name: "Renocheck 裝修點評",
-        alternateName: [...BRAND_ALTERNATE_NAMES],
+        name: WEBSITE_NAME,
+        // alternateName must not repeat the node's own name.
+        alternateName: BRAND_ALTERNATE_NAMES.filter((alt) => alt !== WEBSITE_NAME),
         url: siteUrl,
         inLanguage: "zh-HK",
         description: BRAND_TAGLINE,

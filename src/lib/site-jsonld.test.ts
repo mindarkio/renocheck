@@ -30,7 +30,11 @@ describe("site JSON-LD disambiguation", () => {
   });
 
   it("adds Hong Kong alternate names on Organization and WebSite without sameAs", () => {
-    expect(website?.alternateName).toEqual(alternateNames);
+    expect(website?.alternateName).toEqual(
+      alternateNames.filter((alt) => alt !== website?.name),
+    );
+    expect(website?.alternateName).not.toContain(website?.name);
+    expect(organization?.alternateName).not.toContain(organization?.name);
     expect(organization?.alternateName).toEqual(alternateNames);
     expect(website).not.toHaveProperty("sameAs");
     expect(organization).not.toHaveProperty("sameAs");
