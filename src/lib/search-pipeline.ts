@@ -294,6 +294,9 @@ export async function runSearchPipeline(
   const publicLinks = selectPublicLinkHits(webHitsForLlm, tokens, {
     normalizedPhone: phoneForL1,
     alwaysIncludeUrls: highlightUrls,
+    // No highlights → calibration uses the dispute-keyword sentence when any
+    // L1 hit has a dispute word. Those hits must stay visible.
+    keepDisputeSources: highlightUrls.size === 0,
   });
   console.info(
     JSON.stringify({

@@ -946,6 +946,39 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.textContent).not.toContain("本次未形成討論摘要");
   });
 
+  it("shows dispute-source links with the dispute sentence and no empty notice", () => {
+    const disputeSummary =
+      "根據本次可檢索的公開來源，有多則與查詢對象相關的討論出現糾紛／投訴相關字眼；請逐條點開下方來源核實。";
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          summaryZh: disputeSummary,
+          evaluation: {
+            ...minimalReport().evaluation,
+            dataSaturation: "moderate",
+          },
+          signals: {
+            ...minimalReport().signals,
+            boundHitCount: 2,
+            highlights: [],
+            retrievalEvidence: [
+              {
+                url: "https://www.facebook.com/groups/a/posts/d",
+                title: "中伏經驗 | 有否人使用過齊來設計效果如何？",
+                snippetExcerpt: "",
+                matchedToken: "齊來設計",
+                matchReason: "entity_token",
+              },
+            ],
+          },
+        })}
+      />,
+    );
+    expect(container.textContent).toContain("相關公開連結（1 條）");
+    expect(container.textContent).toContain(disputeSummary);
+    expect(container.textContent).not.toContain("今次未搵到有實質內容嘅公開討論。");
+  });
+
   it("keeps the dispute-keyword hero when every public link was filtered out", () => {
     const disputeSummary =
       "根據本次可檢索的公開來源，有多則與查詢對象相關的討論出現糾紛／投訴相關字眼；請逐條點開下方來源核實。";

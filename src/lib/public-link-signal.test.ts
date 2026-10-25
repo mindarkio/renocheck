@@ -483,6 +483,58 @@ describe("selectPublicLinkHits", () => {
     expect(selected.dropped.over_cap).toBe(3);
   });
 
+  it("keeps a dispute-keyword question when that sentence will be shown", () => {
+    const disputeQuestion = hit(
+      "中伏經驗 | 有否人使用過齊來設計效果如何？",
+      "",
+      "https://www.facebook.com/groups/a/posts/d",
+    );
+    const bare = hit(
+      "有否人使用過齊來設計效果如何？",
+      "",
+      "https://www.facebook.com/groups/a/posts/q",
+    );
+    const selected = selectPublicLinkHits([disputeQuestion, bare], TOKENS, {
+      keepDisputeSources: true,
+    });
+    expect(selected.hits.map((h) => h.url)).toEqual([disputeQuestion.url]);
+    expect(selected.dropped.bare_question).toBe(1);
+  });
+
+  it("does not exempt a question that did not contribute a dispute keyword", () => {
+    const selected = selectPublicLinkHits(questions, TOKENS, {
+      keepDisputeSources: true,
+    });
+    expect(selected.hits).toEqual([]);
+  });
+
+  it("keeps every dispute-keyword source past the display cap", () => {
+    const hits = Array.from({ length: 9 }, (_, i) =>
+      hit(
+        "中伏經驗 | 有否人使用過齊來設計效果如何？",
+        "",
+        `https://www.facebook.com/groups/a/posts/d${i}`,
+      ),
+    );
+    const selected = selectPublicLinkHits(hits, TOKENS, {
+      keepDisputeSources: true,
+    });
+    expect(selected.hits).toHaveLength(9);
+    expect(selected.dropped.bare_question).toBe(0);
+    expect(selected.dropped.over_cap).toBe(0);
+  });
+
+  it("still hides a dispute-keyword question when a summary was formed", () => {
+    const disputeQuestion = hit(
+      "中伏經驗 | 有否人使用過齊來設計效果如何？",
+      "",
+      "https://www.facebook.com/groups/a/posts/d",
+    );
+    const selected = selectPublicLinkHits([disputeQuestion], TOKENS);
+    expect(selected.hits).toEqual([]);
+    expect(selected.dropped.bare_question).toBe(1);
+  });
+
   it("returns kept links in L1 order, not rank order", () => {
     const praise = hit(
       "十分推薦齊來設計，態度好好，收費清楚",

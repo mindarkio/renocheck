@@ -24,6 +24,10 @@ import type { WebSearchHit } from "./web-search";
  * A bare "has anyone used them?" question stays hidden. A question that names
  * a dispute or is looking for victims (糾紛、投訴、苦主) is shown. Negated
  * praise (唔推薦、冇推薦、唔係好推薦) is a negative first-hand signal.
+ *
+ * When the hero uses the dispute-keyword sentence, every L1 hit that
+ * contributed a dispute keyword is kept, including a question the heuristic
+ * would hide. That sentence tells the reader to open the sources below.
  */
 
 /** After the signal filter, do not pad the link list. */
@@ -298,10 +302,18 @@ export function classifyPublicLinkHit(
   return { keep: false, reason: "no_signal" };
 }
 
+function contributedDisputeKeyword(hit: WebSearchHit): boolean {
+  return snippetHasDisputeKeyword(`${hit.title} ${hit.snippet}`);
+}
+
 /**
  * Signal-bearing L1 hits for the public link list.
  * URLs in `alwaysIncludeUrls` (highlight citations) stay even if the heuristic
  * would drop them, so a formed summary still has its sources in the list.
+ *
+ * `keepDisputeSources`: the hero will use the dispute-keyword sentence (no
+ * highlights). Hits that incremented that count stay on the list, including
+ * past the display cap, so the sentence is not left pointing at nothing.
  */
 export function selectPublicLinkHits(
   hits: WebSearchHit[],
@@ -309,11 +321,14 @@ export function selectPublicLinkHits(
   opts?: {
     normalizedPhone?: string;
     alwaysIncludeUrls?: ReadonlySet<string>;
+    keepDisputeSources?: boolean;
   },
 ): PublicLinkSelection {
   const dropped = emptyDropped();
   const force = opts?.alwaysIncludeUrls;
   const rows = hits.map((hit, index) => {
+    const disputeSource =
+      Boolean(opts?.keepDisputeSources) && contributedDisputeKeyword(hit);
     if (force?.has(hit.url)) {
       return {
         hit,
@@ -321,6 +336,7 @@ export function selectPublicLinkHits(
         keep: true,
         reason: "cited_highlight" as const,
         rank: 0,
+        pinned: true,
       };
     }
     const decision = classifyPublicLinkHit(
@@ -329,6 +345,16 @@ export function selectPublicLinkHits(
       opts?.normalizedPhone,
     );
     if (!decision.keep) {
+      if (disputeSource) {
+        return {
+          hit,
+          index,
+          keep: true,
+          reason: "dispute_or_experience" as const,
+          rank: rankOf("dispute_or_experience"),
+          pinned: true,
+        };
+      }
       dropped[decision.reason as PublicLinkDropReason] += 1;
       return {
         hit,
@@ -336,19 +362,27 @@ export function selectPublicLinkHits(
         keep: false,
         reason: decision.reason,
         rank: 9,
+        pinned: false,
       };
     }
     const reason = decision.reason as PublicLinkKeepReason;
-    return { hit, index, keep: true, reason, rank: rankOf(reason) };
+    return {
+      hit,
+      index,
+      keep: true,
+      reason,
+      rank: rankOf(reason),
+      pinned: disputeSource,
+    };
   });
 
   const keptRows = rows.filter((row) => row.keep);
-  const cited = keptRows.filter((row) => row.reason === "cited_highlight");
-  const rest = keptRows.filter((row) => row.reason !== "cited_highlight");
+  const pinned = keptRows.filter((row) => row.pinned);
+  const rest = keptRows.filter((row) => !row.pinned);
   rest.sort((a, b) => a.rank - b.rank || a.index - b.index);
-  const room = Math.max(0, PUBLIC_LINK_DISPLAY_CAP - cited.length);
+  const room = Math.max(0, PUBLIC_LINK_DISPLAY_CAP - pinned.length);
   const picked = new Set<WebSearchHit>();
-  for (const row of cited) picked.add(row.hit);
+  for (const row of pinned) picked.add(row.hit);
   for (const row of rest.slice(0, room)) picked.add(row.hit);
   dropped.over_cap += Math.max(0, rest.length - room);
 

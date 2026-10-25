@@ -455,6 +455,46 @@ describe("runSearchPipeline cache + legal degraded", () => {
     );
   });
 
+  it("shows dispute-keyword questions with the dispute sentence and hides other questions", async () => {
+    const disputeQuestion = {
+      title: "中伏經驗 | 有否人使用過齊來設計效果如何？",
+      url: "https://www.facebook.com/groups/a/posts/d",
+      snippet: "",
+    };
+    const bareQuestion = {
+      title: "有否人使用過齊來設計效果如何？",
+      url: "https://www.facebook.com/groups/a/posts/q",
+      snippet: "",
+    };
+    const hits = [disputeQuestion, bareQuestion];
+    vi.mocked(fetchWebSearchHitsForEntity).mockResolvedValueOnce({
+      hits,
+      queriesCompleted: 1,
+    });
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "齊來設計",
+    });
+
+    expect(synthesizeRiskReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webHits: hits,
+        boundHitCount: hits.length,
+      }),
+    );
+    expect(result.report.signals.boundHitCount).toBe(hits.length);
+    expect(result.report.grade).toBe("C");
+    expect(result.report.evaluation.displayGradeZh).toBe("C+");
+    expect(result.report.evaluation.riskBandZh).toBe("中性");
+    expect(result.report.summaryZh).toBe(
+      "根據本次可檢索的公開來源，有多則與查詢對象相關的討論出現糾紛／投訴相關字眼；請逐條點開下方來源核實。",
+    );
+    expect(result.report.signals.retrievalEvidence.map((e) => e.url)).toEqual([
+      disputeQuestion.url,
+    ]);
+  });
+
   it("keeps a dispute link and still sends the question hits to the LLM", async () => {
     const hits = [
       {
@@ -531,21 +571,22 @@ describe("runSearchPipeline cache + legal degraded", () => {
     expect(result.report.signals.boundHitCount).toBe(11);
   });
 
-  it("keeps the dispute-keyword summary when the link filter drops every hit", async () => {
+  it("keeps the dispute-keyword summary and the hits that triggered it", async () => {
+    const hits = [
+      {
+        title: "齊來設計 分享",
+        url: "https://www.lihkg.com/thread/101",
+        snippet:
+          "我屋企一年前搵佢哋做全屋，期間一直好順利，點知最後交樓前三日突然話要加錢，之後就拖工兩個月",
+      },
+      {
+        title: "十大裝修公司 1. 甲公司爛尾 2. 齊來設計 3. 乙",
+        url: "https://example.test/list",
+        snippet: "",
+      },
+    ];
     vi.mocked(fetchWebSearchHitsForEntity).mockResolvedValueOnce({
-      hits: [
-        {
-          title: "齊來設計 分享",
-          url: "https://www.lihkg.com/thread/101",
-          snippet:
-            "我屋企一年前搵佢哋做全屋，期間一直好順利，點知最後交樓前三日突然話要加錢，之後就拖工兩個月",
-        },
-        {
-          title: "十大裝修公司 1. 甲公司爛尾 2. 齊來設計 3. 乙",
-          url: "https://example.test/list",
-          snippet: "",
-        },
-      ],
+      hits,
       queriesCompleted: 1,
     });
 
@@ -554,10 +595,18 @@ describe("runSearchPipeline cache + legal degraded", () => {
       companyName: "齊來設計",
     });
 
-    // ReportCard must not swap this sentence for the empty-discussion line.
-    expect(result.report.signals.retrievalEvidence).toEqual([]);
+    expect(synthesizeRiskReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webHits: hits,
+        boundHitCount: hits.length,
+      }),
+    );
+    expect(result.report.signals.retrievalEvidence.map((e) => e.url)).toEqual(
+      hits.map((h) => h.url),
+    );
     expect(result.report.signals.boundHitCount).toBe(2);
     expect(result.report.summaryZh).toContain("糾紛／投訴相關字眼");
+    expect(result.report.summaryZh).not.toContain("今次未搵到有實質內容嘅公開討論");
   });
 
   it("resolves when cache upsert fails", async () => {
