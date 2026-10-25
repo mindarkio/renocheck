@@ -54,7 +54,10 @@ import {
   shouldShowMwcMissWithCrFoundNote,
   shouldShowUnverifiedCompanyRegistrationAlert,
 } from "@/lib/unverified-company-registration";
-import { LEGAL_LOOKUP_DEGRADED_SECTION_ZH } from "@/lib/legal-event-display";
+import {
+  LEGAL_LOOKUP_DEGRADED_SECTION_ZH,
+  LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX,
+} from "@/lib/legal-event-display";
 import {
   isReportLegalLookupDegraded,
   reportCardHeaderBandLabel,
@@ -103,6 +106,7 @@ import {
   riskBandRationaleLineZh,
 } from "@/lib/report-risk-band-rationale";
 import { RiskBandMeter } from "./RiskBandMeter";
+import { BOUND_NO_HIGHLIGHT_SUMMARY } from "@/lib/risk-report-calibration-v2";
 import { redactFeedbackComment } from "@/lib/feedback/redact";
 
 /** Third-party SERP text: strip phones, emails, HKID, addresses, honorific names before display. */
@@ -122,6 +126,35 @@ function confidenceLabelZh(confidence: RiskReport["confidence"]): string {
   if (confidence === "high") return "較高";
   if (confidence === "medium") return "中等";
   return "較低";
+}
+
+/** Shown in 查證摘要 when the signal filter left no public links. */
+const EMPTY_FILTERED_DISCUSSION_ZH = "今次未搵到有實質內容嘅公開討論。";
+
+function displayedSummaryZh(
+  report: RiskReport,
+  evidenceCount: number,
+): string {
+  const highlights = report.signals.highlights ?? [];
+  const filteredEmpty =
+    highlights.length === 0 &&
+    evidenceCount === 0 &&
+    (report.signals.boundHitCount ?? 0) > 0;
+  if (!filteredEmpty) return report.summaryZh;
+  // The judgment block says 「詳見上方說明」 and points at this prefix.
+  const degraded = report.summaryZh.startsWith(
+    LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX,
+  );
+  const body = degraded
+    ? report.summaryZh.slice(LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX.length)
+    : report.summaryZh;
+  // Only the no-signal sentence may be swapped. The dispute-keyword sentence
+  // (and any other summary) comes from the full L1 set and must stay, even
+  // when the display filter left no links.
+  if (body !== BOUND_NO_HIGHLIGHT_SUMMARY) return report.summaryZh;
+  return degraded
+    ? `${LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX}${EMPTY_FILTERED_DISCUSSION_ZH}`
+    : EMPTY_FILTERED_DISCUSSION_ZH;
 }
 
 function dataSaturationCaution(
@@ -366,10 +399,14 @@ export function ReportCard({
   const officialVerifyLinks = buildOfficialVerifyLinks(report);
   const saturation = report.evaluation.dataSaturation;
   const saturationNote = dataSaturationCaution(saturation);
+  const evidenceCount = report.signals.retrievalEvidence?.length ?? 0;
+  const heroSummary = displayedSummaryZh(report, evidenceCount);
   const showSaturationBanner =
     saturation === "unindexed" ||
-    (saturation === "moderate" && highlights.length === 0);
-  const evidenceCount = report.signals.retrievalEvidence?.length ?? 0;
+    // Moderate copy points at the link list. Hide it when that list was filtered empty.
+    (saturation === "moderate" &&
+      highlights.length === 0 &&
+      evidenceCount > 0);
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
   const mwcRegistryHref = mwcRegistrySearchHref(report);
@@ -639,7 +676,7 @@ export function ReportCard({
             ) : null}
           </div>
           <p className={`mt-3 ${reportHeroBodyClass}`}>
-            {report.summaryZh}
+            {heroSummary}
           </p>
           <p className={`mt-3 ${reportHeroMetaClass}`} role="note">
             {THIRD_PARTY_REDACTION_NOTICE_ZH}

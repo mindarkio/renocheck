@@ -1,14 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { entityMatchTokens } from "./search-entity-labels";
 import {
   buildRetrievalEvidence,
   countBoundDisputeSignals,
   countBoundPraiseSignals,
   filterWebSearchHitsForLlm,
+  llmHitCap,
   matchesPhoneAnchor,
 } from "./search-evidence-filter";
 import type { WebSearchHit } from "./web-search";
 import { calibrateEvaluation } from "./risk-report-calibration-v2";
+import { riskReportSchema } from "./report-schema";
 
 describe("filterWebSearchHitsForLlm", () => {
   it("drops hits with no entity token", () => {
@@ -264,5 +266,31 @@ describe("matchesPhoneAnchor", () => {
         "91234567",
       ),
     ).toBe(true);
+  });
+});
+
+describe("llmHitCap", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // Dispute sources are pinned past the display cap, so every L1 hit can land
+  // in retrievalEvidence. The clamp must stay within the stored schema max.
+  it("never exceeds the stored link-list maximum", () => {
+    vi.stubEnv("SERP_LLM_HIT_CAP", "999");
+    const cap = llmHitCap();
+    const item = {
+      url: "https://example.test/x",
+      title: "t",
+      snippetExcerpt: "",
+      matchedToken: "t",
+      matchReason: "entity_token" as const,
+    };
+    const evidence =
+      riskReportSchema.innerType().shape.signals.shape.retrievalEvidence;
+    const rows = (n: number) => Array.from({ length: n }, () => item);
+    expect(evidence.safeParse(rows(cap)).success).toBe(true);
+    expect(evidence.safeParse(rows(cap + 1)).success).toBe(false);
+    expect(cap).toBe(30);
   });
 });

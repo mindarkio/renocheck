@@ -32,7 +32,8 @@ const MWC_SPARSE_SUMMARY =
 const UNINDEXED_SUMMARY =
   "根據本次可檢索的公開來源，未檢出與查詢對象相關、可引用的裝修糾紛討論摘要；資料有限，請自行核實。";
 
-const BOUND_NO_HIGHLIGHT_SUMMARY =
+/** Bound hits, no highlight, no dispute keyword. ReportCard may swap it when the link list is empty. */
+export const BOUND_NO_HIGHLIGHT_SUMMARY =
   "根據本次可檢索的公開來源，已確認與查詢字串相關的來源，但未能形成可引用的討論摘要，請自行核實。";
 
 const BOUND_DISPUTE_SNIPPET_SUMMARY =

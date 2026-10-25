@@ -196,9 +196,9 @@ const riskReportBaseSchema = z.object({
     highlights: z.array(discussionHighlightSchema).max(HIGHLIGHTS_MAX).optional(),
     /** Serp 命中條數（未必全部相關）；AI 未完成時供參考 */
     serpHitCount: z.number().int().nonnegative().optional(),
-    /** L1 後送 LLM 的條數 */
+    /** L1 後送 LLM 的條數（分檔仍用此數；未扣低信號連結） */
     boundHitCount: z.number().int().nonnegative().optional(),
-    /** 與 bound 對齊的公開來源列表（檢索層 SSOT） */
+    /** 公開連結：L1 入面有具體訊號嘅子集，可以少過 boundHitCount */
     retrievalEvidence: z.array(retrievalEvidenceItemSchema).max(30),
     contractChecklist: z.array(z.string()).min(1),
     actionableClauses: z.array(actionableClauseSchema).max(8).default([]),
