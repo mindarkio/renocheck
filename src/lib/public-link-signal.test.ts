@@ -43,7 +43,8 @@ describe("classifyPublicLinkHit — question posts and listicles", () => {
       ),
       TOKENS,
     );
-    expect(decision).toEqual({ keep: false, reason: "bare_question" });
+    // Not a question cue on its own; dropped because nothing near the name is a signal.
+    expect(decision).toEqual({ keep: false, reason: "no_signal" });
   });
 
   it("drops the same generic question when the company name is absent", () => {
@@ -234,6 +235,86 @@ describe("classifyPublicLinkHit — signal worth showing", () => {
   });
 });
 
+describe("classifyPublicLinkHit — review follow-ups", () => {
+  it("keeps a court item even when a reader comment asks a question", () => {
+    expect(
+      classifyPublicLinkHit(
+        hit("明報：齊來設計被小額錢債審裁處裁定敗訴", "網友留言：請問點睇判詞？"),
+        TOKENS,
+      ),
+    ).toEqual({ keep: true, reason: "news_or_registry" });
+  });
+
+  it("uses a 2–3 character brand when no longer anchor exists", () => {
+    expect(classifyPublicLinkHit(hit("新家居裝修爛尾，訂金收咗就失聯"), ["新家居"]).keep).toBe(true);
+    expect(classifyPublicLinkHit(hit("新家居 Instagram"), ["新家居"])).toEqual({
+      keep: false,
+      reason: "no_signal",
+    });
+    expect(
+      classifyPublicLinkHit(hit("新家居", ""), ["新家居裝修工程有限公司", "新家居"]),
+    ).toEqual({ keep: false, reason: "weak_entity" });
+  });
+
+  it("keeps English incidents and court items, drops English questions and hiring", () => {
+    const en = ["Brightway Interiors"];
+    expect(classifyPublicLinkHit(hit("Brightway Interiors took my deposit and disappeared"), en).keep).toBe(true);
+    expect(classifyPublicLinkHit(hit("Small Claims Tribunal ruling against Brightway Interiors"), en)).toEqual({
+      keep: true,
+      reason: "news_or_registry",
+    });
+    expect(classifyPublicLinkHit(hit("Complaint: Brightway Interiors works delayed 6 months"), en).keep).toBe(true);
+    expect(classifyPublicLinkHit(hit("Has anyone used Brightway Interiors? Any reviews?"), en)).toEqual({
+      keep: false,
+      reason: "bare_question",
+    });
+    expect(classifyPublicLinkHit(hit("Brightway Interiors is hiring a site foreman"), en).keep).toBe(false);
+  });
+
+  it("does not let another list item's incident count for this company", () => {
+    expect(
+      classifyPublicLinkHit(hit("十大裝修公司 1. 甲公司爛尾 2. 齊來設計 3. 乙"), TOKENS),
+    ).toEqual({ keep: false, reason: "listicle" });
+  });
+
+  it("does not treat a neutral milestone as an incident", () => {
+    expect(classifyPublicLinkHit(hit("齊來設計招聘師傅，完工獎金"), TOKENS)).toEqual({
+      keep: false,
+      reason: "recruitment",
+    });
+    expect(classifyPublicLinkHit(hit("齊來設計呃錢，有冇人一齊追？"), TOKENS).keep).toBe(true);
+  });
+
+  it("does not treat 想全屋 as a question when the post is specific praise", () => {
+    expect(
+      classifyPublicLinkHit(hit("我想全屋翻新，最後揀咗齊來設計，推薦，態度好收費清楚"), TOKENS),
+    ).toEqual({ keep: true, reason: "specific_praise" });
+  });
+
+  it("shows a negative review with a detail, and drops negated praise without one", () => {
+    // hasUnnegatedMatch uses the dispute negators (冇/無/唔會…), not 唔/不, so
+    // 「唔係好推薦…收費貴」 still has praise + detail. It is a first-hand opinion: keep it.
+    expect(classifyPublicLinkHit(hit("唔係好推薦齊來設計，收費貴"), TOKENS).keep).toBe(true);
+    expect(classifyPublicLinkHit(hit("冇乜推薦齊來設計"), TOKENS).keep).toBe(false);
+  });
+
+  it("uses the whole text when only the phone is in the title", () => {
+    expect(classifyPublicLinkHit(hit("9123-4567 做到一半爛尾", "裝修討論"), [], "91234567")).toEqual({
+      keep: true,
+      reason: "dispute_or_experience",
+    });
+  });
+
+  it("ignores an incident far from the company name", () => {
+    expect(
+      classifyPublicLinkHit(
+        hit("Homic Décor 分享", `齊來設計${"。".repeat(30)}另一間爛尾`),
+        TOKENS,
+      ),
+    ).toEqual({ keep: false, reason: "no_signal" });
+  });
+});
+
 describe("selectPublicLinkHits", () => {
   const questions: WebSearchHit[] = [
     hit(
@@ -262,7 +343,8 @@ describe("selectPublicLinkHits", () => {
     const selected = selectPublicLinkHits(questions, TOKENS);
     expect(selected.hits).toEqual([]);
     expect(selected.kept).toBe(0);
-    expect(selected.dropped.bare_question).toBe(3);
+    expect(selected.dropped.bare_question).toBe(2);
+    expect(selected.dropped.no_signal).toBe(1);
     expect(selected.dropped.listicle).toBe(1);
   });
 
@@ -302,6 +384,35 @@ describe("selectPublicLinkHits", () => {
       alwaysIncludeUrls: new Set([questions[0]!.url]),
     });
     expect(selected.hits.map((h) => h.url)).toEqual([questions[0]!.url]);
-    expect(selected.dropped.bare_question).toBe(2);
+    expect(selected.dropped.bare_question).toBe(1);
+    expect(selected.dropped.no_signal).toBe(1);
+  });
+
+  it("keeps a cited URL inside the cap and still caps the rest", () => {
+    const disputes = Array.from({ length: 10 }, (_, i) =>
+      hit(`齊來設計爛尾 個案${i}`, "", `https://lihkg.com/thread/${i}`),
+    );
+    const cited = questions[0]!;
+    const selected = selectPublicLinkHits([...disputes, cited], TOKENS, {
+      alwaysIncludeUrls: new Set([cited.url]),
+    });
+    expect(selected.hits).toHaveLength(PUBLIC_LINK_DISPLAY_CAP);
+    expect(selected.hits.at(-1)?.url).toBe(cited.url);
+    expect(selected.dropped.over_cap).toBe(3);
+  });
+
+  it("returns kept links in L1 order, not rank order", () => {
+    const praise = hit(
+      "十分推薦齊來設計，態度好好，收費清楚",
+      "",
+      "https://www.facebook.com/groups/a/posts/p",
+    );
+    const news = hit(
+      "明報：齊來設計被小額錢債審裁處裁定敗訴",
+      "",
+      "https://www.mingpao.com/article/1",
+    );
+    const selected = selectPublicLinkHits([praise, news], TOKENS);
+    expect(selected.hits.map((h) => h.url)).toEqual([praise.url, news.url]);
   });
 });

@@ -488,6 +488,49 @@ describe("runSearchPipeline cache + legal degraded", () => {
     expect(result.report.grade).toBe("C");
   });
 
+  it("keeps a cited question URL in the capped link list", async () => {
+    const disputes = Array.from({ length: 10 }, (_, i) => ({
+      title: `齊來設計爛尾 個案${i}`,
+      url: `https://www.lihkg.com/thread/${i}`,
+      snippet: "苦主分享",
+    }));
+    const cited = {
+      title: "有否人使用過齊來設計居+屋Dimensions Interiors 效果如何？",
+      url: "https://www.facebook.com/groups/a/posts/1",
+      snippet: "",
+    };
+    vi.mocked(fetchWebSearchHitsForEntity).mockResolvedValueOnce({
+      hits: [...disputes, cited],
+      queriesCompleted: 1,
+    });
+    const llm = baseLlmReport();
+    vi.mocked(synthesizeRiskReport).mockResolvedValueOnce({
+      ...llm,
+      signals: {
+        ...llm.signals,
+        discussionCount: 1,
+        highlights: [
+          {
+            summaryZh: "合成摘要：留言指訂金糾紛",
+            url: cited.url,
+            incidentType: "payment_dispute",
+            approxYear: "2026",
+          },
+        ],
+      },
+    });
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "齊來設計",
+    });
+
+    const urls = result.report.signals.retrievalEvidence.map((e) => e.url);
+    expect(urls).toHaveLength(8);
+    expect(urls).toContain(cited.url);
+    expect(result.report.signals.boundHitCount).toBe(11);
+  });
+
   it("resolves when cache upsert fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const actual = await vi.importActual<typeof import("./search-cache")>(
