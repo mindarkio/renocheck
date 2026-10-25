@@ -291,11 +291,51 @@ describe("classifyPublicLinkHit — review follow-ups", () => {
     ).toEqual({ keep: true, reason: "specific_praise" });
   });
 
-  it("shows a negative review with a detail, and drops negated praise without one", () => {
-    // hasUnnegatedMatch uses the dispute negators (冇/無/唔會…), not 唔/不, so
-    // 「唔係好推薦…收費貴」 still has praise + detail. It is a first-hand opinion: keep it.
-    expect(classifyPublicLinkHit(hit("唔係好推薦齊來設計，收費貴"), TOKENS).keep).toBe(true);
-    expect(classifyPublicLinkHit(hit("冇乜推薦齊來設計"), TOKENS).keep).toBe(false);
+  it("shows a dispute-seeking question even without a first-hand incident", () => {
+    expect(
+      classifyPublicLinkHit(hit("有冇人同齊來設計有糾紛？想搵苦主"), TOKENS),
+    ).toEqual({ keep: true, reason: "dispute_or_experience" });
+    expect(
+      classifyPublicLinkHit(hit("有冇人投訴過齊來設計？"), TOKENS),
+    ).toEqual({ keep: true, reason: "dispute_or_experience" });
+    expect(
+      classifyPublicLinkHit(
+        hit("Has anyone had a dispute with Brightway Interiors?"),
+        ["Brightway Interiors"],
+      ),
+    ).toEqual({ keep: true, reason: "dispute_or_experience" });
+  });
+
+  it("still hides a bare usage question", () => {
+    expect(
+      classifyPublicLinkHit(hit("有否人使用過齊來設計效果如何？"), TOKENS),
+    ).toEqual({ keep: false, reason: "bare_question" });
+    expect(
+      classifyPublicLinkHit(hit("有冇人推薦齊來設計？"), TOKENS),
+    ).toEqual({ keep: false, reason: "bare_question" });
+  });
+
+  it("shows negated praise as a negative first-hand signal", () => {
+    for (const title of [
+      "唔係好推薦齊來設計，收費貴",
+      "唔推薦齊來設計",
+      "冇推薦齊來設計",
+      "不推薦齊來設計",
+      "冇乜推薦齊來設計",
+      "不太推薦齊來設計",
+      "唔好推薦齊來設計",
+    ]) {
+      expect(classifyPublicLinkHit(hit(title), TOKENS)).toEqual({
+        keep: true,
+        reason: "dispute_or_experience",
+      });
+    }
+    expect(
+      classifyPublicLinkHit(
+        hit("十分推薦齊來設計，態度好好，收費清楚，唔錯"),
+        TOKENS,
+      ),
+    ).toEqual({ keep: true, reason: "specific_praise" });
   });
 
   it("uses the whole text when only the phone is in the title", () => {

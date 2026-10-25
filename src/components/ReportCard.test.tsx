@@ -921,7 +921,10 @@ describe("ReportCard report trust (PR-BC)", () => {
   });
 
   it("hides the moderate link caution when the public link list is empty", () => {
+    const oldSummary =
+      "根據本次可檢索的公開來源，已確認與查詢字串相關的來源，但未能形成可引用的討論摘要，請自行核實。";
     const report = minimalReport({
+      summaryZh: oldSummary,
       evaluation: {
         ...minimalReport().evaluation,
         dataSaturation: "moderate",
@@ -936,8 +939,70 @@ describe("ReportCard report trust (PR-BC)", () => {
     });
     const { container } = render(<ReportCard report={report} />);
     expect(container.querySelector("#retrieval-evidence-heading")).toBeNull();
+    expect(container.textContent).toContain("今次未搵到有實質內容嘅公開討論。");
     expect(container.textContent).not.toContain("請以下方連結");
+    expect(container.textContent).not.toContain("請逐條點開下方來源");
+    expect(container.textContent).not.toContain(oldSummary);
     expect(container.textContent).not.toContain("本次未形成討論摘要");
+  });
+
+  it("replaces a link-pointing hero when every public link was filtered out", () => {
+    const oldSummary =
+      "根據本次可檢索的公開來源，有多則與查詢對象相關的討論出現糾紛／投訴相關字眼；請逐條點開下方來源核實。";
+    const report = minimalReport({
+      summaryZh: oldSummary,
+      signals: {
+        ...minimalReport().signals,
+        boundHitCount: 3,
+        highlights: [],
+        retrievalEvidence: [],
+      },
+    });
+    const { container } = render(<ReportCard report={report} />);
+    expect(container.textContent).toContain("今次未搵到有實質內容嘅公開討論。");
+    expect(container.textContent).not.toContain("下方來源");
+  });
+
+  it("keeps the judgment-outage line above the empty-discussion sentence", () => {
+    const prefix = "判詞紀錄暫時未能查詢，本次評級未計入判詞。";
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          summaryZh: `${prefix}根據本次可檢索的公開來源，已確認與查詢字串相關的來源，但未能形成可引用的討論摘要，請自行核實。`,
+          official: { mwcMatched: false, legalLookupStatus: "timeout" },
+          signals: {
+            ...minimalReport().signals,
+            boundHitCount: 2,
+            highlights: [],
+            retrievalEvidence: [],
+          },
+        })}
+      />,
+    );
+    expect(container.textContent).toContain(
+      `${prefix}今次未搵到有實質內容嘅公開討論。`,
+    );
+    expect(container.textContent).toContain("詳見上方說明");
+    expect(container.textContent).not.toContain("請自行核實。");
+  });
+
+  it("keeps the calibrated hero when nothing was retrieved", () => {
+    const summary = "公開資料摘要。";
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          summaryZh: summary,
+          signals: {
+            ...minimalReport().signals,
+            boundHitCount: 0,
+            highlights: [],
+            retrievalEvidence: [],
+          },
+        })}
+      />,
+    );
+    expect(container.textContent).toContain(summary);
+    expect(container.textContent).not.toContain("今次未搵到有實質內容嘅公開討論。");
   });
 
   it("keeps the moderate link caution when a public link remains", () => {
@@ -964,10 +1029,12 @@ describe("ReportCard report trust (PR-BC)", () => {
     });
     const { container } = render(<ReportCard report={report} />);
     expect(container.textContent).toContain("相關公開連結（1 條）");
+    expect(container.textContent).toContain("公開資料摘要。");
     expect(container.textContent).toContain(
       "本次未形成討論摘要，以下連結供自行閱讀核實。",
     );
     expect(container.textContent).toContain("請以下方連結");
+    expect(container.textContent).not.toContain("今次未搵到有實質內容嘅公開討論。");
   });
 
   it("bound links redact title and snippet when no highlights", () => {

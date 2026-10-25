@@ -54,7 +54,10 @@ import {
   shouldShowMwcMissWithCrFoundNote,
   shouldShowUnverifiedCompanyRegistrationAlert,
 } from "@/lib/unverified-company-registration";
-import { LEGAL_LOOKUP_DEGRADED_SECTION_ZH } from "@/lib/legal-event-display";
+import {
+  LEGAL_LOOKUP_DEGRADED_SECTION_ZH,
+  LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX,
+} from "@/lib/legal-event-display";
 import {
   isReportLegalLookupDegraded,
   reportCardHeaderBandLabel,
@@ -122,6 +125,26 @@ function confidenceLabelZh(confidence: RiskReport["confidence"]): string {
   if (confidence === "high") return "較高";
   if (confidence === "medium") return "中等";
   return "較低";
+}
+
+/** Shown in 查證摘要 when the signal filter left no public links. */
+const EMPTY_FILTERED_DISCUSSION_ZH = "今次未搵到有實質內容嘅公開討論。";
+
+function displayedSummaryZh(
+  report: RiskReport,
+  evidenceCount: number,
+): string {
+  const highlights = report.signals.highlights ?? [];
+  const filteredEmpty =
+    highlights.length === 0 &&
+    evidenceCount === 0 &&
+    (report.signals.boundHitCount ?? 0) > 0;
+  if (!filteredEmpty) return report.summaryZh;
+  // The judgment block says 「詳見上方說明」 and points at this prefix.
+  if (report.summaryZh.startsWith(LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX)) {
+    return `${LEGAL_LOOKUP_DEGRADED_SUMMARY_PREFIX}${EMPTY_FILTERED_DISCUSSION_ZH}`;
+  }
+  return EMPTY_FILTERED_DISCUSSION_ZH;
 }
 
 function dataSaturationCaution(
@@ -367,6 +390,7 @@ export function ReportCard({
   const saturation = report.evaluation.dataSaturation;
   const saturationNote = dataSaturationCaution(saturation);
   const evidenceCount = report.signals.retrievalEvidence?.length ?? 0;
+  const heroSummary = displayedSummaryZh(report, evidenceCount);
   const showSaturationBanner =
     saturation === "unindexed" ||
     // Moderate copy points at the link list. Hide it when that list was filtered empty.
@@ -642,7 +666,7 @@ export function ReportCard({
             ) : null}
           </div>
           <p className={`mt-3 ${reportHeroBodyClass}`}>
-            {report.summaryZh}
+            {heroSummary}
           </p>
           <p className={`mt-3 ${reportHeroMetaClass}`} role="note">
             {THIRD_PARTY_REDACTION_NOTICE_ZH}

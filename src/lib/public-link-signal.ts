@@ -20,6 +20,10 @@ import type { WebSearchHit } from "./web-search";
  * highlights empty when a hit is not a citable incident, and calibration then
  * uses the bound-but-no-highlight summary. Dropping questions here does not
  * invent that summary.
+ *
+ * A bare "has anyone used them?" question stays hidden. A question that names
+ * a dispute or is looking for victims (糾紛、投訴、苦主) is shown. Negated
+ * praise (唔推薦、冇推薦、唔係好推薦) is a negative first-hand signal.
  */
 
 /** After the signal filter, do not pad the link list. */
@@ -59,6 +63,19 @@ const EN_QUESTION =
 
 const RECRUITMENT =
   /招聘|請人|请人|徵人|征人|出糧|出粮|請緊|请紧|兼職|兼职|全職|全职|職位|职位|月薪|日薪/u;
+
+/**
+ * Dispute / victim-hunting named in the question itself.
+ * 中伏 is omitted: it appears in group titles such as 中伏經驗.
+ */
+const DISPUTE_SEEKING = /糾紛|纠纷|投訴|投诉|苦主|爭議|争议|dispute/iu;
+
+/**
+ * Negated 推薦. Fillers are the forms already treated as not-praise in grading
+ * (唔係好、不太、不值得) plus 冇推薦 / 冇乜推薦. 「有冇人推薦」 is not a match.
+ */
+const NEGATED_PRAISE =
+  /(?:唔係好|唔好|不太|不大|唔係幾|不是好|不值得|唔值得|冇乜|没什么|沒什麼)(?:推薦|推荐)|(?<!人)[唔不](?:推薦|推荐)|(?<![人有])(?:冇|無|无|沒有|没有)(?:推薦|推荐)/u;
 
 export type PublicLinkDropReason =
   | "weak_entity"
@@ -190,18 +207,24 @@ function hasSpecificPraise(window: string): boolean {
   return PRAISE_DETAIL.test(window);
 }
 
+function hasNegatedPraise(window: string): boolean {
+  return NEGATED_PRAISE.test(window);
+}
+
 function signalInWindows(
   windows: string[],
   question: boolean,
 ): PublicLinkKeepReason | null {
   for (const w of windows) {
-    if (FIRST_HAND.test(w) || EN_FIRST_HAND.test(w)) {
+    if (FIRST_HAND.test(w) || EN_FIRST_HAND.test(w) || hasNegatedPraise(w)) {
       return "dispute_or_experience";
     }
     // A court / registry / news marker is never "question-only". `question`
     // is detected on the whole title+snippet, so a reader's 「請問」 in a
     // news snippet must not hide the ruling.
     if (NEWS_OR_REGISTRY.test(w) || EN_NEWS.test(w)) return "news_or_registry";
+    // 「有冇人同X有糾紛？想搵苦主」 names the dispute. A bare usage question does not.
+    if (question && DISPUTE_SEEKING.test(w)) return "dispute_or_experience";
     if (question) continue;
     if (snippetHasDisputeKeyword(w) || EN_DISPUTE.test(w)) {
       return "dispute_or_experience";
