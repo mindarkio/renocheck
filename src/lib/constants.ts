@@ -17,6 +17,13 @@ export const BRAND_TAGLINE = BRAND_TAGLINE_LINES.join(" ");
 export const FOOTER_DISCLAIMER =
   "裝修點評僅根據網上可檢索的公開資料（包括 MWC 名冊與公開討論摘要）整理風險參考分檔，供你自行核實與參考；並不構成法律、投資或專業意見，亦非信貸報告或裝修配對服務。";
 
+/**
+ * Visible HK/UK disambiguation (footer and /about).
+ * Plain text only — do not link renocheck.co.uk.
+ */
+export const SITE_DISAMBIGUATION_LINE =
+  "Renocheck 裝修點評係香港獨立網站，同英國 renocheck.co.uk 無關。";
+
 export const DISCLAIMER_VERSION = "1.2.5";
 
 /** Bump when RiskReport shape changes; stale cache entries are ignored. */

@@ -1,4 +1,10 @@
-# Renocheck (裝修點評)
+import { SITE_DISAMBIGUATION_LINE } from "./constants";
+
+/**
+ * Body of GET /llms.txt. Plain text for AI crawlers.
+ * Do not link renocheck.co.uk — name it only to disambiguate.
+ */
+export const LLMS_TXT = `# Renocheck (裝修點評)
 
 Canonical site: https://renocheck.homes/
 Contact: hello@renocheck.homes
@@ -11,16 +17,23 @@ Contact: hello@renocheck.homes
 
 Renocheck is a Hong Kong homeowner-facing tool that aggregates **public** sources—primarily the Buildings Department Minor Works Contractor (MWC) register and **public web discussion snippets**—into a **risk reference** report when you search by company name, HK phone, or business registration number.
 
+The site is Hong Kong-only and in Traditional Chinese (zh-HK). Reports are public-record summaries, including the MWC register. They are not a credit report, a contractor-matching service, or legal advice.
+
 ## What this service is NOT
 
 - Not a credit report, TransUnion product, or credit score.
 - Not a contractor matching or advertising marketplace.
 - Not user-generated reviews or a forum.
 - Not legal advice or a guarantee of workmanship or completion.
+- Not a renovation cost estimator.
+- Not an expert consultation service.
+- Not a UK service. This website is not renocheck.co.uk.
 
 ## Service area & disambiguation
 
 Renocheck (renocheck.homes) serves Hong Kong only, in Traditional Chinese (zh-HK). It does not offer expert consultation, renovation cost estimates, or builder matching. It is not affiliated with RenoCheck (renocheck.co.uk), a separate UK company.
+
+${SITE_DISAMBIGUATION_LINE}
 
 ## Risk bands (display)
 
@@ -56,3 +69,4 @@ Identical queries may return a cached report snapshot for about **7 days**; see 
 ## Crawling
 
 /report/* URLs are report snapshots and should not be treated as stable SEO landing pages.
+`;

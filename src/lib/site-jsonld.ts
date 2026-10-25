@@ -11,6 +11,14 @@ const AREA_SERVED = {
 const DISAMBIGUATING_DESCRIPTION =
   "Hong Kong-only (zh-HK) public-record risk-reference search for renovation contractors. Not affiliated with renocheck.co.uk (UK). No expert consultation or cost estimates.";
 
+/** Keep the original「裝修點評」alias, then the HK-specific names. */
+const BRAND_ALTERNATE_NAMES = [
+  "裝修點評",
+  "Renocheck 香港",
+  "Renocheck 裝修點評",
+  "renocheck.homes",
+] as const;
+
 export function buildSiteJsonLd(siteUrl: string) {
   const orgId = `${siteUrl}/#org`;
   return {
@@ -20,7 +28,7 @@ export function buildSiteJsonLd(siteUrl: string) {
         "@type": "WebSite" as const,
         "@id": `${siteUrl}/#website`,
         name: "Renocheck 裝修點評",
-        alternateName: ["裝修點評"],
+        alternateName: [...BRAND_ALTERNATE_NAMES],
         url: siteUrl,
         inLanguage: "zh-HK",
         description: BRAND_TAGLINE,
@@ -30,7 +38,7 @@ export function buildSiteJsonLd(siteUrl: string) {
         "@type": "Organization" as const,
         "@id": orgId,
         name: "Renocheck",
-        alternateName: "裝修點評",
+        alternateName: [...BRAND_ALTERNATE_NAMES],
         url: siteUrl,
         logo: `${siteUrl}/logo/mark-color-on-white.png`,
         email: SITE_CONTACT_EMAIL,
