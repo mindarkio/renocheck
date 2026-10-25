@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { APP_VERSION, FOOTER_DISCLAIMER } from "@/lib/constants";
+import { APP_VERSION, FOOTER_DISCLAIMER, SITE_DISAMBIGUATION_LINE } from "@/lib/constants";
 import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
 import { SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
 
@@ -40,6 +40,10 @@ export function SiteFooter() {
             {FOOTER_DISCLAIMER}
           </p>
         </div>
+
+        <p className="mt-3 text-pretty text-center text-sm leading-snug text-primary-foreground/92">
+          {SITE_DISAMBIGUATION_LINE}
+        </p>
 
         <nav
           className="mt-3 border-t border-white/12 pt-3"

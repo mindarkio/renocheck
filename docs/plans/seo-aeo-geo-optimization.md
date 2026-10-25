@@ -20,7 +20,7 @@
 | `/report/[fingerprint]` | **Client-only**（`ReportView` fetch） | 首屏幾乎無報告 HTML；**不宜作 SEO 落地頁**；應 **noindex**（避免薄內容／過期快照被收錄） |
 | `/api/*` | API | 不應索引 |
 
-**[Certain]** Phase 1–3 已加 `robots.ts`、`sitemap.ts`、`metadataBase`、OG/Twitter、首頁 JSON-LD、FAQ JSON-LD、`public/llms.txt`。
+**[Certain]** Phase 1–3 已加 `robots.ts`、`sitemap.ts`、`metadataBase`、OG/Twitter、首頁 JSON-LD、FAQ JSON-LD、`/llms.txt`（`src/app/llms.txt/route.ts`，內容喺 `src/lib/llms-txt.ts`）。
 
 ### 1.2 技術 SEO
 
@@ -49,7 +49,7 @@
 
 | 項 | 現況 | 建議 |
 |----|------|------|
-| `llms.txt` / 站點說明給 agent | ✅ `public/llms.txt` | 域名切換後確認 canonical 行 |
+| `llms.txt` / 站點說明給 agent | ✅ `src/lib/llms-txt.ts` → `/llms.txt` | 域名切換後確認 canonical 行 |
 | 品牌與域名一致 | 郵件已 `.homes`；站仍 `*.vercel.app` 直至你駁 primary | 設 `NEXT_PUBLIC_SITE_URL` |
 | 誤導風險（「信用評級」「TU」） | 首頁／FAQ 已用風險參考表述 | 上線後抽樣 AI 引用 |
 | 可驗證主張 | pipeline 有 gold eval | 公開頁寫 **非**實時、7 日 cache、非法律意見 |
