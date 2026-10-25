@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SITE_DISAMBIGUATION_LINE } from "@/lib/constants";
 import { pageMetadata, SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
 import {
   ContentCard,
@@ -44,6 +45,9 @@ export default function AboutPage() {
       />
       <ContentCard>
         <ContentPageTitle>關於 Renocheck</ContentPageTitle>
+        <p className="mt-3 text-sm leading-relaxed text-foreground">
+          {SITE_DISAMBIGUATION_LINE}
+        </p>
         <ContentSections className="space-y-4">
           <p>
             <strong>Renocheck（裝修點評）</strong>站在業主防禦角度，協助你在委聘裝修承辦商前，快速查閱

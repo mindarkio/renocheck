@@ -1,7 +1,6 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 import robots from "@/app/robots";
+import { LLMS_TXT } from "@/lib/llms-txt";
 import sitemap from "@/app/sitemap";
 import { metadata } from "@/app/quote/page";
 import {
@@ -59,7 +58,7 @@ describe("/quote indexing", () => {
   });
 
   it("describes /quote in llms.txt without claiming automated analysis", () => {
-    const text = readFileSync(path.join(process.cwd(), "public/llms.txt"), "utf8");
+    const text = LLMS_TXT;
     expect(text).toContain(
       "- /quote — quotation self-check list (missing or vague items only; does not judge price)",
     );
