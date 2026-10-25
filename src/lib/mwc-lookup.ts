@@ -66,6 +66,77 @@ function throwIfMwcLookupFailed(error: { message: string } | null): void {
   if (error) throw new Error("mwc_lookup_failed", { cause: error });
 }
 
+/** Contains-matches ranked in memory. Leading-wildcard ILIKE cannot ORDER BY length. */
+export const MWC_NAME_CANDIDATE_LIMIT = 20;
+
+export function foldMwcName(value: string): string {
+  return value.normalize("NFKC").toLowerCase();
+}
+
+function fieldMatchTier(field: string | null | undefined, term: string): number | null {
+  const name = field?.trim();
+  const needle = term.trim();
+  if (!name || !needle) return null;
+  const hay = foldMwcName(name);
+  const pin = foldMwcName(needle);
+  if (!pin || !hay.includes(pin)) return null;
+  if (hay === pin) return 0;
+  if (hay.startsWith(pin)) return 1;
+  return 2;
+}
+
+function mwcNameMatchTier(row: MwcRow, term: string): number {
+  const tiers = [fieldMatchTier(row.company_name, term), fieldMatchTier(row.company_name_en, term)]
+    .filter((tier): tier is number => tier !== null);
+  if (tiers.length === 0) return 2;
+  return Math.min(...tiers);
+}
+
+/** Exact match, then prefix match, then shortest company_name. */
+export function pickRankedMwcRow(rows: MwcRow[], term: string): MwcRow | null {
+  if (rows.length === 0) return null;
+  const ranked = [...rows].sort((a, b) => {
+    const tier = mwcNameMatchTier(a, term) - mwcNameMatchTier(b, term);
+    if (tier !== 0) return tier;
+    const length = [...a.company_name].length - [...b.company_name].length;
+    if (length !== 0) return length;
+    const reg = a.registration_no.localeCompare(b.registration_no);
+    if (reg !== 0) return reg;
+    return a.company_name.localeCompare(b.company_name);
+  });
+  return ranked[0] ?? null;
+}
+
+function columnsForMwcSelect(): string {
+  if (
+    mwcCompanyNameEnColumn === "absent" &&
+    Date.now() - mwcCompanyNameEnAbsentAt < MWC_EN_COLUMN_REPROBE_MS
+  ) {
+    return MWC_CONTRACTOR_SELECT;
+  }
+  return MWC_CONTRACTOR_SELECT_WITH_EN;
+}
+
+function markEnColumnAbsent(): void {
+  mwcCompanyNameEnColumn = "absent";
+  mwcCompanyNameEnAbsentAt = Date.now();
+}
+
+async function withMwcColumns<T>(
+  run: (columns: string) => Promise<{ data: T; error: MwcQueryError | null }>,
+): Promise<{ data: T; error: MwcQueryError | null }> {
+  const columns = columnsForMwcSelect();
+  const first = await run(columns);
+  if (columns !== MWC_CONTRACTOR_SELECT && isMissingMwcCompanyNameEnColumn(first.error)) {
+    markEnColumnAbsent();
+    return run(MWC_CONTRACTOR_SELECT);
+  }
+  if (columns === MWC_CONTRACTOR_SELECT_WITH_EN && !first.error) {
+    mwcCompanyNameEnColumn = "present";
+  }
+  return first;
+}
+
 function mergeMwcRows(primary: MwcRow[], extra: MwcRow[]): MwcRow[] {
   const out: MwcRow[] = [];
   const seen = new Set<string>();
@@ -83,14 +154,39 @@ async function ilikeContractors(
   column: "company_name" | "company_name_en",
   pattern: string,
 ): Promise<{ data: MwcRow[] | null; error: MwcQueryError | null }> {
-  const { data, error } = await supabase
-    .from("mwc_contractors")
-    .select(MWC_CONTRACTOR_SELECT)
-    .ilike(column, pattern)
-    .limit(2);
+  const result = await withMwcColumns(async (columns) => {
+    const { data, error } = await supabase
+      .from("mwc_contractors")
+      .select(columns)
+      .ilike(column, pattern)
+      .limit(MWC_NAME_CANDIDATE_LIMIT);
+    return {
+      data: (data as MwcRow[] | null) ?? null,
+      error: error as MwcQueryError | null,
+    };
+  });
+  return result;
+}
+
+async function matchNameColumn(
+  supabase: SupabaseClient,
+  column: "company_name" | "company_name_en",
+  term: string,
+): Promise<{ data: MwcRow[] | null; error: MwcQueryError | null }> {
+  const escaped = escapeIlikePattern(term);
+  const contains = await ilikeContractors(supabase, column, `%${escaped}%`);
+  if (contains.error || !contains.data) return contains;
+  const windowFull = contains.data.length >= MWC_NAME_CANDIDATE_LIMIT;
+  const sawExact = contains.data.some((row) => mwcNameMatchTier(row, term) === 0);
+  if (!windowFull || sawExact) return contains;
+
+  const exact = await ilikeContractors(supabase, column, escaped);
+  if (exact.error) return exact;
+  const prefix = await ilikeContractors(supabase, column, `${escaped}%`);
+  if (prefix.error) return prefix;
   return {
-    data: (data as MwcRow[] | null) ?? null,
-    error: error as MwcQueryError | null,
+    data: mergeMwcRows(contains.data, mergeMwcRows(exact.data ?? [], prefix.data ?? [])),
+    error: null,
   };
 }
 
@@ -99,42 +195,50 @@ export async function lookupMwcWithMeta(
   input: NormalizedSearchInput,
 ): Promise<MwcLookupResult> {
   if (input.phone) {
-    const { data, error } = await supabase
-      .from("mwc_contractors")
-      .select(MWC_CONTRACTOR_SELECT)
-      .eq("phone", input.phone)
-      .limit(1)
-      .maybeSingle();
+    const phone = input.phone;
+    const { data, error } = await withMwcColumns(async (columns) => {
+      const res = await supabase
+        .from("mwc_contractors")
+        .select(columns)
+        .eq("phone", phone)
+        .limit(1)
+        .maybeSingle();
+      return {
+        data: (res.data as MwcRow | null) ?? null,
+        error: res.error as MwcQueryError | null,
+      };
+    });
     throwIfMwcLookupFailed(error);
     if (data) return { row: data, ambiguous: false };
   }
 
   if (input.br) {
-    const { data, error } = await supabase
-      .from("mwc_contractors")
-      .select(MWC_CONTRACTOR_SELECT)
-      .ilike("registration_no", `%${escapeIlikePattern(input.br)}%`)
-      .limit(1)
-      .maybeSingle();
+    const br = input.br;
+    const { data, error } = await withMwcColumns(async (columns) => {
+      const res = await supabase
+        .from("mwc_contractors")
+        .select(columns)
+        .ilike("registration_no", `%${escapeIlikePattern(br)}%`)
+        .limit(1)
+        .maybeSingle();
+      return {
+        data: (res.data as MwcRow | null) ?? null,
+        error: res.error as MwcQueryError | null,
+      };
+    });
     throwIfMwcLookupFailed(error);
     if (data) return { row: data, ambiguous: false };
   }
 
   if (input.companyName) {
     for (const term of mwcCompanyNameLookupTerms(input.companyName)) {
-      const pattern = `%${escapeIlikePattern(term)}%`;
-      const nameRes = await ilikeContractors(supabase, "company_name", pattern);
+      const nameRes = await matchNameColumn(supabase, "company_name", term);
       throwIfMwcLookupFailed(nameRes.error);
       let rows = nameRes.data ?? [];
-      if (rows.length < 2 && shouldQueryCompanyNameEn(term)) {
-        const enRes = await ilikeContractors(
-          supabase,
-          "company_name_en",
-          pattern,
-        );
+      if (shouldQueryCompanyNameEn(term)) {
+        const enRes = await matchNameColumn(supabase, "company_name_en", term);
         if (isMissingMwcCompanyNameEnColumn(enRes.error)) {
-          mwcCompanyNameEnColumn = "absent";
-          mwcCompanyNameEnAbsentAt = Date.now();
+          markEnColumnAbsent();
         } else {
           throwIfMwcLookupFailed(enRes.error);
           mwcCompanyNameEnColumn = "present";
@@ -142,7 +246,10 @@ export async function lookupMwcWithMeta(
         }
       }
       if (rows.length === 0) continue;
-      return { row: rows[0] ?? null, ambiguous: rows.length >= 2 };
+      return {
+        row: pickRankedMwcRow(rows, term) ?? rows[0] ?? null,
+        ambiguous: rows.length >= 2,
+      };
     }
     return { row: null, ambiguous: false };
   }

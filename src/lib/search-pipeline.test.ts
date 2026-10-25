@@ -656,6 +656,56 @@ describe("runSearchPipeline whole-pipeline deadline (PR24 S1)", () => {
     getCachedReport.mockResolvedValue(null);
   });
 
+  it("passes the register English name into web search", async () => {
+    vi.mocked(lookupMwcWithMeta).mockResolvedValueOnce({
+      row: {
+        company_name: "齊來設計居+屋有限公司",
+        company_name_en: "Dimensions Interiors Limited",
+        phone: null,
+        registration_no: "MWC-1",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+      ambiguous: false,
+    });
+    await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "齊來設計",
+    });
+    expect(fetchWebSearchHitsForEntity).toHaveBeenCalledWith(
+      expect.objectContaining({ companyName: "齊來設計" }),
+      expect.objectContaining({
+        mwcCompanyName: "齊來設計居+屋有限公司",
+        mwcCompanyNameEn: "Dimensions Interiors Limited",
+        mwcAmbiguous: false,
+      }),
+    );
+  });
+
+  it("tells web search when the register match is ambiguous", async () => {
+    vi.mocked(lookupMwcWithMeta).mockResolvedValueOnce({
+      row: {
+        company_name: "齊來設計居+屋有限公司",
+        company_name_en: "Dimensions Interiors Limited",
+        phone: null,
+        registration_no: "MWC-1",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+      ambiguous: true,
+    });
+    await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "齊來設計",
+    });
+    expect(fetchWebSearchHitsForEntity).toHaveBeenCalledWith(
+      expect.objectContaining({ companyName: "齊來設計" }),
+      expect.objectContaining({ mwcAmbiguous: true }),
+    );
+  });
+
   it("bounds SERP by deadline − LLM reserve and passes an abort signal to the LLM", async () => {
     const t0 = Date.now();
     await runSearchPipeline({

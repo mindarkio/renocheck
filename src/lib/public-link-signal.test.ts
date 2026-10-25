@@ -108,6 +108,18 @@ describe("classifyPublicLinkHit — question posts and listicles", () => {
 });
 
 describe("classifyPublicLinkHit — signal worth showing", () => {
+  it("matches an English name regardless of case", () => {
+    const decision = classifyPublicLinkHit(
+      hit(
+        "Hang Wai Engineering Limited took the deposit and disappeared",
+        "",
+        "https://www.lihkg.com/thread/3",
+      ),
+      ["HANG WAI ENGINEERING LIMITED"],
+    );
+    expect(decision).toEqual({ keep: true, reason: "dispute_or_experience" });
+  });
+
   it("keeps a first-hand dispute", () => {
     const decision = classifyPublicLinkHit(
       hit("齊來設計裝修爛尾，訂金收咗就失聯"),

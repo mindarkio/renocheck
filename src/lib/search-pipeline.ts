@@ -145,7 +145,14 @@ export async function runSearchPipeline(
   const mwc = mwcLookup.row;
   const mwcMs = Math.round(performance.now() - mwcStart);
 
-  const mwcOpts = mwc ? { mwcCompanyName: mwc.company_name } : undefined;
+  const mwcEnglish = mwc?.company_name_en?.trim();
+  const mwcOpts = mwc
+    ? {
+        mwcCompanyName: mwc.company_name,
+        ...(mwcEnglish ? { mwcCompanyNameEn: mwcEnglish } : {}),
+        mwcAmbiguous: mwcLookup.ambiguous,
+      }
+    : undefined;
   const searchLabelUsed = resolveAuthoritativeSearchLabel(input, mwcOpts);
   const companiesRegistryPromise = lookupCompaniesRegistryForSearch(
     input,
@@ -180,7 +187,7 @@ export async function runSearchPipeline(
   let anySearchSourceOk = queriesCompleted > 0;
 
   const tokens = entityMatchTokens(input, {
-    mwcCompanyName: mwc?.company_name,
+    ...mwcOpts,
     phoneNormalized: input.phone,
   });
   const phoneForL1 = normalizeHongKongPhone(input.phone) ?? undefined;

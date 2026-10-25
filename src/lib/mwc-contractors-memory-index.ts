@@ -2,16 +2,19 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { NormalizedSearchInput } from "./normalize-search-input";
 import {
+  foldMwcName,
   isMissingMwcCompanyNameEnColumn,
   MWC_CONTRACTOR_SELECT,
   MWC_CONTRACTOR_SELECT_WITH_EN,
+  pickRankedMwcRow,
   type MwcLookupResult,
   type MwcRow,
 } from "./mwc-lookup";
 import { mwcCompanyNameLookupTerms } from "./mwc-company-search-terms";
 
 function ilikeSubstring(haystack: string, needle: string): boolean {
-  return haystack.toLowerCase().includes(needle.toLowerCase());
+  const pin = foldMwcName(needle);
+  return pin.length > 0 && foldMwcName(haystack).includes(pin);
 }
 
 /** In-memory MWC name lookup — same semantics as `lookupMwcWithMeta` (company / phone / br). */
@@ -126,7 +129,7 @@ export class MwcContractorsMemoryIndex {
         );
         if (matches.length === 0) continue;
         if (matches.length >= 2) ambiguous = true;
-        return { row: matches[0], ambiguous };
+        return { row: pickRankedMwcRow(matches, term), ambiguous };
       }
       return { row: null, ambiguous: false };
     }

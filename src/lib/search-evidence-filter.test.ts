@@ -75,6 +75,52 @@ describe("filterWebSearchHitsForLlm", () => {
     expect(out).toHaveLength(1);
   });
 
+  it("accepts the 齊來設計 brand anchor and an English name in any case", () => {
+    const tokens = entityMatchTokens(
+      { companyName: "齊來設計" },
+      {
+        mwcCompanyName: "齊來設計居+屋有限公司",
+        mwcCompanyNameEn: "Dimensions Interiors Limited",
+      },
+    );
+    const hits: WebSearchHit[] = [
+      {
+        title: "齊來設計裝修投訴",
+        url: "https://www.lihkg.com/thread/9",
+        snippet: "訂金",
+      },
+      {
+        title: "dimensions interiors limited review",
+        url: "https://www.facebook.com/groups/a/posts/2",
+        snippet: "delay",
+      },
+      {
+        title: "設計裝修流程",
+        url: "https://www.discuss.com.hk/viewthread.php?tid=1",
+        snippet: "無公司名",
+      },
+    ];
+    expect(filterWebSearchHitsForLlm(hits, tokens).map((hit) => hit.url)).toEqual([
+      "https://www.lihkg.com/thread/9",
+      "https://www.facebook.com/groups/a/posts/2",
+    ]);
+
+    const english = entityMatchTokens({ companyName: "HANG WAI ENGINEERING LIMITED" });
+    expect(english).not.toContain("HANG W");
+    expect(
+      filterWebSearchHitsForLlm(
+        [
+          {
+            title: "Complaint about hang wai engineering limited",
+            url: "https://www.lihkg.com/thread/8",
+            snippet: "overcharge",
+          },
+        ],
+        english,
+      ),
+    ).toHaveLength(1);
+  });
+
   it("does not bind 物種源始 on bare 源始 token", () => {
     const tokens = entityMatchTokens({
       companyName: "源始（國際）設計及裝修有限公司",
