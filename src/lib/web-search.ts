@@ -2,6 +2,7 @@ import { SearchPipelineError } from "./search-pipeline-error";
 import { resolveAuthoritativeSearchLabel } from "./entity-report-context";
 import { normalizeHongKongPhone } from "./normalize-phone";
 import {
+  extraSearchPhrases,
   normalizeSearchLabelForSerp,
   resolveBrandSerpSearchPhrase,
 } from "./search-entity-labels";
@@ -129,6 +130,22 @@ export function buildWebSearchQueryBroad(
   return `"${entity}" 裝修 (投訴 OR 苦主 OR 爛尾 OR 糾紛 OR 超支)`;
 }
 
+/** Characters Google treats as operators unless the name is quoted. */
+const SERP_LITERAL_SPECIAL = /[+&/()（）]/;
+
+const LOOSE_RISK = "(投訴 OR 苦主 OR 爛尾 OR 糾紛 OR 超支)";
+
+function quoteSerpLiteral(phrase: string): string {
+  return `"${phrase.replace(/"/g, "").trim()}"`;
+}
+
+function stripCompanySuffixForQuery(label: string): string {
+  return label
+    .replace(/有限公司$/u, "")
+    .replace(/有限責任公司$/u, "")
+    .trim();
+}
+
 /** Core terms for loose Q2 (no surrounding quotes). */
 export function looseEntityCoreTerms(entityLabel: string): string {
   return entityLabel
@@ -146,15 +163,20 @@ export function buildWebSearchQueryLoose(
     phone?: string;
     br?: string;
   },
-  opts?: { mwcCompanyName?: string },
+  opts?: { mwcCompanyName?: string; mwcCompanyNameEn?: string },
 ): string {
   const entity = normalizeSearchLabelForSerp(
     resolveAuthoritativeSearchLabel(input, opts),
   );
   const brandPhrase = resolveBrandSerpSearchPhrase(entity);
-  const risk = "(投訴 OR 苦主 OR 爛尾 OR 糾紛 OR 超支)";
+  const risk = LOOSE_RISK;
   if (brandPhrase) {
-    return `"${brandPhrase}" 裝修 ${risk}`;
+    return `${quoteSerpLiteral(brandPhrase)} 裝修 ${risk}`;
+  }
+  // `+`, `&`, `/`, and parentheses must stay inside quotes or Google splits them.
+  if (SERP_LITERAL_SPECIAL.test(entity)) {
+    const core = stripCompanySuffixForQuery(entity);
+    return `${quoteSerpLiteral(core)} 裝修 ${risk}`;
   }
   const core = looseEntityCoreTerms(entity);
   const parts = core.split(/\s+/).filter((p) => p.length >= 2);
@@ -175,9 +197,85 @@ export function buildEntitySearchQueries(
     phone?: string;
     br?: string;
   },
-  opts?: { mwcCompanyName?: string },
+  opts?: { mwcCompanyName?: string; mwcCompanyNameEn?: string },
 ): [string, string] {
   return [buildWebSearchQuery(input, opts), buildWebSearchQueryLoose(input, opts)];
+}
+
+export type EntityNameOpts = {
+  mwcCompanyName?: string;
+  mwcCompanyNameEn?: string;
+};
+
+export type PlannedWebSearch = {
+  id: "q1" | "q2" | "alias" | "q3";
+  query: string;
+  pages: number;
+};
+
+/** Default Serp HTTP budget: Q1 pages + Q2 pages + Q3 page when a phone is present. */
+export function serpRequestBudget(hasPhone: boolean): number {
+  return serpPageCount() + serpQ2PageCount() + (hasPhone ? serpQ3PageCount() : 0);
+}
+
+function buildAliasWebSearchQuery(phrases: string[]): string {
+  const quoted = phrases.map((phrase) => quoteSerpLiteral(phrase));
+  const name = quoted.length === 1 ? quoted[0]! : `(${quoted.join(" OR ")})`;
+  return `${name} 裝修 ${LOOSE_RISK}`;
+}
+
+/**
+ * Q1 + Q2, plus at most one alias query (typed brand and/or register English
+ * name). The alias spends Q1's spare page so the HTTP count stays inside
+ * `serpRequestBudget`. When no spare page exists, the alias is OR'd into Q2.
+ */
+export function planEntityWebSearches(
+  input: {
+    companyName?: string;
+    phone?: string;
+    br?: string;
+  },
+  opts?: EntityNameOpts,
+): PlannedWebSearch[] {
+  const phone = normalizeHongKongPhone(input.phone);
+  const hasPhone = Boolean(phone);
+  const budget = serpRequestBudget(hasPhone);
+  const phrases = extraSearchPhrases(input, opts);
+  const aliasQuery = phrases.length > 0 ? buildAliasWebSearchQuery(phrases) : undefined;
+
+  let q1Pages = serpPageCount();
+  let q2Pages = serpQ2PageCount();
+  const q3Pages = hasPhone ? serpQ3PageCount() : 0;
+  let runAlias = Boolean(aliasQuery);
+  const total = () => q1Pages + q2Pages + (runAlias ? 1 : 0) + q3Pages;
+  while (total() > budget && q1Pages > 1) q1Pages -= 1;
+  while (total() > budget && q2Pages > 1) q2Pages -= 1;
+  if (total() > budget) runAlias = false;
+
+  let q2 = buildWebSearchQueryLoose(input, opts);
+  if (aliasQuery && !runAlias) {
+    q2 = `(${q2}) OR (${aliasQuery})`;
+  }
+
+  const planned: PlannedWebSearch[] = [
+    { id: "q1", query: buildWebSearchQuery(input, opts), pages: q1Pages },
+    { id: "q2", query: q2, pages: q2Pages },
+  ];
+  if (aliasQuery && runAlias) {
+    planned.push({ id: "alias", query: aliasQuery, pages: 1 });
+  }
+  if (phone) {
+    planned.push({
+      id: "q3",
+      query: buildPhoneAnchorQuery(phone),
+      pages: q3Pages,
+    });
+  }
+  return planned;
+}
+
+export function countPlannedSerpRequests(planned: PlannedWebSearch[]): number {
+  return planned.reduce((sum, step) => sum + step.pages, 0);
 }
 
 /** Eval Q3: same loose shape as production Q2 (alias). */
@@ -526,77 +624,57 @@ export type EntityWebSearchResult = {
   queriesCompleted: number;
 };
 
-/** Production: Q1 then Q2; Q2 failure returns Q1 hits only. */
+const QUERY_LOG_INDEX: Record<PlannedWebSearch["id"], number> = {
+  q1: 1,
+  q2: 2,
+  q3: 3,
+  alias: 5,
+};
+
+/** Production: Q1 then Q2; a later query failure keeps earlier hits. */
 export async function fetchWebSearchHitsForEntity(
   input: {
     companyName?: string;
     phone?: string;
     br?: string;
   },
-  opts?: { mwcCompanyName?: string; deadlineMs?: number },
+  opts?: EntityNameOpts & { deadlineMs?: number },
 ): Promise<EntityWebSearchResult> {
   const deadlineMs = opts?.deadlineMs;
-  const [q1, q2] = buildEntitySearchQueries(input, opts);
-  const q1Pages = serpPageCount();
-  const q2Pages = serpQ2PageCount();
-
-  const q1Start = performance.now();
+  const planned = planEntityWebSearches(input, opts);
   let merged: WebSearchHit[] = [];
   let queriesCompleted = 0;
-  let q2Ms: number | undefined;
+  const timings: Partial<Record<PlannedWebSearch["id"], number>> = {};
 
-  try {
-    const q1Hits = await fetchSerpOrganicHits(q1, { pages: q1Pages, deadlineMs });
-    merged = dedupeHits(q1Hits);
-    queriesCompleted = 1;
-  } catch (e) {
-    console.warn(
-      JSON.stringify({
-        event: "serp_query_failed",
-        query_index: 1,
-        message: String(e).slice(0, 160),
-      }),
-    );
-  }
-  const q1Ms = Math.round(performance.now() - q1Start);
-
-  try {
-    const q2Start = performance.now();
-    const q2Hits = await fetchSerpOrganicHits(q2, { pages: q2Pages, deadlineMs });
-    q2Ms = Math.round(performance.now() - q2Start);
-    merged = dedupeHits([...merged, ...q2Hits]);
-    queriesCompleted += 1;
-  } catch (e) {
-    console.warn(
-      JSON.stringify({
-        event: "serp_query_failed",
-        query_index: 2,
-        message: String(e).slice(0, 160),
-      }),
-    );
-  }
-
-  const normalizedPhone = normalizeHongKongPhone(input.phone);
-  let q3Ms: number | undefined;
-  if (normalizedPhone) {
-    const q3Pages = serpQ3PageCount();
+  for (const step of planned) {
+    const started = performance.now();
     try {
-      const q3Start = performance.now();
-      const q3 = buildPhoneAnchorQuery(normalizedPhone);
-      const q3Hits = await fetchSerpOrganicHits(q3, { pages: q3Pages, deadlineMs });
-      q3Ms = Math.round(performance.now() - q3Start);
-      merged = dedupeHits([...merged, ...q3Hits]);
+      const hits = await fetchSerpOrganicHits(step.query, {
+        pages: step.pages,
+        deadlineMs,
+      });
+      merged = dedupeHits([...merged, ...hits]);
       queriesCompleted += 1;
+      timings[step.id] = Math.round(performance.now() - started);
     } catch (e) {
+      if (step.id === "q1") {
+        timings.q1 = Math.round(performance.now() - started);
+      }
       console.warn(
         JSON.stringify({
           event: "serp_query_failed",
-          query_index: 3,
+          query_index: QUERY_LOG_INDEX[step.id],
+          query_kind: step.id,
           message: String(e).slice(0, 160),
         }),
       );
     }
   }
+
+  const q1 = planned.find((step) => step.id === "q1");
+  const q2 = planned.find((step) => step.id === "q2");
+  const alias = planned.find((step) => step.id === "alias");
+  const q3 = planned.find((step) => step.id === "q3");
 
   console.info(
     JSON.stringify({
@@ -604,12 +682,14 @@ export async function fetchWebSearchHitsForEntity(
       provider: resolveWebSearchProvider(),
       organic_merged: merged.length,
       queries_completed: queriesCompleted,
-      q1_pages: q1Pages,
-      q2_pages: q2Pages,
-      q1_ms: q1Ms,
-      ...(q2Ms != null ? { q2_ms: q2Ms } : {}),
-      ...(normalizedPhone ? { q3_pages: serpQ3PageCount() } : {}),
-      ...(q3Ms != null ? { q3_ms: q3Ms } : {}),
+      q1_pages: q1?.pages ?? 0,
+      q2_pages: q2?.pages ?? 0,
+      q1_ms: timings.q1,
+      ...(timings.q2 != null ? { q2_ms: timings.q2 } : {}),
+      ...(alias ? { alias_pages: alias.pages } : {}),
+      ...(timings.alias != null ? { alias_ms: timings.alias } : {}),
+      ...(q3 ? { q3_pages: q3.pages } : {}),
+      ...(timings.q3 != null ? { q3_ms: timings.q3 } : {}),
     }),
   );
 

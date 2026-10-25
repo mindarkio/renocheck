@@ -56,4 +56,36 @@ describe("MwcContractorsMemoryIndex", () => {
     expect(r.ambiguous).toBe(true);
     expect(r.row?.company_name).toBeTruthy();
   });
+
+  it("ranks exact over prefix over a contains match", () => {
+    const ranked = new MwcContractorsMemoryIndex([
+      {
+        company_name: "某某齊來設計顧問有限公司",
+        phone: null,
+        registration_no: "MWC-CONTAINS",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+      {
+        company_name: "齊來設計居+屋及擴建工程有限公司",
+        phone: null,
+        registration_no: "MWC-PREFIX",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+      {
+        company_name: "齊來設計",
+        phone: null,
+        registration_no: "MWC-EXACT",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+    ]);
+    const found = ranked.lookupWithMeta(companyNameOnlySearchInput("齊來設計"));
+    expect(found.row?.registration_no).toBe("MWC-EXACT");
+    expect(found.ambiguous).toBe(true);
+  });
 });

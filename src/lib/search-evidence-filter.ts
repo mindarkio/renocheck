@@ -41,6 +41,7 @@ function hitBlob(h: WebSearchHit): string {
 function normalizeMatchText(s: string): string {
   return s
     .normalize("NFKC")
+    .toLowerCase()
     .replace(/\s+/g, "")
     .replace(/（/g, "(")
     .replace(/）/g, ")");

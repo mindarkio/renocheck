@@ -31,4 +31,5 @@ When `looseEntityCoreTerms` yields **≥2** tokens, production Q2 uses **conjunc
 
 ## Out of scope
 
-- Third production query, CSE, scraping.
+- CSE, scraping.
+- A third production query that increases the Serp HTTP budget. [DEC-0014](DEC-0014-typed-brand-and-english-name-search.md) adds one alias query only by spending Q1's spare page, so the default request count stays 3 (4 with a phone).

@@ -119,10 +119,11 @@ function emptyDropped(): Record<PublicLinkDropReason, number> {
   };
 }
 
-/** Same folding as L1 token match (NFKC, drop whitespace, ASCII parens). */
+/** Same folding as L1 token match (NFKC, case-fold, drop whitespace, ASCII parens). */
 export function normalizePublicLinkText(s: string): string {
   return s
     .normalize("NFKC")
+    .toLowerCase()
     .replace(/\s+/g, "")
     .replace(/（/g, "(")
     .replace(/）/g, ")");
