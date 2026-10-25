@@ -524,6 +524,31 @@ describe("selectPublicLinkHits", () => {
     expect(selected.dropped.over_cap).toBe(0);
   });
 
+  it("keeps kept dispute statements past the display cap too", () => {
+    const hits = Array.from({ length: 10 }, (_, i) =>
+      hit(`${COMPANY}爛尾 個案${i}`, "苦主分享", `https://www.lihkg.com/thread/s${i}`),
+    );
+    const selected = selectPublicLinkHits(hits, TOKENS, {
+      keepDisputeSources: true,
+    });
+    expect(selected.hits).toHaveLength(10);
+    expect(selected.dropped.over_cap).toBe(0);
+  });
+
+  it("keeps every cited highlight past the display cap", () => {
+    const hits = Array.from({ length: 9 }, (_, i) =>
+      hit(
+        "有否人使用過齊來設計效果如何？",
+        "",
+        `https://www.facebook.com/groups/a/posts/c${i}`,
+      ),
+    );
+    const selected = selectPublicLinkHits(hits, TOKENS, {
+      alwaysIncludeUrls: new Set(hits.map((h) => h.url)),
+    });
+    expect(selected.hits).toHaveLength(9);
+  });
+
   it("still hides a dispute-keyword question when a summary was formed", () => {
     const disputeQuestion = hit(
       "中伏經驗 | 有否人使用過齊來設計效果如何？",
