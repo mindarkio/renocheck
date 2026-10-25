@@ -9,7 +9,7 @@ const AREA_SERVED = {
 
 /** Approved disambiguation (W6). Not a visible UI string. */
 const DISAMBIGUATING_DESCRIPTION =
-  "Hong Kong-only (zh-HK) public-record risk-reference search for renovation contractors. Not affiliated with renocheck.co.uk (UK). No expert consultation or cost estimates.";
+  "Hong Kong-only (zh-HK) public-information risk-reference search for renovation contractors. Not affiliated with renocheck.co.uk (UK). No expert consultation or cost estimates.";
 
 /** Keep the original「裝修點評」alias, then the HK-specific names. */
 const BRAND_ALTERNATE_NAMES = [

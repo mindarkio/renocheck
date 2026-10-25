@@ -22,7 +22,7 @@ describe("site JSON-LD disambiguation", () => {
   it("marks the organization as Hong Kong and distinct from renocheck.co.uk", () => {
     expect(organization?.areaServed.name).toBe("Hong Kong");
     expect(organization?.disambiguatingDescription).toBe(
-      "Hong Kong-only (zh-HK) public-record risk-reference search for renovation contractors. Not affiliated with renocheck.co.uk (UK). No expert consultation or cost estimates.",
+      "Hong Kong-only (zh-HK) public-information risk-reference search for renovation contractors. Not affiliated with renocheck.co.uk (UK). No expert consultation or cost estimates.",
     );
     expect(webApp?.inLanguage).toBe("zh-HK");
     expect(webApp?.areaServed.name).toBe("Hong Kong");
