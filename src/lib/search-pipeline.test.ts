@@ -405,6 +405,89 @@ describe("runSearchPipeline cache + legal degraded", () => {
     expect(result.cacheHit).toBe(false);
   });
 
+  it("hides question-only links without changing the L1 grade inputs", async () => {
+    const questions = [
+      {
+        title: "有否人使用過齊來設計居+屋Dimensions Interiors 效果如何？",
+        url: "https://www.facebook.com/groups/a/posts/1",
+        snippet: "想請教",
+      },
+      {
+        title: "想請教大家齊來設計有人幫襯過嘛？有任何後續",
+        url: "https://www.facebook.com/groups/a/posts/2",
+        snippet: "",
+      },
+      {
+        title: "想全屋裝修水電做。但係私想分開做，唔洗啲咩特別design",
+        url: "https://www.facebook.com/groups/a/posts/3",
+        snippet: "群組有人提過齊來設計",
+      },
+      {
+        title: "1. Homic Décor. 居屋・舊屋 2. 翻新齊來設計居+屋",
+        url: "https://www.facebook.com/groups/a/posts/4",
+        snippet: "",
+      },
+    ];
+    vi.mocked(fetchWebSearchHitsForEntity).mockResolvedValueOnce({
+      hits: questions,
+      queriesCompleted: 1,
+    });
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "齊來設計",
+    });
+
+    expect(synthesizeRiskReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webHits: questions,
+        boundHitCount: questions.length,
+      }),
+    );
+    expect(result.report.signals.boundHitCount).toBe(questions.length);
+    expect(result.report.signals.retrievalEvidence).toEqual([]);
+    expect(result.report.grade).toBe("C");
+    expect(result.report.evaluation.displayGradeZh).toBe("C+");
+    expect(result.report.evaluation.dataSaturation).toBe("moderate");
+    expect(result.report.evaluation.riskBandZh).toBe("中性");
+    expect(result.report.summaryZh).toBe(
+      "根據本次可檢索的公開來源，已確認與查詢字串相關的來源，但未能形成可引用的討論摘要，請自行核實。",
+    );
+  });
+
+  it("keeps a dispute link and still sends the question hits to the LLM", async () => {
+    const hits = [
+      {
+        title: "齊來設計裝修爛尾，訂金收咗就失聯",
+        url: "https://www.lihkg.com/thread/9",
+        snippet: "苦主分享",
+      },
+      {
+        title: "有否人使用過齊來設計居+屋Dimensions Interiors 效果如何？",
+        url: "https://www.facebook.com/groups/a/posts/1",
+        snippet: "",
+      },
+    ];
+    vi.mocked(fetchWebSearchHitsForEntity).mockResolvedValueOnce({
+      hits,
+      queriesCompleted: 1,
+    });
+
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "齊來設計",
+    });
+
+    expect(vi.mocked(synthesizeRiskReport).mock.calls[0]?.[0].webHits).toHaveLength(
+      2,
+    );
+    expect(result.report.signals.boundHitCount).toBe(2);
+    expect(result.report.signals.retrievalEvidence.map((e) => e.url)).toEqual([
+      "https://www.lihkg.com/thread/9",
+    ]);
+    expect(result.report.grade).toBe("C");
+  });
+
   it("resolves when cache upsert fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const actual = await vi.importActual<typeof import("./search-cache")>(

@@ -16,6 +16,7 @@ import {
   resolveBrandSerpSearchPhrase,
 } from "./search-entity-labels";
 import { enforceHighlightEvidenceAlignment } from "./highlight-evidence-alignment";
+import { selectPublicLinkHits } from "./public-link-signal";
 import {
   buildRetrievalEvidence,
   countBoundDisputeSignals,
@@ -287,7 +288,22 @@ export async function runSearchPipeline(
     );
   }
 
-  const retrievalEvidence = buildRetrievalEvidence(webHitsForLlm, tokens, {
+  const highlightUrls = new Set(
+    (fullReport.signals.highlights ?? []).map((h) => h.url),
+  );
+  const publicLinks = selectPublicLinkHits(webHitsForLlm, tokens, {
+    normalizedPhone: phoneForL1,
+    alwaysIncludeUrls: highlightUrls,
+  });
+  console.info(
+    JSON.stringify({
+      event: "public_link_signal",
+      bound: webHitsForLlm.length,
+      kept: publicLinks.kept,
+      ...publicLinks.dropped,
+    }),
+  );
+  const retrievalEvidence = buildRetrievalEvidence(publicLinks.hits, tokens, {
     normalizedPhone: phoneForL1,
   });
   fullReport = {

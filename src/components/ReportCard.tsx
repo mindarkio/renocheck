@@ -366,10 +366,13 @@ export function ReportCard({
   const officialVerifyLinks = buildOfficialVerifyLinks(report);
   const saturation = report.evaluation.dataSaturation;
   const saturationNote = dataSaturationCaution(saturation);
+  const evidenceCount = report.signals.retrievalEvidence?.length ?? 0;
   const showSaturationBanner =
     saturation === "unindexed" ||
-    (saturation === "moderate" && highlights.length === 0);
-  const evidenceCount = report.signals.retrievalEvidence?.length ?? 0;
+    // Moderate copy points at the link list. Hide it when that list was filtered empty.
+    (saturation === "moderate" &&
+      highlights.length === 0 &&
+      evidenceCount > 0);
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
   const mwcRegistryHref = mwcRegistrySearchHref(report);

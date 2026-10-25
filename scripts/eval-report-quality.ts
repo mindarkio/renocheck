@@ -135,9 +135,11 @@ function validateReportAgainstExpect(
         `retrievalEvidence ${retrievalLen} < ${minRetrieval}`,
       );
     }
-    if (bound > 0 && retrievalLen < bound) {
+    // Public-link signal filter may withhold question-only hits, so the
+    // link list can be shorter than boundHitCount. It must not invent rows.
+    if (retrievalLen > bound) {
       errors.push(
-        `retrievalEvidence ${retrievalLen} < boundHitCount ${bound}`,
+        `retrievalEvidence ${retrievalLen} > boundHitCount ${bound}`,
       );
     }
   if (report.signals.contractChecklist.length < exp.minChecklistItems) {

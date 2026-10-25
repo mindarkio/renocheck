@@ -32,6 +32,7 @@
 - 多數 case **`highlights.length === 0`** → 用戶 **冇可逐條點開嘅討論 SSOT**，只有計數與摘要
 - Gold dispute case（如源始）可能 **`boundHitCount === 0`** → report 只代表「今次 L1 未綁定」，唔代表網上無公開討論
 - 同名／弱相關 bound hit 可能 **有 bound、無 highlight** — 需 evidence 列表或更嚴 L1（DEC 驅動）
+- **公開連結：** `retrievalEvidence` 可以短過 `boundHitCount`。分檔仍用 L1 全數；連結清單只留具體經驗、糾紛、有細節嘅讚揚，或新聞／法庭／名冊訊號（`public-link-signal.ts`）。純提問、招聘、清單文唔展示。討論摘要仍由 LLM 睇完整 L1；純提問本身無可引用事件，唔會因此產生摘要。
 
 **M1（DEC-0006）：** `signals.retrievalEvidence[]` — pipeline 從 L1 hits 填入；API/UI 全開放。  
 **M2：** highlight URL ⊆ L1 hits（`highlight-evidence-alignment.ts`）。  

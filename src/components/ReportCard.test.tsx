@@ -920,6 +920,56 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.textContent).toContain("facebook.com");
   });
 
+  it("hides the moderate link caution when the public link list is empty", () => {
+    const report = minimalReport({
+      evaluation: {
+        ...minimalReport().evaluation,
+        dataSaturation: "moderate",
+      },
+      signals: {
+        ...minimalReport().signals,
+        boundHitCount: 4,
+        serpHitCount: 10,
+        highlights: [],
+        retrievalEvidence: [],
+      },
+    });
+    const { container } = render(<ReportCard report={report} />);
+    expect(container.querySelector("#retrieval-evidence-heading")).toBeNull();
+    expect(container.textContent).not.toContain("請以下方連結");
+    expect(container.textContent).not.toContain("本次未形成討論摘要");
+  });
+
+  it("keeps the moderate link caution when a public link remains", () => {
+    const report = minimalReport({
+      evaluation: {
+        ...minimalReport().evaluation,
+        dataSaturation: "moderate",
+      },
+      signals: {
+        ...minimalReport().signals,
+        boundHitCount: 4,
+        serpHitCount: 10,
+        highlights: [],
+        retrievalEvidence: [
+          {
+            url: "https://www.lihkg.com/thread/9",
+            title: "公開討論示例",
+            snippetExcerpt: "示例摘錄",
+            matchedToken: "合成",
+            matchReason: "entity_token",
+          },
+        ],
+      },
+    });
+    const { container } = render(<ReportCard report={report} />);
+    expect(container.textContent).toContain("相關公開連結（1 條）");
+    expect(container.textContent).toContain(
+      "本次未形成討論摘要，以下連結供自行閱讀核實。",
+    );
+    expect(container.textContent).toContain("請以下方連結");
+  });
+
   it("bound links redact title and snippet when no highlights", () => {
     const { container } = render(
       <ReportCard
