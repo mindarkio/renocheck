@@ -15,23 +15,28 @@ const TRADING_AS_ZH = "經營";
 const ENGLISH_TITLES = new Set(["mr", "mrs", "ms", "miss"]);
 
 /**
- * Single characters used in trading names (李錦記、大昌行). They are not added
- * to the generic-alias list: that list also blocks a whole name made only of
- * trade words, and 行 appears inside ordinary company names.
+ * Single characters used in trading names (李錦記、大昌行). They count only
+ * as the last character, after trimming. They are not added to the
+ * generic-alias list: that list also blocks a whole name made only of trade
+ * words, and 行 appears inside ordinary company names.
  */
 const TRADE_NAME_CHARS = ["記", "行", "號"] as const;
 
-function hasTradeNameChar(text: string): boolean {
-  return TRADE_NAME_CHARS.some((char) => text.includes(char));
+/** True when the trimmed name ends in 記、行 or 號. */
+function endsWithTradeNameChar(text: string): boolean {
+  const last = Array.from(text).at(-1);
+  return last != null && (TRADE_NAME_CHARS as readonly string[]).includes(last);
 }
 
 /**
- * Exactly three Han and a trading-name character: search it as a company.
- * A trade word inside (水電行、工程記) keeps it on the short-name prompt.
+ * Exactly three Han ending in 記、行 or 號: search it as a company.
+ * A generic trade word inside (水電行、工程記) keeps the full-name prompt.
  */
 function isThreeHanTradeName(text: string): boolean {
   return (
-    /^\p{Script=Han}{3}$/u.test(text) && hasTradeNameChar(text) && !hasSearchTradeMarker(text)
+    /^\p{Script=Han}{3}$/u.test(text) &&
+    endsWithTradeNameChar(text) &&
+    !hasSearchTradeMarker(text)
   );
 }
 
@@ -106,7 +111,7 @@ export function isEnglishPersonalName(raw: string): boolean {
 
 export function isPersonalName(raw: string): boolean {
   const text = normalizeCompanyQuery(raw);
-  if (!text || hasDigit(text) || hasSearchTradeMarker(text) || hasTradeNameChar(text)) {
+  if (!text || hasDigit(text) || hasSearchTradeMarker(text) || endsWithTradeNameChar(text)) {
     return false;
   }
   if (isChineseTitledPersonalName(text)) return true;

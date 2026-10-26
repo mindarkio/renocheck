@@ -162,10 +162,21 @@ describe("classifyCompanyNameQuery", () => {
     });
   });
 
-  it("searches a three-character name that uses 記、行 or 號", () => {
+  it("searches a three-character name that ends in 記、行 or 號", () => {
     expect(classifyCompanyNameQuery("李錦記")).toEqual({ kind: "search", input: "李錦記" });
+    expect(classifyCompanyNameQuery("　李錦記 ")).toEqual({ kind: "search", input: "李錦記" });
     expect(classifyCompanyNameQuery("合成行")).toEqual({ kind: "search", input: "合成行" });
     expect(classifyCompanyNameQuery("合成號")).toEqual({ kind: "search", input: "合成號" });
+    // 陳志行 ends in 行, so the same rule searches it as a company.
+    expect(classifyCompanyNameQuery("陳志行")).toEqual({ kind: "search", input: "陳志行" });
+  });
+
+  it("keeps a three-character name personal when 記、行 or 號 is not last", () => {
+    expect(classifyCompanyNameQuery("行文華")).toEqual({
+      kind: "personal",
+      input: "行文華",
+      allowCompanyOverride: true,
+    });
   });
 
   it("keeps a generic trade word with 記、行 or 號 on the short-name prompt", () => {
