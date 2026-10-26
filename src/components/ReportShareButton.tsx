@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { focusRingClass } from "@/lib/focus-ring";
 import { sendUsageEvent } from "@/lib/usage-events-client";
 
 export const REPORT_SHARE_BUTTON_ZH = "分享報告";
 export const REPORT_SHARE_COPIED_ZH = "已複製連結";
 export const REPORT_SHARE_FAILED_ZH = "未能複製連結";
-
-const focusRingClass =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 function reportUrl(fingerprint: string): string {
   return `${window.location.origin}/report/${fingerprint}`;

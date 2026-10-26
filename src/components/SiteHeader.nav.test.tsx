@@ -90,7 +90,9 @@ describe("SiteHeader quote link", () => {
     expect(mobile?.getAttribute("aria-current")).toBe("page");
     expect(mobile?.className).toContain("min-h-12");
     expect(mobile?.className).toContain("focus-visible:ring-white");
+    expect(mobile?.className).toContain("focus-visible:ring-offset-2");
     expect(mobile?.className).not.toContain("ring-white/50");
+    expect(dialog.className).toContain("focus-on-primary");
     expect(screen.getByRole("button", { name: "關閉選單" })).toBeTruthy();
   });
 });

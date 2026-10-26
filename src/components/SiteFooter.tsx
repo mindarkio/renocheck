@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_VERSION, FOOTER_DISCLAIMER, SITE_DISAMBIGUATION_LINE } from "@/lib/constants";
+import { focusOnPrimaryClass, focusRingOnPrimaryClass } from "@/lib/focus-ring";
 import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
 import { SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
 
@@ -23,13 +24,14 @@ const FOOTER_LEGAL_LINK = {
   label: "免責聲明",
 } as const;
 
-const footerLinkClass =
-  "inline-flex min-h-11 items-center justify-center rounded-md px-1 text-center text-xs text-primary-foreground/92 transition-colors hover:text-primary-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:px-0";
+const footerLinkClass = `inline-flex min-h-11 items-center justify-center rounded-md px-1 text-center text-xs text-primary-foreground/92 transition-colors hover:text-primary-foreground hover:underline sm:px-0 ${focusRingOnPrimaryClass}`;
 
 export function SiteFooter() {
   const pathname = usePathname();
   return (
-    <footer className="mt-auto shrink-0 border-t border-white/15 bg-primary text-primary-foreground">
+    <footer
+      className={`mt-auto shrink-0 border-t border-white/15 bg-primary text-primary-foreground ${focusOnPrimaryClass}`}
+    >
       <div className="mx-auto w-full max-w-[584px] px-4 py-4 sm:px-6 sm:py-5">
         <div
           className="mx-auto max-w-md rounded-lg bg-white/10 px-3.5 py-2.5 ring-1 ring-white/10 sm:px-4 sm:py-3"
@@ -81,7 +83,7 @@ export function SiteFooter() {
         >
           <a
             href={`mailto:${SITE_CONTACT_EMAIL}`}
-            className="text-primary-foreground/88 underline decoration-white/25 underline-offset-2 hover:text-primary-foreground"
+            className={`rounded-sm text-primary-foreground/88 underline decoration-white/25 underline-offset-2 hover:text-primary-foreground ${focusRingOnPrimaryClass}`}
           >
             {SITE_CONTACT_EMAIL}
           </a>

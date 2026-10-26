@@ -3,7 +3,7 @@ export const surfaceCardClass =
   "rounded-2xl border border-border/70 bg-background shadow-[0_1px_8px_rgba(32,33,36,0.05)]";
 
 export const contentLinkClass =
-  "text-primary underline-offset-2 transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-sm";
+  "text-primary underline-offset-2 transition-colors hover:underline rounded-sm";
 
 /** Brand Navy (`primary`) — page H1 and major headings. */
 export const brandPageTitleClass =

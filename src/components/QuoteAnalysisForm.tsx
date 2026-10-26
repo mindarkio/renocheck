@@ -99,7 +99,7 @@ export function QuoteAnalysisForm() {
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
       >
         {QUOTE_SUBMIT_ZH}
       </button>

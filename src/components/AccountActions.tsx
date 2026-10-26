@@ -13,7 +13,7 @@ import {
 } from "@/lib/quote-analysis/copy";
 
 const fieldClass =
-  "mt-1 w-full min-h-11 rounded-lg border border-border bg-background px-3 text-base text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
+  "mt-1 w-full min-h-11 rounded-lg border border-border bg-background px-3 text-base text-foreground";
 
 export function AccountActions() {
   const router = useRouter();
@@ -70,7 +70,7 @@ export function AccountActions() {
         type="button"
         onClick={signOut}
         disabled={pending !== null}
-        className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium disabled:opacity-60"
       >
         {ACCOUNT_SIGN_OUT_ZH}
       </button>
@@ -109,7 +109,7 @@ export function AccountActions() {
         <button
           type="submit"
           disabled={pending !== null || !confirmed}
-          className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+          className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
         >
           {ACCOUNT_DELETE_BUTTON_ZH}
         </button>

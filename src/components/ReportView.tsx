@@ -149,7 +149,7 @@ export function ReportView({
           >
             <Link
               href="/"
-              className="flex w-full min-h-12 items-center justify-center gap-2.5 rounded-xl border border-primary bg-transparent px-5 py-3 text-[15px] font-semibold tracking-wide text-primary transition-[transform,background-color] duration-200 hover:bg-primary/5 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+              className="flex w-full min-h-12 items-center justify-center gap-2.5 rounded-xl border border-primary bg-transparent px-5 py-3 text-[15px] font-semibold tracking-wide text-primary transition-[transform,background-color] duration-200 hover:bg-primary/5 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
             >
               <Image
                 src="/logo/mark-color-transparent.svg"

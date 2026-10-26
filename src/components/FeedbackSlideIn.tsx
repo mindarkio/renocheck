@@ -132,7 +132,7 @@ export function FeedbackSlideIn({
       <div className="mb-2 flex items-start justify-end">
         <button
           type="button"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-sm text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-sm text-muted-foreground"
           aria-label={FEEDBACK_CLOSE_LABEL_ZH}
           onClick={onDismiss}
         >
@@ -154,7 +154,7 @@ export function FeedbackSlideIn({
       />
       <button
         type="button"
-        className="mt-3 inline-flex min-h-11 items-center text-sm text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        className="mt-3 inline-flex min-h-11 items-center rounded-sm text-sm text-muted-foreground underline-offset-2 hover:underline"
         onClick={onDismiss}
       >
         {FEEDBACK_DISMISS_ZH}

@@ -10,6 +10,11 @@ import {
   siteLayoutContainerClass,
   siteLayoutGutterClass,
 } from "@/components/report-column";
+import {
+  focusOnPrimaryClass,
+  focusRingClass,
+  focusRingOnPrimaryClass,
+} from "@/lib/focus-ring";
 import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
 
 const HOME_NAV = [
@@ -21,9 +26,8 @@ const HOME_NAV = [
   { href: "/legal/disclaimer", label: "免責聲明" },
 ] as const;
 
-/** Solid primary on the page background. `ring-primary/30` is about 1.6:1 and fails WCAG 1.4.11. */
-const headerFocusRingClass =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+/** Solid navy on the page. See `focusRingClass`. */
+const headerFocusRingClass = focusRingClass;
 
 const navLinkClass = `rounded-md hover:underline hover:text-foreground ${headerFocusRingClass}`;
 
@@ -31,9 +35,8 @@ function isCurrentNav(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Solid white on the navy sheet. `ring-white/50` over `bg-primary/85` is about 2.4:1. */
-const menuFocusRingClass =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white";
+/** Solid white on the navy sheet. A navy ring on `bg-primary/85` is about 1.4:1. */
+const menuFocusRingClass = focusRingOnPrimaryClass;
 
 const homeMenuLinkClass = `rounded-md text-white hover:text-white hover:underline ${menuFocusRingClass}`;
 
@@ -167,7 +170,7 @@ function MobileNavMenuPortal({
       id={menuId}
       role="dialog"
       aria-label="網站選單"
-      className="fixed inset-0 z-[100] flex flex-col bg-primary/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-primary/85 sm:hidden"
+      className={`fixed inset-0 z-[100] flex flex-col bg-primary/95 text-white backdrop-blur-md supports-[backdrop-filter]:bg-primary/85 sm:hidden ${focusOnPrimaryClass}`}
     >
       <nav
         className="renocheck-menu-panel-in flex flex-1 flex-col items-center justify-center gap-1 px-6 pb-16"
