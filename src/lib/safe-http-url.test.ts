@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeHttpUrl } from "./safe-http-url";
+import { nonLinkFallbackClasses, safeHttpUrl } from "./safe-http-url";
 
 describe("safeHttpUrl", () => {
   it("returns a normal http or https URL unchanged", () => {
@@ -47,5 +47,53 @@ describe("safeHttpUrl", () => {
     expect(safeHttpUrl("")).toBeNull();
     expect(safeHttpUrl(null)).toBeNull();
     expect(safeHttpUrl(undefined)).toBeNull();
+  });
+
+  it("rejects an empty host without throwing", () => {
+    expect(() => safeHttpUrl("https://")).not.toThrow();
+    expect(safeHttpUrl("https://")).toBeNull();
+    expect(safeHttpUrl("http://:80/")).toBeNull();
+  });
+
+  it("rejects backslash forms and zero-width or BOM prefixes", () => {
+    expect(safeHttpUrl("https:\\\\evil.example")).toBeNull();
+    expect(safeHttpUrl("\uFEFFhttps://example.com")).toBeNull();
+    expect(safeHttpUrl("\u200Bjavascript:alert(1)")).toBeNull();
+    expect(safeHttpUrl("https\uFF1A//example.com")).toBeNull();
+  });
+
+  it("rejects control or Unicode space characters inside the URL", () => {
+    expect(safeHttpUrl("https://exa\tmple.com/")).toBeNull();
+    expect(safeHttpUrl("https://example.com/a\nb")).toBeNull();
+    expect(safeHttpUrl("https://example.com/a\u00A0b")).toBeNull();
+    expect(safeHttpUrl("https://example.com/a\u3000b")).toBeNull();
+    expect(safeHttpUrl("https://example.com/a\u2028b")).toBeNull();
+  });
+
+  it("rejects URLs with userinfo", () => {
+    expect(safeHttpUrl("https://good.example@evil.example/")).toBeNull();
+    expect(safeHttpUrl("https://u:p@evil.example/")).toBeNull();
+    expect(safeHttpUrl("https://:p@evil.example/")).toBeNull();
+    expect(safeHttpUrl("https://evil.example/a@b")).toBe(
+      "https://evil.example/a@b",
+    );
+  });
+
+  it("keeps IDN hosts and explicit ports as http(s) links", () => {
+    expect(safeHttpUrl("https://例子.香港/")).toBe("https://例子.香港/");
+    expect(safeHttpUrl("https://example.com:8443/a")).toBe(
+      "https://example.com:8443/a",
+    );
+  });
+});
+
+describe("nonLinkFallbackClasses", () => {
+  it("drops link colour and underline classes only", () => {
+    expect(
+      nonLinkFallbackClasses(
+        "font-medium text-primary underline-offset-2 hover:underline break-all",
+      ),
+    ).toBe("font-medium break-all");
+    expect(nonLinkFallbackClasses(undefined)).toBe("");
   });
 });

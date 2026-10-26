@@ -71,7 +71,7 @@ import {
   isMwcExpiryBeforeReport,
 } from "@/lib/mwc-registry-display";
 import type { RiskReport } from "@/lib/report-schema";
-import { safeHttpUrl } from "@/lib/safe-http-url";
+import { nonLinkFallbackClasses, safeHttpUrl } from "@/lib/safe-http-url";
 import {
   riskBandMeterActiveLabelClass,
   riskBandSurfaceClass,
@@ -344,7 +344,13 @@ function ReportExternalLink({
   const safe = safeHttpUrl(href);
   const classes = `inline-flex min-h-11 items-center ${reportExternalLinkTouchClass} ${className ?? ""}`;
   if (!safe) {
-    return <span className={classes}>{children}</span>;
+    return (
+      <span
+        className={`inline-flex min-h-11 items-center ${reportExternalLinkTouchClass} ${nonLinkFallbackClasses(className)} text-foreground`}
+      >
+        {children}
+      </span>
+    );
   }
   return (
     <a

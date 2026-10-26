@@ -14,7 +14,7 @@ import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
 import type { OfficialLegalEvent } from "@/lib/legal-event-schema";
 import { judgmentDedupeKey } from "@/lib/lookup-legal-judgments";
 import { LEGAL_EVENT_SOURCE_LINK_LABEL_ZH } from "@/lib/report-trust-copy-zh";
-import { safeHttpUrl } from "@/lib/safe-http-url";
+import { nonLinkFallbackClasses, safeHttpUrl } from "@/lib/safe-http-url";
 import {
   reportBlockPaddingClass,
   reportExternalLinkTouchClass,
@@ -46,7 +46,13 @@ function ReportExternalLink({
   const safe = safeHttpUrl(href);
   const classes = `${reportExternalLinkTouchClass} ${className ?? ""}`;
   if (!safe) {
-    return <span className={classes}>{children}</span>;
+    return (
+      <span
+        className={`${reportExternalLinkTouchClass} ${nonLinkFallbackClasses(className)} text-foreground`}
+      >
+        {children}
+      </span>
+    );
   }
   return (
     <a

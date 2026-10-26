@@ -11,6 +11,10 @@
  * and spaces, so `"\njavascript:"` and `"\u0000javascript:"` are still
  * `javascript:` after parsing. A control-prefixed `https:` URL is also
  * rejected rather than copied into `href` with the prefix left on.
+ *
+ * A URL with userinfo (`https://user:pass@host` or `https://good.example@evil`)
+ * is also rejected: no public source needs it, and it makes the host shown in
+ * the status bar easy to misread.
  */
 const DISALLOWED_IN_HREF =
   /[\u0000-\u001F\u007F\u0020\u00A0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]/u;
@@ -26,5 +30,24 @@ export function safeHttpUrl(value: unknown): string | null {
     return null;
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+  if (parsed.username !== "" || parsed.password !== "") return null;
   return value;
+}
+
+/**
+ * Class list for the plain-text fallback when an href is rejected. Drops the
+ * link colour and underline hover so the text does not look clickable.
+ */
+export function nonLinkFallbackClasses(className: string | undefined): string {
+  return (className ?? "")
+    .split(/\s+/)
+    .filter(
+      (c) =>
+        c !== "" &&
+        c !== "text-primary" &&
+        c !== "hover:underline" &&
+        c !== "underline" &&
+        !c.startsWith("underline-offset-"),
+    )
+    .join(" ");
 }
