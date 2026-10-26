@@ -21,6 +21,7 @@ import {
   shortCompanyNameMessageZh,
 } from "@/lib/search-disambiguation-copy";
 import { getOrCreateAnonId } from "@/lib/anon-id";
+import { searchFieldFocusRingClass } from "@/lib/focus-ring";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
 import { RegisterMatchPanel } from "./RegisterMatchPanel";
 import { SearchProgressModal } from "./SearchProgress";
@@ -45,12 +46,13 @@ type SearchFormProps = {
 };
 
 const inputBase =
-  "w-full min-h-11 bg-transparent text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-60";
+  "w-full min-h-11 bg-transparent text-foreground placeholder:text-muted-foreground disabled:opacity-60";
 
 const inputCard =
-  "rounded-lg border border-border bg-background px-3 py-2 focus:ring-2 focus:ring-primary/30";
+  "rounded-lg border border-border bg-background px-3 py-2";
 
-const inputLanding = "px-1 py-2.5 focus:ring-0";
+/** Outline stays on the pill, not the inner field. */
+const inputLanding = "px-1 py-2.5 outline-none";
 
 type SearchBody = {
   companyName?: string;
@@ -289,13 +291,13 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
       {isLanding ? (
         <div className="space-y-1.5">
           <div
-            className="flex items-center gap-3 rounded-full border border-border/80 bg-background px-4 py-1 shadow-[0_1px_6px_rgba(32,33,36,0.16)] transition-shadow hover:shadow-[0_1px_8px_rgba(32,33,36,0.22)] focus-within:shadow-[0_1px_8px_rgba(32,33,36,0.22)] sm:px-5"
+            className={`flex items-center gap-3 rounded-full border border-border/80 bg-background px-4 py-1 shadow-[0_1px_6px_rgba(32,33,36,0.16)] transition-shadow hover:shadow-[0_1px_8px_rgba(32,33,36,0.22)] focus-within:shadow-[0_1px_8px_rgba(32,33,36,0.22)] sm:px-5 ${searchFieldFocusRingClass}`}
           >
             <button
               type="submit"
               disabled={inputsDisabled}
               aria-label={submitLabel}
-              className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
+              className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-muted-foreground hover:text-primary disabled:opacity-60"
             >
               <SearchGlyph className="size-5" />
             </button>
@@ -428,7 +430,7 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
             <button
               type="button"
               onClick={() => void previewRegister(notice.input)}
-              className="mt-2 inline-flex min-h-11 items-center rounded text-sm font-medium underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+              className="mt-2 inline-flex min-h-11 items-center rounded text-sm font-medium underline underline-offset-2"
             >
               {CONTINUE_AS_COMPANY_ZH}
             </button>

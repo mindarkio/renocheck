@@ -16,7 +16,7 @@ import {
 } from "@/lib/feedback-copy-zh";
 
 const tap =
-  "inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 disabled:opacity-60";
+  "inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border px-3 text-sm font-medium transition-colors motion-reduce:transition-none disabled:opacity-60";
 
 export function FeedbackComposer({
   heading,
@@ -69,7 +69,7 @@ export function FeedbackComposer({
           <p
             ref={thanksRef}
             tabIndex={-1}
-            className="text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="rounded-sm text-sm text-foreground"
           >
             {FEEDBACK_THANKS_ZH}
           </p>
@@ -132,7 +132,7 @@ export function FeedbackComposer({
               aria-describedby={counterId}
               disabled={busy}
               onChange={(event) => onComment(event.target.value)}
-              className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
             />
           </label>
           <p id={counterId} className="text-xs text-muted-foreground">
@@ -155,7 +155,7 @@ export function FeedbackComposer({
       )}
       <Link
         href={FEEDBACK_PRIVACY_HREF}
-        className="inline-flex min-h-11 items-center text-xs text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        className="inline-flex min-h-11 items-center rounded-sm text-xs text-muted-foreground underline-offset-2 hover:underline"
       >
         {FEEDBACK_PRIVACY_LINK_ZH}
       </Link>

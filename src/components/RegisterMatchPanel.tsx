@@ -55,7 +55,7 @@ export function RegisterMatchPanel({
         <button
           type="button"
           onClick={onRetry}
-          className="mt-3 min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+          className="mt-3 min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
         >
           {REGISTER_RETRY_ZH}
         </button>
@@ -80,7 +80,7 @@ export function RegisterMatchPanel({
         <button
           type="button"
           onClick={onBack}
-          className="mt-3 min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+          className="mt-3 min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
         >
           {TOO_MANY_BACK_ZH}
         </button>
@@ -154,14 +154,14 @@ export function RegisterMatchPanel({
           onClick={() => {
             if (selected) onPick(selected);
           }}
-          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
         >
           {PICKER_ACTION_ZH}
         </button>
         <button
           type="button"
           onClick={onBack}
-          className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
+          className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
         >
           {PICKER_BACK_ZH}
         </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { childFocusRingClass, focusRingClass } from "@/lib/focus-ring";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
 import { sendUsageEvent } from "@/lib/usage-events-client";
 import {
@@ -29,11 +30,8 @@ import {
   type QuoteCheckStatus,
 } from "@/lib/quote-selfcheck";
 
-const focusRingClass =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
-
 const optionClass = (checked: boolean) =>
-  `flex min-h-11 min-w-0 cursor-pointer items-center gap-1.5 break-words rounded-lg border px-2 text-sm text-foreground min-[360px]:gap-2 min-[360px]:px-2.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background ${
+  `flex min-h-11 min-w-0 cursor-pointer items-center gap-1.5 break-words rounded-lg border px-2 text-sm text-foreground min-[360px]:gap-2 min-[360px]:px-2.5 ${childFocusRingClass} ${
     checked
       ? "border-primary bg-primary/5 font-medium"
       : "border-border bg-background"
@@ -178,7 +176,7 @@ export function QuoteSelfCheck() {
                             value={option.id}
                             checked={checked}
                             onChange={() => choose(item.id, option.id)}
-                            className="size-4 shrink-0 accent-primary focus-visible:outline-none"
+                            className="size-4 shrink-0 accent-primary focus-visible:outline-hidden"
                           />
                           <span>
                             <span aria-hidden="true">{option.mark} </span>

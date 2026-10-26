@@ -8,7 +8,7 @@ import {
 } from "@/lib/report-trust-copy-zh";
 
 const defaultButtonClass =
-  "inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/5 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/5 text-primary transition-colors hover:bg-primary/10";
 
 export function CopyCompanyNameButton({
   text,
