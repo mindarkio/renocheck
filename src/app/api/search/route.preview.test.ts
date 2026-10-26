@@ -4,8 +4,12 @@ const mocks = vi.hoisted(() => ({
   buildRegisterPreview: vi.fn(),
   runSearchPipeline: vi.fn(),
   isSupabaseAdminConfigured: vi.fn(() => true),
-  checkRateLimit: vi.fn(() => true),
-  takeAuthRateLimit: vi.fn(async () => "ok" as const),
+  checkRateLimit: vi.fn<(key: string, maxPerWindow?: number) => boolean>(() => true),
+  takeAuthRateLimit: vi.fn<
+    (input: { key: string; limit: number; windowMs: number }) => Promise<
+      "ok" | "limited" | "unavailable"
+    >
+  >(async () => "ok"),
 }));
 
 vi.mock("@/lib/register-preview", async (importOriginal) => {
@@ -26,13 +30,14 @@ vi.mock("@/lib/search-pipeline", () => ({
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
-  checkRateLimit: (...args: unknown[]) => mocks.checkRateLimit(...args),
+  checkRateLimit: (key: string, maxPerWindow?: number) => mocks.checkRateLimit(key, maxPerWindow),
   SEARCH_MAX_PER_WINDOW: 5,
 }));
 
 vi.mock("@/lib/auth/rate-limit", () => ({
   rateLimitIp: (ip: string) => ip,
-  takeAuthRateLimit: (...args: unknown[]) => mocks.takeAuthRateLimit(...args),
+  takeAuthRateLimit: (input: { key: string; limit: number; windowMs: number }) =>
+    mocks.takeAuthRateLimit(input),
 }));
 
 import { POST } from "./route";
