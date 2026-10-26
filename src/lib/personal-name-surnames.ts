@@ -1,0 +1,92 @@
+/**
+ * Common Hong Kong (Cantonese romanisation) and English surnames for the
+ * company-search personal-name gate (DEC-0015).
+ *
+ * A surname missing from this list is a miss, not a block: "Tim" plus a rare
+ * surname still searches as a company. Do not add given names or trade words
+ * (alfred, tim, urban, craft, modern, living).
+ */
+const PERSONAL_SURNAMES = [
+  "au",
+  "au-yeung",
+  "brown",
+  "chan",
+  "chau",
+  "cheng",
+  "cheung",
+  "cheong",
+  "chiu",
+  "choi",
+  "chow",
+  "chu",
+  "chung",
+  "clark",
+  "davies",
+  "evans",
+  "fong",
+  "fung",
+  "harris",
+  "ho",
+  "hui",
+  "hung",
+  "ip",
+  "johnson",
+  "jones",
+  "kan",
+  "ko",
+  "kwan",
+  "kwok",
+  "lai",
+  "lam",
+  "lau",
+  "law",
+  "lee",
+  "leung",
+  "lewis",
+  "li",
+  "lo",
+  "lui",
+  "luk",
+  "ma",
+  "mak",
+  "martin",
+  "ng",
+  "pang",
+  "poon",
+  "roberts",
+  "sham",
+  "siu",
+  "smith",
+  "so",
+  "szeto",
+  "tam",
+  "tang",
+  "taylor",
+  "thomas",
+  "tong",
+  "tsang",
+  "tse",
+  "tsui",
+  "walker",
+  "wan",
+  "white",
+  "williams",
+  "wilson",
+  "wong",
+  "woo",
+  "wright",
+  "wu",
+  "yau",
+  "yeung",
+  "yip",
+  "young",
+  "yu",
+  "yuen",
+] as const;
+
+const SURNAME_SET = new Set<string>(PERSONAL_SURNAMES);
+
+export function isPersonalSurname(word: string): boolean {
+  const key = word.normalize("NFKC").toLowerCase().replace(/’/g, "'");
+  return SURNAME_SET.has(key);
+}

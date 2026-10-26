@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
+import { verificationScopeLine } from "@/lib/verification-scope-line";
 import { DailyCauseListSearchForm } from "@/components/DailyCauseListSearchForm";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
 import { CompanyIdentityCard } from "@/components/CompanyIdentityCard";
@@ -409,6 +410,11 @@ export function ReportCard({
       evidenceCount > 0);
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
+  const scopeLine = verificationScopeLine({
+    typed: report.entity.queryEcho,
+    registerName: report.entity.displayName,
+    mwcMatched: report.official.mwcMatched,
+  });
   const mwcRegistryHref = mwcRegistrySearchHref(report);
   const licenseChipClass = `${reportHeroChipClass} ${heroChipToneClass(license.tone)}`;
   const disputeTone =
@@ -593,6 +599,12 @@ export function ReportCard({
         <h1 className={`mt-0.5 ${reportH1Class}`}>
           {report.entity.displayName}
         </h1>
+        {scopeLine ? (
+          <div className="mt-3">
+            <h2 className={`font-semibold ${reportHeroMetaClass}`}>{scopeLine.heading}</h2>
+            <p className={`mt-1 ${reportHeroMetaClass}`}>{scopeLine.line}</p>
+          </div>
+        ) : null}
 
         <div className="mt-4 border-t border-primary-foreground/15 pt-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-primary-foreground">

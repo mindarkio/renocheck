@@ -16,7 +16,7 @@ Keep the default Serp HTTP budget (Q1×2 + Q2×1 = 3, plus Q3×1 when a phone is
 - Names containing `+`, `&`, or `/` are quoted in Q2 so Google matches them literally. Parentheses keep the DEC-0003 conjunctive form because `looseEntityCoreTerms` already turns them into spaces.
 - English names are not truncated to 6 characters. L1 and public-link matching are case-insensitive.
 - The register `company_name_en`, when present and not itself only trade words, is an alias phrase and an L1 anchor.
-- When several register rows contain the input, keep a single row: exact match, then prefix match, then shortest `company_name`. `ambiguous` stays true whenever two or more rows match. No picker UI.
+- When several register rows contain the input and the caller did not choose a registration number, keep a single row: exact match, then prefix match, then shortest `company_name`. `ambiguous` stays true whenever two or more rows match. The sentence "No picker UI" is superseded by [DEC-0015](DEC-0015-register-name-picker.md) (accepted 2026-10-26). Direct API calls that do not send a chosen registration number still use this single-row ranking.
 
 No change to `REPORT_VERSION`, `DISCLAIMER_VERSION`, grading, prompts, or user-facing copy.
 

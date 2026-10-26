@@ -22,6 +22,7 @@
 ## 技術 SSOT（已具備）
 
 - **單一路徑：** `runSearchPipeline` → `report-schema.ts` → cache（`reportVersion` miss 舊形狀）
+- **本次查證範圍（DEC-0015）：** 名冊有對上，而且 `queryEcho` 同 `entity.displayName` 喺去掉空白同全形之後唔同，報告藍底標題下先顯示「你輸入…／名冊名稱…」。呢行係現有欄位嘅呈現，唔加新 JSON 欄位，所以唔因此改 `REPORT_VERSION`。
 - **量度：** `pnpm eval:report-quality`（golden）、`pnpm eval:report-quality --live`（[`report-quality-live.json`](../../scripts/fixtures/report-quality-live.json)）、`pnpm eval:search-evidence`（retrieval）、`pnpm mwc:spot-check`
 - **誠實層（Phase 2）：** 零 highlight 唔 A/B/D–F；bound 與 themes／summary 一致（[`pipeline-trust-phase-2.md`](../plans/pipeline-trust-phase-2.md)）
 

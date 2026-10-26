@@ -5,7 +5,8 @@ export type SearchPipelineErrorCode =
   | "llm_unavailable"
   | "llm_failed"
   | "llm_busy"
-  | "service_paused";
+  | "service_paused"
+  | "search_failed";
 
 export class SearchPipelineError extends Error {
   readonly code: SearchPipelineErrorCode;

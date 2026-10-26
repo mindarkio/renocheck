@@ -244,6 +244,8 @@ export const searchInputSchema = z
     companyName: z.string().optional(),
     phone: z.string().optional(),
     br: z.string().optional(),
+    /** Picker choice. Not a report field. DEC-0015. */
+    mwcRegistrationNo: z.string().max(80).optional(),
   })
   .refine(
     (data) =>

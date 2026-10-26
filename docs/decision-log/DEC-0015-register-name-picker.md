@@ -1,0 +1,46 @@
+# DEC-0015: Register name picker before the report
+
+- **Status:** accepted
+- **Date:** 2026-10-26
+- **Supersedes:** the "No picker UI" sentence in [DEC-0014](DEC-0014-typed-brand-and-english-name-search.md). The rest of DEC-0014 (alias query budget, English register names, contains ranking) stays.
+
+## Context
+
+A typed company name that contains several Buildings Department register rows still ran one report. The heading became one register name. The typed text was stored on `entity.queryEcho` and was not shown. The only signal was the chip **政府名冊需再核實**. Very short, generic, and personal-name queries were not stopped before lookup. `/legal/disclaimer`, `/how-it-works`, and the FAQ already refer to a heading **本次查證範圍** that the report did not render.
+
+Approved by Aaron on 2026-10-26.
+
+## Decision
+
+Company-name search, after the box is read as a company name (phones and BR numbers skip this):
+
+1. Short or generic text (under 4 Chinese characters except the 3-character case below, under 6 Latin letters, or only the existing trade-word list) asks for the full name. No register lookup and no report.
+2. A likely personal name asks for a company or trading name. No lookup and no web search. English names of 2–3 words with a listed surname or a title (`Mr` / `Mrs` / `Ms` / `Miss`), and Chinese names of 1–3 characters plus 生／太／先生／小姐／太太／師傅, have no continue link. A Chinese name of exactly 3 characters and no trade word is blocked the same way and adds the text link **呢個係公司全名，繼續查**, which then continues as a company search. Two-character names with no title stay on the short-name prompt. `南興` is not a person.
+3. `經營`, `trading as`, and `t/a` search only the trading name after those words, and only when that part still passes the rules above.
+4. Otherwise look up the register (at most the existing 20-row window):
+   - 0 rows: today's report.
+   - 1 row: today's report, plus the typed-versus-register line when the strings differ.
+   - 2–8 rows: a picker. The report starts only after a choice. An exact register name that is also contained in longer names still shows the picker, with **同你輸入一樣** on the exact row.
+   - 9 or more, or a full 20-row window: ask for the full name. No list and no report.
+5. Each picker row shows the published Chinese name (for an `MWC(W)` individual registration, that published name), the English name when it differs, and **註冊編號**. Never phone, authorised signatory, or district.
+6. After an explicit pick, the report uses that registration number, `ambiguous` is false, and the chip is **政府名冊有登記**. The big heading stays the register name.
+7. When a register row was used and the typed text is not that register name (spaces and full-width characters ignored), the blue header shows the heading **本次查證範圍** and the line **你輸入「{輸入}」／名冊名稱「{名冊}」**. If either name contains 「／」 or `/`, use the two-sentence form **你輸入「{輸入}」。報告用名冊名稱「{名冊}」。** Phone and BR searches use the same line when the heading became a register company name. No register row: do not add the line.
+8. Copy is the recommended column from the 2026-10-26 spec: picker, too-many, short/generic, personal-name, loading **正在對照屋宇署名冊…**, error **名冊暫時對唔到，請稍後再試。** with **再試一次**, and the screen-reader labels **揀一間名冊上嘅公司** and **正在對照屋宇署名冊**.
+
+`DISCLAIMER_VERSION` stays 1.2.5. `/legal/*`, `/how-it-works`, and the FAQ are not edited in this change. `REPORT_VERSION` stays 2.7.0 because the line is rendered from `queryEcho`, `displayName`, and `official.mwcMatched`. The chosen registration number is part of the search fingerprint, not a new report field. No database migration.
+
+## Consequences
+
+- Direct `POST /api/search` without `mwcRegistrationNo` still auto-picks one row and keeps `ambiguous` when several rows match (DEC-0014 ranking). The product UI does not do that for 2–8 matches.
+- A two-word English brand that ends in a listed surname and has no trade word can be blocked. That is the cost of catching `Tim Ho`. A surname missing from the list is a miss, not a block.
+- Contains ranking still reads at most 20 rows. A full window is treated as too many, not as a partial picker.
+
+## Reversal
+
+Remove the pre-report gate in the search form, stop sending `preview: "register"` and `mwcRegistrationNo`, and hide the scope line. DEC-0014's single-row ranking then applies to every company-name search again.
+
+## Triggers to reconsider
+
+- Real 3-character trading names are blocked often enough that the continue link is not enough.
+- The 2–8 picker band is too narrow or too wide on the live register.
+- The surname list blocks a brand that owners search often.

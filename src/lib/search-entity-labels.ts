@@ -152,6 +152,29 @@ function isUntruncatedLatinName(label: string): boolean {
   return latin >= 4 && han === 0;
 }
 
+const LATIN_TRADE_ATOMS = new Set(
+  GENERIC_ALIAS_ATOMS.filter((atom) => /[a-z]/i.test(atom)).map((atom) =>
+    atom.toLowerCase(),
+  ),
+);
+
+const CJK_TRADE_ATOMS = GENERIC_ALIAS_ATOMS.filter((atom) =>
+  /\p{Script=Han}/u.test(atom),
+);
+
+/**
+ * True when the string contains a company or trade marker from the generic
+ * alias list. Latin markers match whole words so "craft" is not "co".
+ * Han markers match inside the string so 陳生裝修 still contains 裝修.
+ */
+export function hasSearchTradeMarker(raw: string): boolean {
+  const nfkc = raw.normalize("NFKC").toLowerCase();
+  const compact = nfkc.replace(/[\s\u3000]+/g, "");
+  if (CJK_TRADE_ATOMS.some((atom) => compact.includes(atom))) return true;
+  const words = nfkc.split(/[^a-z]+/).filter(Boolean);
+  return words.some((word) => LATIN_TRADE_ATOMS.has(word));
+}
+
 /** True when `compact` splits fully into generic atoms (any split, not only greedy). */
 function isOnlyGenericWords(compact: string): boolean {
   const ok: boolean[] = new Array(compact.length + 1).fill(false);

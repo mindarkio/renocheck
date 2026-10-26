@@ -7,6 +7,11 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isAnonId } from "@/lib/anon-id";
 import { redactReportForPublicResponse } from "@/lib/redact-public-report";
 import { isSyntheticProbeTerm } from "@/lib/synthetic-probe";
+import {
+  buildRegisterPreview,
+  readRegisterPreviewCompanyName,
+} from "@/lib/register-preview";
+import { getSupabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
 
 function anonIdFromBody(body: unknown): string | null {
   if (typeof body !== "object" || body === null || !("anonId" in body)) {
@@ -31,6 +36,42 @@ export async function POST(req: Request) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  }
+
+  const previewName = readRegisterPreviewCompanyName(body);
+  if (previewName === "invalid") {
+    return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  }
+  if (previewName) {
+    if (process.env.NODE_ENV === "production" && isSyntheticProbeTerm(previewName)) {
+      return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+    }
+    if (!isSupabaseAdminConfigured()) {
+      return NextResponse.json({ error: "register_lookup_failed" }, { status: 503 });
+    }
+    const supabase = getSupabaseAdmin();
+    if (!supabase) {
+      return NextResponse.json({ error: "register_lookup_failed" }, { status: 503 });
+    }
+    try {
+      const preview = await buildRegisterPreview(supabase, previewName);
+      console.info(
+        JSON.stringify({
+          event: "register_preview",
+          match_count: preview.matchCount,
+          window_full: preview.windowFull,
+        }),
+      );
+      return NextResponse.json(preview);
+    } catch (e) {
+      console.error(
+        JSON.stringify({
+          event: "register_preview_error",
+          message: e instanceof Error ? e.name : "error",
+        }),
+      );
+      return NextResponse.json({ error: "register_lookup_failed" }, { status: 503 });
+    }
   }
 
   const parsed = searchInputSchema.safeParse(body);

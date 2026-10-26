@@ -365,6 +365,46 @@ describe("lookupMwcWithMeta", () => {
     });
   });
 
+  it("treats an explicit registration pick as one unambiguous row", async () => {
+    const picked = mwc({
+      company_name: "合成個人裝修",
+      registration_no: "MWC(W) 12/2026",
+      phone: "90000000",
+      primary_signatory_name: "合成簽署",
+    });
+    const supabase = {
+      from: () => ({
+        select: () => ({
+          eq: (_column: string, value: string) => ({
+            limit: () => ({
+              maybeSingle: async () => ({
+                data: value === picked.registration_no ? picked : null,
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      }),
+    } as unknown as SupabaseClient;
+    const found = await lookupMwcWithMeta(supabase, {
+      matchType: "company_name",
+      companyName: "合成",
+      mwcRegistrationNo: "MWC(W) 12/2026",
+    });
+    expect(found.ambiguous).toBe(false);
+    expect(found.row?.company_name).toBe("合成個人裝修");
+    expect(found.pickedMissing).toBeUndefined();
+
+    const missing = await lookupMwcWithMeta(supabase, {
+      matchType: "company_name",
+      companyName: "合成",
+      mwcRegistrationNo: "MWC-MISSING",
+    });
+    expect(missing.pickedMissing).toBe(true);
+    expect(missing.ambiguous).toBe(false);
+    expect(missing.row).toBeNull();
+  });
+
   it("ranks a contains window by exact match instead of row order", async () => {
     const exact = mwc({ company_name: "齊來設計", registration_no: "MWC-EXACT" });
     const filler = Array.from({ length: MWC_NAME_CANDIDATE_LIMIT }, (_, i) =>

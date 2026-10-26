@@ -683,6 +683,51 @@ describe("runSearchPipeline whole-pipeline deadline (PR24 S1)", () => {
     );
   });
 
+  it("keeps a picked registration unambiguous", async () => {
+    vi.mocked(lookupMwcWithMeta).mockResolvedValueOnce({
+      row: {
+        company_name: "合成設計有限公司",
+        company_name_en: null,
+        phone: null,
+        registration_no: "MWC(W) 12/2026",
+        expiry_date: null,
+        primary_signatory_name: null,
+        source_updated_at: null,
+      },
+      ambiguous: false,
+    });
+    const result = await runSearchPipeline({
+      matchType: "company_name",
+      companyName: "合成設計",
+      mwcRegistrationNo: "MWC(W) 12/2026",
+    });
+    expect(lookupMwcWithMeta).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ mwcRegistrationNo: "MWC(W) 12/2026" }),
+    );
+    expect(fetchWebSearchHitsForEntity).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ mwcAmbiguous: false }),
+    );
+    expect(result.report.evaluation.complianceTrack.licenseStatus).toBe("active");
+  });
+
+  it("does not search the web when the picked registration is missing", async () => {
+    vi.mocked(lookupMwcWithMeta).mockResolvedValueOnce({
+      row: null,
+      ambiguous: false,
+      pickedMissing: true,
+    });
+    await expect(
+      runSearchPipeline({
+        matchType: "company_name",
+        companyName: "合成設計",
+        mwcRegistrationNo: "MWC-MISSING",
+      }),
+    ).rejects.toMatchObject({ code: "search_failed" });
+    expect(fetchWebSearchHitsForEntity).not.toHaveBeenCalled();
+  });
+
   it("tells web search when the register match is ambiguous", async () => {
     vi.mocked(lookupMwcWithMeta).mockResolvedValueOnce({
       row: {

@@ -7,8 +7,21 @@ import {
   parsedSearchQueryLabel,
   toSearchInputBody,
 } from "@/lib/parse-unified-search-query";
+import { classifyCompanyNameQuery } from "@/lib/company-query-gate";
+import {
+  decideRegisterCandidateGate,
+  type PublicMwcCandidate,
+} from "@/lib/register-candidate-gate";
+import {
+  CONTINUE_AS_COMPANY_ZH,
+  REGISTER_LOADING_LABEL_ZH,
+  REGISTER_LOADING_ZH,
+  personalNameMessageZh,
+  shortCompanyNameMessageZh,
+} from "@/lib/search-disambiguation-copy";
 import { getOrCreateAnonId } from "@/lib/anon-id";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
+import { RegisterMatchPanel } from "./RegisterMatchPanel";
 import { SearchProgressModal } from "./SearchProgress";
 
 const REPORT_RETRY_ZH = "報告未能顯示，請稍後再試。";
@@ -38,6 +51,24 @@ const inputCard =
 
 const inputLanding = "px-1 py-2.5 focus:ring-0";
 
+type SearchBody = {
+  companyName?: string;
+  phone?: string;
+  br?: string;
+  mwcRegistrationNo?: string;
+};
+
+type NameNotice = {
+  kind: "short" | "personal";
+  input: string;
+  allowCompanyOverride: boolean;
+};
+
+type MatchPanel =
+  | { kind: "picker"; input: string; candidates: PublicMwcCandidate[] }
+  | { kind: "too_many"; input: string }
+  | { kind: "register_error"; input: string };
+
 export function SearchForm({ variant = "card", paused = false }: SearchFormProps) {
   const router = useRouter();
   const [unifiedQuery, setUnifiedQuery] = useState("");
@@ -47,6 +78,9 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
   const [message, setMessage] = useState<string | null>(null);
   const [pausedByApi, setPausedByApi] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [notice, setNotice] = useState<NameNotice | null>(null);
+  const [panel, setPanel] = useState<MatchPanel | null>(null);
   const [progressStartedAt, setProgressStartedAt] = useState<number | null>(
     null,
   );
@@ -65,24 +99,19 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
   );
   const detectLabel = parsedSearchQueryLabel(parsedUnified);
 
-  const inputsDisabled = loading || pausedByApi;
+  const inputsDisabled = loading || registerLoading || pausedByApi;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (pausedByApi) return;
-    const body = isLanding
-      ? toSearchInputBody(parseUnifiedSearchQuery(unifiedQuery))
-      : {
-          companyName: companyName.trim() || undefined,
-          phone: phone.trim() || undefined,
-          br: br.trim() || undefined,
-        };
+  function clearGates() {
+    setNotice(null);
+    setPanel(null);
+    setMessage(null);
+  }
 
-    if (!body) {
-      setMessage("請輸入公司名稱、香港電話或 BR 號碼。");
-      return;
-    }
+  function focusQuery() {
+    document.getElementById(isLanding ? "search-query" : "companyName")?.focus();
+  }
 
+  async function runReport(body: SearchBody) {
     setLoading(true);
     setMessage(null);
     setProgressStartedAt(Date.now());
@@ -138,7 +167,105 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
     }
   }
 
+  async function previewRegister(companyName: string) {
+    setRegisterLoading(true);
+    setNotice(null);
+    setPanel(null);
+    setMessage(null);
+    let reportBody: SearchBody | null = null;
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preview: "register", companyName }),
+      });
+      if (!res.ok) {
+        setPanel({ kind: "register_error", input: companyName });
+        return;
+      }
+      const data = (await res.json()) as {
+        matchCount?: number;
+        windowFull?: boolean;
+        candidates?: PublicMwcCandidate[];
+      };
+      const gate = decideRegisterCandidateGate({
+        matchCount: data.matchCount ?? 0,
+        windowFull: data.windowFull === true,
+      });
+      if (gate === "too_many") {
+        setPanel({ kind: "too_many", input: companyName });
+        return;
+      }
+      if (gate === "picker") {
+        setPanel({
+          kind: "picker",
+          input: companyName,
+          candidates: data.candidates ?? [],
+        });
+        return;
+      }
+      reportBody = { companyName };
+    } catch {
+      setPanel({ kind: "register_error", input: companyName });
+    } finally {
+      setRegisterLoading(false);
+    }
+    if (reportBody) await runReport(reportBody);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (pausedByApi || registerLoading || loading) return;
+    const body: SearchBody | null = isLanding
+      ? toSearchInputBody(parseUnifiedSearchQuery(unifiedQuery))
+      : {
+          companyName: companyName.trim() || undefined,
+          phone: phone.trim() || undefined,
+          br: br.trim() || undefined,
+        };
+
+    if (!body) {
+      setNotice(null);
+      setPanel(null);
+      setMessage("請輸入公司名稱、香港電話或 BR 號碼。");
+      return;
+    }
+
+    if (body.companyName && !body.phone && !body.br) {
+      const gate = classifyCompanyNameQuery(body.companyName);
+      if (gate.kind === "short" || gate.kind === "personal") {
+        setPanel(null);
+        setMessage(null);
+        setNotice({
+          kind: gate.kind,
+          input: gate.input,
+          allowCompanyOverride: gate.kind === "personal" && gate.allowCompanyOverride,
+        });
+        return;
+      }
+      if (gate.kind === "search") {
+        await previewRegister(gate.input);
+        return;
+      }
+    }
+
+    await runReport(body);
+  }
+
   const fieldClass = `${inputBase} ${isLanding ? "text-sm sm:text-[15px]" : "text-base"} ${isLanding ? inputLanding : inputCard}`;
+  const showDetectHint =
+    Boolean(detectLabel && unifiedQuery.trim()) &&
+    !notice &&
+    !panel &&
+    !registerLoading;
+  const submitLabel = loading
+    ? "查閱中"
+    : registerLoading
+      ? REGISTER_LOADING_LABEL_ZH
+      : "查閱公開資料摘要";
+  const statusClass = `rounded-lg border border-warning/30 bg-warning-foreground px-3 py-2 text-sm text-warning ${
+    isLanding ? "mt-4 text-center" : ""
+  }`;
 
   return (
     <form
@@ -157,7 +284,7 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
             <button
               type="submit"
               disabled={inputsDisabled}
-              aria-label={loading ? "查閱中" : "查閱公開資料摘要"}
+              aria-label={submitLabel}
               className="flex shrink-0 items-center justify-center rounded-full p-1.5 text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-60"
             >
               <SearchGlyph className="size-5" />
@@ -172,14 +299,17 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
               enterKeyHint="search"
               autoComplete="off"
               value={unifiedQuery}
-              onChange={(e) => setUnifiedQuery(e.target.value)}
+              onChange={(e) => {
+                setUnifiedQuery(e.target.value);
+                clearGates();
+              }}
               disabled={inputsDisabled}
               aria-describedby={paused ? "service-paused-banner" : undefined}
               className={`${fieldClass} min-h-12`}
               placeholder="輸入裝修公司名稱、電話或 BR 號碼"
             />
           </div>
-          {detectLabel && unifiedQuery.trim() && (
+          {showDetectHint && (
             <p className="px-4 text-center text-xs text-muted-foreground">
               將以
               <strong className="font-medium text-foreground/80">
@@ -204,7 +334,10 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
               type="text"
               autoComplete="organization"
               value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
+              onChange={(e) => {
+                setCompanyName(e.target.value);
+                clearGates();
+              }}
               disabled={inputsDisabled}
               className={fieldClass}
               placeholder="例：某某裝修工程有限公司"
@@ -221,7 +354,10 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
               inputMode="tel"
               autoComplete="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                clearGates();
+              }}
               disabled={inputsDisabled}
               className={fieldClass}
               placeholder="例：9123 4567"
@@ -236,7 +372,10 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
               name="br"
               type="text"
               value={br}
-              onChange={(e) => setBr(e.target.value)}
+              onChange={(e) => {
+                setBr(e.target.value);
+                clearGates();
+              }}
               disabled={inputsDisabled}
               className={fieldClass}
               placeholder="例：12345678"
@@ -251,7 +390,7 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
           disabled={inputsDisabled}
           className="w-full min-h-11 rounded-lg bg-primary px-4 py-2 text-base font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
         >
-          {loading ? "查閱中…" : "查閱公開資料摘要"}
+          {loading ? "查閱中…" : registerLoading ? `${REGISTER_LOADING_LABEL_ZH}…` : "查閱公開資料摘要"}
         </button>
       )}
 
@@ -261,13 +400,46 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
           startedAt={progressStartedAt}
         />
       )}
+      {registerLoading && (
+        <p role="status" aria-label={REGISTER_LOADING_LABEL_ZH} className={statusClass}>
+          {REGISTER_LOADING_ZH}
+        </p>
+      )}
+      {notice && (
+        <div role="status" className={statusClass}>
+          <p>
+            {notice.kind === "personal"
+              ? personalNameMessageZh(notice.input)
+              : shortCompanyNameMessageZh(notice.input)}
+          </p>
+          {notice.allowCompanyOverride ? (
+            <button
+              type="button"
+              onClick={() => void previewRegister(notice.input)}
+              className="mt-2 inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-2"
+            >
+              {CONTINUE_AS_COMPANY_ZH}
+            </button>
+          ) : null}
+        </div>
+      )}
+      {panel ? (
+        <RegisterMatchPanel
+          input={panel.input}
+          mode={panel.kind}
+          candidates={panel.kind === "picker" ? panel.candidates : []}
+          onPick={(registrationNo) =>
+            void runReport({ companyName: panel.input, mwcRegistrationNo: registrationNo })
+          }
+          onBack={() => {
+            setPanel(null);
+            focusQuery();
+          }}
+          onRetry={() => void previewRegister(panel.input)}
+        />
+      ) : null}
       {message && (
-        <p
-          role="status"
-          className={`rounded-lg border border-warning/30 bg-warning-foreground px-3 py-2 text-sm text-warning ${
-            isLanding ? "mt-4 text-center" : ""
-          }`}
-        >
+        <p role="status" className={statusClass}>
           {message}
         </p>
       )}

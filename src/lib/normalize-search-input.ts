@@ -5,6 +5,12 @@ export type NormalizedSearchInput = {
   companyName?: string;
   phone?: string;
   br?: string;
+  /**
+   * Buildings Department registration number chosen from the picker.
+   * Present only for a company-name search. The report then uses that row
+   * and is not marked ambiguous (DEC-0015).
+   */
+  mwcRegistrationNo?: string;
   matchType: "phone" | "br" | "company_name";
 };
 
@@ -17,7 +23,18 @@ export function normalizeSearchInput(raw: SearchInput): NormalizedSearchInput {
   if (phone) matchType = "phone";
   else if (br) matchType = "br";
 
-  return { companyName, phone, br, matchType };
+  const mwcRegistrationNo =
+    matchType === "company_name"
+      ? raw.mwcRegistrationNo?.trim() || undefined
+      : undefined;
+
+  return {
+    companyName,
+    phone,
+    br,
+    matchType,
+    ...(mwcRegistrationNo ? { mwcRegistrationNo } : {}),
+  };
 }
 
 /** Scripts / D2 in-memory lookup that only search by company label. */
