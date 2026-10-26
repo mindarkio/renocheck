@@ -86,6 +86,46 @@ describe("LegalEventsTable", () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
+  it("does not make a non-http source URL clickable", () => {
+    const { container } = render(
+      <LegalEventsTable
+        events={[
+          synthEvent({
+            caseRef: "HCLA 1/2024",
+            sourceUrl: "javascript:alert(1)",
+            hearingKeyPointQuotesZh: ["合成引文"],
+          }),
+        ]}
+      />,
+    );
+    expect(container.textContent).toContain(LEGAL_EVENT_SOURCE_LINK_LABEL_ZH);
+    expect(container.textContent).toContain("判詞原文（Legal Ref）");
+    expect(container.textContent).toContain("合成引文");
+    expect(container.innerHTML).not.toContain("javascript:");
+    for (const anchor of container.querySelectorAll("a")) {
+      expect(anchor.getAttribute("href") ?? "").toMatch(/^https?:\/\//i);
+    }
+    const label = screen.getByText(LEGAL_EVENT_SOURCE_LINK_LABEL_ZH);
+    expect(label.closest("a")).toBeNull();
+    expect(label.className).not.toMatch(/text-primary|hover:underline/);
+    expect(label.className).toContain("text-foreground");
+  });
+
+  it("does not make a userinfo source URL clickable", () => {
+    const { container } = render(
+      <LegalEventsTable
+        events={[
+          synthEvent({
+            caseRef: "HCLA 2/2024",
+            sourceUrl: "https://legalref.judiciary.hk@evil.example/x",
+          }),
+        ]}
+      />,
+    );
+    expect(container.textContent).toContain(LEGAL_EVENT_SOURCE_LINK_LABEL_ZH);
+    expect(container.innerHTML).not.toContain("evil.example");
+  });
+
   it("類別 CJK 標點斷行 span", () => {
     const { container } = render(<LegalEventsTable events={events} />);
     const card = screen.getAllByTestId("legal-event-card")[0];

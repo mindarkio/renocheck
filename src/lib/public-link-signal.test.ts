@@ -495,6 +495,18 @@ describe("selectPublicLinkHits", () => {
     expect(selected.dropped.over_cap).toBe(3);
   });
 
+  it("keeps a dispute-keyword source even when its URL is not http(s)", () => {
+    const disputeQuestion = hit(
+      "中伏經驗 | 有否人使用過齊來設計效果如何？",
+      "",
+      "javascript:alert(1)",
+    );
+    const selected = selectPublicLinkHits([disputeQuestion], TOKENS, {
+      keepDisputeSources: true,
+    });
+    expect(selected.hits.map((h) => h.url)).toEqual(["javascript:alert(1)"]);
+  });
+
   it("keeps a dispute-keyword question when that sentence will be shown", () => {
     const disputeQuestion = hit(
       "中伏經驗 | 有否人使用過齊來設計效果如何？",
