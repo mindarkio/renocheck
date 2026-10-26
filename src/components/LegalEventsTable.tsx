@@ -14,6 +14,7 @@ import { hearingSummaryPendingForEvent } from "@/lib/judgment-hearing-summary";
 import type { OfficialLegalEvent } from "@/lib/legal-event-schema";
 import { judgmentDedupeKey } from "@/lib/lookup-legal-judgments";
 import { LEGAL_EVENT_SOURCE_LINK_LABEL_ZH } from "@/lib/report-trust-copy-zh";
+import { safeHttpUrl } from "@/lib/safe-http-url";
 import {
   reportBlockPaddingClass,
   reportExternalLinkTouchClass,
@@ -42,12 +43,17 @@ function ReportExternalLink({
   children: ReactNode;
   className?: string;
 }) {
+  const safe = safeHttpUrl(href);
+  const classes = `${reportExternalLinkTouchClass} ${className ?? ""}`;
+  if (!safe) {
+    return <span className={classes}>{children}</span>;
+  }
   return (
     <a
-      href={href}
+      href={safe}
       target="_blank"
       rel="noopener noreferrer"
-      className={`${reportExternalLinkTouchClass} ${className ?? ""}`}
+      className={classes}
     >
       {children}
       <ExternalLink className="ms-1 inline size-3.5 opacity-80" aria-hidden />
@@ -76,6 +82,7 @@ function LegalEventDetails({
             {ev.hearingKeyPointsZh.map((point, pointIndex) => {
               const quote =
                 ev.hearingKeyPointQuotesZh?.[pointIndex]?.trim();
+              const sourceHref = safeHttpUrl(ev.sourceUrl);
               return (
                 <li key={`${pointIndex}-${point}`}>
                   <span>{point}</span>
@@ -99,15 +106,21 @@ function LegalEventDetails({
                       >
                         {quote}
                       </p>
-                      <a
-                        href={ev.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`mt-1.5 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline ${reportExternalLinkTouchClass}`}
-                      >
-                        <ExternalLink className="size-3 shrink-0" aria-hidden />
-                        判詞原文（Legal Ref）
-                      </a>
+                      {sourceHref ? (
+                        <a
+                          href={sourceHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`mt-1.5 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline ${reportExternalLinkTouchClass}`}
+                        >
+                          <ExternalLink className="size-3 shrink-0" aria-hidden />
+                          判詞原文（Legal Ref）
+                        </a>
+                      ) : (
+                        <span className="mt-1.5 inline-flex items-center gap-1 text-sm font-medium">
+                          判詞原文（Legal Ref）
+                        </span>
+                      )}
                     </details>
                   ) : null}
                 </li>

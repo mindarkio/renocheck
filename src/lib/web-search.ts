@@ -343,6 +343,9 @@ type SerpJson = {
   }>;
 };
 
+// `link` is copied through unchanged. These hits are the LLM payload, the
+// bound/dispute counts, and the public-link selection. Scheme checks belong
+// on the clickable href (`safeHttpUrl`), not here.
 function mapSerpApiOrganic(json: SerpJson): WebSearchHit[] {
   return (json.organic_results ?? [])
     .filter((r) => r.link && r.title)

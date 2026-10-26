@@ -3,6 +3,7 @@ import { describe, expect, it, afterEach, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ReportCard } from "./ReportCard";
 import { REPORT_VERSION } from "@/lib/constants";
+import { safeHttpUrl } from "@/lib/safe-http-url";
 import { buildEvaluationStub } from "@/lib/evaluation-stub";
 import type { RiskReport } from "@/lib/report-schema";
 import { LEGAL_LOOKUP_DEGRADED_SECTION_ZH } from "@/lib/legal-event-display";
@@ -944,6 +945,95 @@ describe("ReportCard report trust (PR-BC)", () => {
     expect(container.textContent).not.toContain("請逐條點開下方來源");
     expect(container.textContent).not.toContain(oldSummary);
     expect(container.textContent).not.toContain("本次未形成討論摘要");
+  });
+
+  it("keeps a dispute-source row visible when the URL is not http(s)", () => {
+    const disputeSummary =
+      "根據本次可檢索的公開來源，有多則與查詢對象相關的討論出現糾紛／投訴相關字眼；請逐條點開下方來源核實。";
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          summaryZh: disputeSummary,
+          signals: {
+            ...minimalReport().signals,
+            boundHitCount: 3,
+            highlights: [],
+            retrievalEvidence: [
+              {
+                url: "javascript:alert(1)",
+                title: "中伏經驗 | 有否人使用過齊來設計效果如何？",
+                snippetExcerpt: "投訴摘錄",
+                matchedToken: "齊來設計",
+                matchReason: "entity_token",
+              },
+              {
+                url: "\nhttps://www.lihkg.com/thread/control",
+                title: "控制字元前綴",
+                snippetExcerpt: "",
+                matchedToken: "齊來設計",
+                matchReason: "entity_token",
+              },
+              {
+                url: "https://www.lihkg.com/thread/9",
+                title: "公開討論示例",
+                snippetExcerpt: "",
+                matchedToken: "齊來設計",
+                matchReason: "entity_token",
+              },
+            ],
+          },
+        })}
+      />,
+    );
+    expect(container.textContent).toContain(disputeSummary);
+    expect(container.textContent).toContain("相關公開連結（3 條）");
+    expect(container.textContent).toContain(
+      "中伏經驗 | 有否人使用過齊來設計效果如何？",
+    );
+    expect(container.textContent).toContain("投訴摘錄");
+    expect(container.textContent).toContain("控制字元前綴");
+    expect(container.textContent).not.toContain("今次未搵到有實質內容嘅公開討論。");
+    expect(container.innerHTML).not.toContain("javascript:");
+    expect(container.querySelector('a[href="https://www.lihkg.com/thread/9"]')).toBeTruthy();
+    const unsafeRow = [...container.querySelectorAll("li")].find((li) =>
+      li.textContent?.includes("控制字元前綴"),
+    );
+    expect(unsafeRow?.querySelector("a")).toBeNull();
+    for (const anchor of container.querySelectorAll("a")) {
+      const href = anchor.getAttribute("href") ?? "";
+      if (href.startsWith("#") || href.startsWith("/")) continue;
+      expect(safeHttpUrl(href)).toBe(href);
+    }
+  });
+
+  it("renders a non-http highlight title as text", () => {
+    const { container } = render(
+      <ReportCard
+        report={minimalReport({
+          signals: {
+            ...minimalReport().signals,
+            discussionCount: 2,
+            highlights: [
+              {
+                summaryZh: "合成摘要：留言指糾紛",
+                url: "JAVASCRIPT:alert(1)",
+                incidentType: "payment_dispute",
+              },
+              {
+                summaryZh: "合成摘要：公開討論",
+                url: "https://www.lihkg.com/thread/9",
+                incidentType: "other",
+              },
+            ],
+          },
+        })}
+      />,
+    );
+    const unsafeTitle = container.querySelector("#highlight-title-0");
+    expect(unsafeTitle?.tagName).toBe("P");
+    expect(unsafeTitle?.textContent).toContain("合成摘要：留言指糾紛");
+    expect(container.querySelector('a[href="https://www.lihkg.com/thread/9"]')).toBeTruthy();
+    expect(container.innerHTML).not.toMatch(/javascript:/i);
   });
 
   it("shows dispute-source links with the dispute sentence and no empty notice", () => {
