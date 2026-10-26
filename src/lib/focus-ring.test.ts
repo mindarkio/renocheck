@@ -5,6 +5,7 @@ import {
   FOCUS_RING_NAVY,
   FOCUS_RING_ON_PRIMARY,
   blendHex,
+  childFocusRingClass,
   contrastRatio,
   focusOnPrimaryClass,
   focusRingClass,
@@ -67,8 +68,11 @@ describe("focus ring source", () => {
     expect(css).toContain("--focus-ring-on-primary: #ffffff");
     expect(css).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus-ring\)/);
     expect(css).toMatch(/:focus-visible\s*\{[^}]*outline-offset:\s*2px/);
-    expect(css).toContain(".focus-on-primary");
-    expect(css).toMatch(/\.search-field-focus:focus-within\s*\{[^}]*outline:\s*2px solid var\(--focus-ring\)/);
+    expect(css).toMatch(/\.focus-on-primary\s*\{[^}]*--focus-ring:\s*var\(--focus-ring-on-primary\)/);
+    expect(css).toMatch(
+      /\.search-field-focus:has\(input:focus-visible\)\s*\{[^}]*outline:\s*2px solid var\(--focus-ring\)/,
+    );
+    expect(css).not.toMatch(/\.search-field-focus:focus-within/);
     expect(css).not.toMatch(/:focus\s*\{[^}]*outline:/);
   });
 
@@ -84,6 +88,33 @@ describe("focus ring source", () => {
       const text = readFileSync(file, "utf8");
       for (const pattern of forbidden) {
         if (pattern.test(text)) hits.push(`${path.relative(ROOT, file)} ${pattern}`);
+      }
+    }
+    expect(hits).toEqual([]);
+  });
+
+  it("keeps the white ring on navy surfaces and the quote radio label ring", () => {
+    const read = (file: string) => readFileSync(path.join(ROOT, file), "utf8");
+    expect(read("src/components/ReportCard.tsx")).toMatch(
+      /bg-primary px-5 py-5[^`]*\$\{focusOnPrimaryClass\}/,
+    );
+    expect(read("src/components/SiteFooter.tsx")).toMatch(/bg-primary[^`]*\$\{focusOnPrimaryClass\}/);
+    expect(read("src/components/SiteHeader.tsx")).toMatch(/bg-primary\/95[^`]*\$\{focusOnPrimaryClass\}/);
+    expect(childFocusRingClass).toContain("has-[:focus-visible]:ring-2");
+    expect(childFocusRingClass).toContain("has-[:focus-visible]:ring-primary");
+    expect(read("src/components/QuoteSelfCheck.tsx")).toContain("${childFocusRingClass}");
+  });
+
+  it("never uses outline-none on focus rings (forced-colors keeps outline-hidden)", () => {
+    for (const cls of [focusRingClass, focusRingOnPrimaryClass]) {
+      expect(cls).toContain("focus-visible:outline-hidden");
+      expect(cls).not.toContain("outline-none");
+    }
+    const hits: string[] = [];
+    for (const file of walk(path.join(ROOT, "src"))) {
+      if (file.endsWith(".test.ts") || file.endsWith(".test.tsx")) continue;
+      if (/focus-visible:outline-none/.test(readFileSync(file, "utf8"))) {
+        hits.push(path.relative(ROOT, file));
       }
     }
     expect(hits).toEqual([]);

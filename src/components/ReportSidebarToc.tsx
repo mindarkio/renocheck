@@ -13,7 +13,7 @@ export function ReportSidebarToc({ report }: { report: RiskReport }) {
           <li key={entry.id}>
             <a
               href={`#${entry.id}`}
-              className="block rounded-md py-1 text-primary underline-offset-2 hover:underline"
+              className="block rounded-md py-1 text-primary underline-offset-2 hover:underline focus-visible:-outline-offset-2"
             >
               {entry.label}
             </a>

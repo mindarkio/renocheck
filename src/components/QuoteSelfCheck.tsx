@@ -176,7 +176,7 @@ export function QuoteSelfCheck() {
                             value={option.id}
                             checked={checked}
                             onChange={() => choose(item.id, option.id)}
-                            className="size-4 shrink-0 accent-primary focus-visible:outline-none"
+                            className="size-4 shrink-0 accent-primary focus-visible:outline-hidden"
                           />
                           <span>
                             <span aria-hidden="true">{option.mark} </span>

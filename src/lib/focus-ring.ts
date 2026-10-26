@@ -1,6 +1,10 @@
 /**
  * Keyboard focus rings shared with the header (PR #43).
  *
+ * Ring classes use `outline-hidden`, not `outline-none`: forced-colors mode
+ * (Windows High Contrast) drops `box-shadow`, and Tailwind's `outline-hidden`
+ * keeps a transparent 2px outline there that the UA repaints in a system colour.
+ *
  * Light surfaces use solid brand navy `#2f5d8a`. That colour on the navy
  * footer, report hero, or mobile sheet is about 1:1, so those surfaces use
  * solid white instead. Mouse clicks do not match `:focus-visible` on links
@@ -11,20 +15,24 @@
 
 /** Solid `#2f5d8a` on the page background. */
 export const focusRingClass =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 /** Solid white on brand navy. Offset matches `bg-primary`. */
 export const focusRingOnPrimaryClass =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary";
+  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary";
 
-/** Label or row that rings when a child control is keyboard-focused. */
+/**
+ * Label or row that rings when a child control is keyboard-focused. The child
+ * keeps `focus-visible:outline-hidden` so forced-colors mode still shows it.
+ */
 export const childFocusRingClass =
   "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-background";
 
 /**
  * Landing search pill. See `.search-field-focus` in `globals.css`.
  * A Tailwind ring is omitted because the pill's own shadow replaces `box-shadow`.
- * `:focus-within` is used because the CSS pipeline drops `:has()`.
+ * `:has(input:focus-visible)` so the icon button (own outline) and pointer
+ * clicks on it do not also outline the pill.
  */
 export const searchFieldFocusRingClass = "search-field-focus";
 

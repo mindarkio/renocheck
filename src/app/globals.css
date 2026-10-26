@@ -49,7 +49,8 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* In the base layer so a component ring can opt out with `focus-visible:outline-none`.
+/* In the base layer so a component ring can opt out with `focus-visible:outline-hidden`
+   (not the `-none` variant, which also drops the forced-colors fallback).
    `:focus-visible` skips pointer clicks on links and buttons. 2px + 2px offset meets
    WCAG 2.4.7 / 1.4.11 and the 2.4.13 perimeter where the colour pair is at least 3:1. */
 @layer base {
@@ -65,9 +66,10 @@ body {
 }
 
 /* The landing search pill already paints a box-shadow, which replaces a Tailwind ring.
-   `:focus-within` matches the text field (pointer or keyboard). The icon button
-   is a separate control and keeps the global outline when it is :focus-visible. */
-.search-field-focus:focus-within {
+   Only the text field outlines the pill (text fields match :focus-visible on pointer
+   too). The icon button keeps its own global outline, so no double ring and no pill
+   outline when the button is clicked with a mouse. */
+.search-field-focus:has(input:focus-visible) {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
