@@ -15,6 +15,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbJsonLd } from "@/lib/breadcrumb-jsonld";
 import { GUIDES, getGuide, guideFaqJsonLd, relatedGuides } from "@/lib/guides";
 import { OG_IMAGE, pageMetadata } from "@/lib/site-metadata";
+import { safeHttpUrl } from "@/lib/safe-http-url";
 import { getSiteUrl } from "@/lib/site-url";
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -170,18 +171,25 @@ export default async function GuidePage({ params }: PageProps) {
           </ContentSection>
           <ContentSection title="資料來源">
             <ul className="list-disc space-y-1 pl-5">
-              {guide.sources.map((s) => (
-                <li key={s.url}>
-                  <a
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="break-words"
-                  >
-                    {s.label}
-                  </a>
-                </li>
-              ))}
+              {guide.sources.map((s) => {
+                const href = safeHttpUrl(s.url);
+                return (
+                  <li key={s.url}>
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="break-words"
+                      >
+                        {s.label}
+                      </a>
+                    ) : (
+                      <span className="break-words">{s.label}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </ContentSection>
           <ContentSection title="相關指南">

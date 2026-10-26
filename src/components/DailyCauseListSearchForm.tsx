@@ -12,6 +12,7 @@ import {
   DAILY_CAUSE_LIST_LINK_LABEL_ZH,
   JUDICIARY_DAILY_CAUSE_LIST_URL,
 } from "@/lib/report-trust-copy-zh";
+import { safeHttpUrl } from "@/lib/safe-http-url";
 
 const noopSubscribe = () => () => {};
 
@@ -31,11 +32,19 @@ export function DailyCauseListSearchForm({
   // false during SSR / before hydration, so the button cannot post an empty date.
   const ready = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const parties = dailyCauseListPartyQuery(partyName);
+  const listHref = safeHttpUrl(JUDICIARY_DAILY_CAUSE_LIST_URL);
 
   if (parties === null) {
+    if (!listHref) {
+      return (
+        <span className={className ?? DEFAULT_BUTTON_CLASS}>
+          {DAILY_CAUSE_LIST_LINK_LABEL_ZH}
+        </span>
+      );
+    }
     return (
       <a
-        href={JUDICIARY_DAILY_CAUSE_LIST_URL}
+        href={listHref}
         target="_blank"
         rel="noopener noreferrer"
         className={className ?? DEFAULT_BUTTON_CLASS}

@@ -71,6 +71,7 @@ import {
   isMwcExpiryBeforeReport,
 } from "@/lib/mwc-registry-display";
 import type { RiskReport } from "@/lib/report-schema";
+import { nonLinkFallbackClasses, safeHttpUrl } from "@/lib/safe-http-url";
 import {
   riskBandMeterActiveLabelClass,
   riskBandSurfaceClass,
@@ -115,8 +116,10 @@ function redactEvidenceText(text: string): string {
 }
 
 function siteLabel(url: string): string {
+  const safe = safeHttpUrl(url);
+  if (!safe) return "公開連結";
   try {
-    return new URL(url).hostname.replace(/^www\./, "");
+    return new URL(safe).hostname.replace(/^www\./, "") || "公開連結";
   } catch {
     return "公開連結";
   }
@@ -338,13 +341,24 @@ function ReportExternalLink({
   className?: string;
   onClick?: () => void;
 }) {
+  const safe = safeHttpUrl(href);
+  const classes = `inline-flex min-h-11 items-center ${reportExternalLinkTouchClass} ${className ?? ""}`;
+  if (!safe) {
+    return (
+      <span
+        className={`inline-flex min-h-11 items-center ${reportExternalLinkTouchClass} ${nonLinkFallbackClasses(className)} text-foreground`}
+      >
+        {children}
+      </span>
+    );
+  }
   return (
     <a
-      href={href}
+      href={safe}
       target="_blank"
       rel="noopener noreferrer"
       onClick={onClick}
-      className={`inline-flex min-h-11 items-center ${reportExternalLinkTouchClass} ${className ?? ""}`}
+      className={classes}
     >
       {children}
       <ExternalLink className="ms-1 inline size-3.5 shrink-0 opacity-80" aria-hidden />
@@ -409,7 +423,7 @@ export function ReportCard({
       evidenceCount > 0);
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
-  const mwcRegistryHref = mwcRegistrySearchHref(report);
+  const mwcRegistryHref = safeHttpUrl(mwcRegistrySearchHref(report) ?? "");
   const licenseChipClass = `${reportHeroChipClass} ${heroChipToneClass(license.tone)}`;
   const disputeTone =
     report.evaluation.reputationTrack.disputeLevel === "severe" ||
@@ -461,29 +475,43 @@ export function ReportCard({
             </p>
           ) : null}
           <ul className="list-none space-y-0 p-0">
-            {report.signals.retrievalEvidence!.map((item) => (
-              <li key={item.url} className={reportListRowClass}>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-start gap-2 font-medium text-primary underline-offset-2 hover:underline break-all"
-                >
-                  <ExternalLink
-                    className="mt-1 size-4 shrink-0"
-                    aria-hidden
-                  />
-                  <span className="text-sm leading-snug sm:text-[15px]">
-                    {item.title ? redactEvidenceText(item.title) : siteLabel(item.url)}
-                  </span>
-                </a>
-                {item.snippetExcerpt && highlights.length === 0 ? (
-                  <p className={`mt-2 ${reportMetaClass}`}>
-                    {redactEvidenceText(item.snippetExcerpt)}
-                  </p>
-                ) : null}
-              </li>
-            ))}
+            {report.signals.retrievalEvidence!.map((item) => {
+              const href = safeHttpUrl(item.url);
+              const label = item.title
+                ? redactEvidenceText(item.title)
+                : siteLabel(item.url);
+              return (
+                <li key={item.url} className={reportListRowClass}>
+                  {href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-start gap-2 font-medium text-primary underline-offset-2 hover:underline break-all"
+                    >
+                      <ExternalLink
+                        className="mt-1 size-4 shrink-0"
+                        aria-hidden
+                      />
+                      <span className="text-sm leading-snug sm:text-[15px]">
+                        {label}
+                      </span>
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-start gap-2 font-medium break-all">
+                      <span className="text-sm leading-snug sm:text-[15px]">
+                        {label}
+                      </span>
+                    </span>
+                  )}
+                  {item.snippetExcerpt && highlights.length === 0 ? (
+                    <p className={`mt-2 ${reportMetaClass}`}>
+                      {redactEvidenceText(item.snippetExcerpt)}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         </ReportBlock>
       )}
@@ -946,6 +974,7 @@ export function ReportCard({
             const body = highlightCardBody(h);
             const when = simplifyHighlightWhen(h);
             const source = h.sourceName?.trim();
+            const href = safeHttpUrl(h.url);
             return (
               <section
                 key={h.url}
@@ -960,16 +989,26 @@ export function ReportCard({
                     {sourceBadgeLabel(source, h.url)}
                   </span>
                 ) : null}
-                <a
-                  id={titleId}
-                  href={h.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`block w-full max-w-[40em] line-clamp-3 text-[15px] font-semibold leading-snug text-primary underline-offset-2 hover:underline lg:text-base ${reportExternalLinkTouchClass}`}
-                  title={title}
-                >
-                  {title}
-                </a>
+                {href ? (
+                  <a
+                    id={titleId}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`block w-full max-w-[40em] line-clamp-3 text-[15px] font-semibold leading-snug text-primary underline-offset-2 hover:underline lg:text-base ${reportExternalLinkTouchClass}`}
+                    title={title}
+                  >
+                    {title}
+                  </a>
+                ) : (
+                  <p
+                    id={titleId}
+                    className={`block w-full max-w-[40em] line-clamp-3 text-[15px] font-semibold leading-snug text-foreground lg:text-base ${reportExternalLinkTouchClass}`}
+                    title={title}
+                  >
+                    {title}
+                  </p>
+                )}
                 {when ? (
                   <p className={`mt-2 ${reportMetaClass} tabular-nums`}>
                     {when}
