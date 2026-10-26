@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
+import { focusOnPrimaryClass } from "@/lib/focus-ring";
 import { DailyCauseListSearchForm } from "@/components/DailyCauseListSearchForm";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
 import { CompanyIdentityCard } from "@/components/CompanyIdentityCard";
@@ -613,7 +614,7 @@ export function ReportCard({
     ) : null}
     <article className={`${reportShellClass} overflow-hidden`}>
       <header
-        className="bg-primary px-5 py-5 text-primary-foreground sm:px-6 sm:py-6"
+        className={`bg-primary px-5 py-5 text-primary-foreground sm:px-6 sm:py-6 ${focusOnPrimaryClass}`}
       >
         <p className={`${reportHeroMetaClass} font-medium`}>
           查證對象
@@ -676,7 +677,7 @@ export function ReportCard({
                 href={mwcRegistryHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${licenseChipClass} min-h-11 transition-colors hover:bg-primary-foreground/22 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/45`}
+                className={`${licenseChipClass} min-h-11 transition-colors hover:bg-primary-foreground/22`}
               >
                 <BadgeCheck className="size-3 shrink-0" aria-hidden />
                 {license.label}
@@ -740,7 +741,7 @@ export function ReportCard({
                 href={mwcRegistryHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`mt-2 inline-flex items-center gap-1 text-xs leading-relaxed text-primary-foreground/90 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/45 ${reportExternalLinkTouchClass}`}
+                className={`mt-2 inline-flex items-center gap-1 rounded-sm text-xs leading-relaxed text-primary-foreground/90 underline-offset-2 hover:underline ${reportExternalLinkTouchClass}`}
               >
                 {officialRegister.companyName}
                 {officialRegister.registrationNo

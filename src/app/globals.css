@@ -21,6 +21,9 @@
   --border: #e4e4e7;
   --warning: #d97706;
   --warning-foreground: #fffbeb;
+  /* Keyboard focus. Navy on light surfaces; `.focus-on-primary` switches it to white. */
+  --focus-ring: var(--brand-navy);
+  --focus-ring-on-primary: #ffffff;
 }
 
 @theme inline {
@@ -44,6 +47,31 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* In the base layer so a component ring can opt out with `focus-visible:outline-hidden`
+   (not the `-none` variant, which also drops the forced-colors fallback).
+   `:focus-visible` skips pointer clicks on links and buttons. 2px + 2px offset meets
+   WCAG 2.4.7 / 1.4.11 and the 2.4.13 perimeter where the colour pair is at least 3:1. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Brand navy surfaces. `#2f5d8a` on itself is 1:1; white on `#2f5d8a` is 6.88:1. */
+.focus-on-primary {
+  --focus-ring: var(--focus-ring-on-primary);
+}
+
+/* The landing search pill already paints a box-shadow, which replaces a Tailwind ring.
+   Only the text field outlines the pill (text fields match :focus-visible on pointer
+   too). The icon button keeps its own global outline, so no double ring and no pill
+   outline when the button is clicked with a mouse. */
+.search-field-focus:has(input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: no-preference) {

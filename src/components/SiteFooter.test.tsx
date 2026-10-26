@@ -24,6 +24,9 @@ describe("SiteFooter quote link", () => {
     expect(link.textContent).toBe(QUOTE_PAGE_TITLE_ZH);
     expect(link.className).toContain("min-h-11");
     expect(link.className).toContain("focus-visible:ring-2");
+    expect(link.className).toContain("focus-visible:ring-white");
+    expect(link.className).not.toContain("ring-white/40");
+    expect(document.querySelector("footer")?.className).toContain("focus-on-primary");
     expect(link.getAttribute("aria-current")).toBeNull();
   });
 

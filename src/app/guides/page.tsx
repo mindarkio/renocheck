@@ -65,7 +65,7 @@ export default function GuidesIndexPage() {
             <li key={g.slug} className="min-w-0">
               <Link
                 href={`/guides/${g.slug}`}
-                className={`${surfaceCardClass} group flex h-full flex-col overflow-hidden transition-shadow hover:shadow-[0_2px_14px_rgba(32,33,36,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40`}
+                className={`${surfaceCardClass} group flex h-full flex-col overflow-hidden transition-shadow hover:shadow-[0_2px_14px_rgba(32,33,36,0.12)]`}
               >
                 <div className="bg-primary px-3 py-3 text-primary-foreground sm:px-5 sm:py-4">
                   <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full border border-primary-foreground/25 bg-primary-foreground/12 px-2 py-0.5 text-[10px] font-medium sm:px-2.5 sm:text-[11px]">

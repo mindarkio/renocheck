@@ -41,7 +41,7 @@ export default async function Home() {
         <h1 className="sr-only">香港裝修公司風險參考搜尋</h1>
         <Link
           href="/"
-          className="mb-6 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:mb-8"
+          className="mb-6 rounded-lg sm:mb-8"
         >
           <Image
             src="/logo/lockup-stacked.svg"
