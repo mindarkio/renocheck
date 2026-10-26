@@ -2,19 +2,17 @@ import { describe, expect, it } from "vitest";
 import { classifyCompanyNameQuery } from "./company-query-gate";
 
 describe("classifyCompanyNameQuery", () => {
-  it("blocks english personal names without a continue link", () => {
-    for (const typed of ["alfred ho", "Tim Ho", "Mr Ho", "Miss Chan"]) {
+  it("blocks english personal names and offers the continue link", () => {
+    for (const typed of ["alfred ho", "Tim Ho", "Mr Ho", "Miss Chan", "Lee Garden", "Wong Kee"]) {
       const gate = classifyCompanyNameQuery(typed);
-      expect(gate.kind).toBe("personal");
-      if (gate.kind === "personal") expect(gate.allowCompanyOverride).toBe(false);
+      expect(gate).toEqual({ kind: "personal", input: typed, allowCompanyOverride: true });
     }
   });
 
-  it("blocks titled Chinese names without a continue link", () => {
+  it("blocks titled Chinese names and offers the continue link", () => {
     for (const typed of ["陳生", "何太", "陳先生", "陳小姐", "何太太", "陳師傅"]) {
       const gate = classifyCompanyNameQuery(typed);
-      expect(gate.kind).toBe("personal");
-      if (gate.kind === "personal") expect(gate.allowCompanyOverride).toBe(false);
+      expect(gate).toEqual({ kind: "personal", input: typed, allowCompanyOverride: true });
     }
   });
 
@@ -82,9 +80,11 @@ describe("classifyCompanyNameQuery", () => {
   });
 
   it("folds full-width letters before the english personal-name check", () => {
-    const gate = classifyCompanyNameQuery("ａｌｆｒｅｄ　ｈｏ");
-    expect(gate.kind).toBe("personal");
-    if (gate.kind === "personal") expect(gate.allowCompanyOverride).toBe(false);
+    expect(classifyCompanyNameQuery("ａｌｆｒｅｄ　ｈｏ")).toEqual({
+      kind: "personal",
+      input: "alfred ho",
+      allowCompanyOverride: true,
+    });
   });
 
   it("reads t/a and trading as only as whole words", () => {
@@ -144,5 +144,27 @@ describe("classifyCompanyNameQuery", () => {
     for (const word of ["花生", "醫生", "學生", "人生"]) {
       expect(classifyCompanyNameQuery(word).kind).toBe("short");
     }
+  });
+
+  it("splits 陳大文經營 and keeps a company name that contains 經營", () => {
+    expect(classifyCompanyNameQuery("陳大文經營南興裝修")).toEqual({
+      kind: "search",
+      input: "南興裝修",
+    });
+    expect(classifyCompanyNameQuery("陳大文經營").kind).toBe("short");
+    expect(classifyCompanyNameQuery("甲乙物業經營管理")).toEqual({
+      kind: "search",
+      input: "甲乙物業經營管理",
+    });
+    expect(classifyCompanyNameQuery("Smart/Advance Engineering Limited")).toEqual({
+      kind: "search",
+      input: "Smart/Advance Engineering Limited",
+    });
+  });
+
+  it("searches a three-character name that uses 記、行 or 號", () => {
+    expect(classifyCompanyNameQuery("李錦記")).toEqual({ kind: "search", input: "李錦記" });
+    expect(classifyCompanyNameQuery("合成行")).toEqual({ kind: "search", input: "合成行" });
+    expect(classifyCompanyNameQuery("合成號")).toEqual({ kind: "search", input: "合成號" });
   });
 });

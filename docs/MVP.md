@@ -206,7 +206,7 @@ interface RiskReport {
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| `POST` | `/api/search` | Body: `{ companyName?, phone?, br?, mwcRegistrationNo? }` → `RiskReport`. `mwcRegistrationNo` is the Buildings Department number chosen in the name picker (DEC-0015); the report uses that one row. The server accepts it only when the same register lookup for `companyName` lists it in a 2–8 row picker; otherwise `search_failed`. Optional `{ preview: "register", companyName }` returns `{ matchCount, windowFull, candidates }` (company name, English name, registration number, exact-name flag only) and does not run the report. |
+| `POST` | `/api/search` | Body: `{ companyName?, phone?, br?, mwcRegistrationNo? }` → `RiskReport`. `mwcRegistrationNo` is the Buildings Department number chosen in the name picker (DEC-0015); the report uses that one row. The server accepts it only when the same register lookup for `companyName` lists it in a 2–8 row picker; otherwise `search_failed`. `companyName` is at most 100 characters. The register preview has its own rate-limit bucket and does not spend a search slot. Optional `{ preview: "register", companyName }` returns `{ matchCount, windowFull, candidates }` (company name, English name, registration number, exact-name flag only) and does not run the report. |
 | `GET` | `/api/health` | 部署探活 |
 
 **錯誤：** 400 無有效輸入；429 rate limit；502 上游搜尋失敗（仍盡力返回僅牌照結果 + 低置信度）。

@@ -5,6 +5,7 @@ import {
   type PublicMwcCandidate,
 } from "./register-candidate-gate";
 import { listMwcCompanyCandidates } from "./mwc-lookup";
+import { COMPANY_NAME_MAX_LENGTH } from "./report-schema";
 
 export type RegisterPreviewBody = {
   matchCount: number;
@@ -24,7 +25,10 @@ export function readRegisterPreviewCompanyName(body: unknown): string | null | "
   if (preview == null) return null;
   if (preview !== "register") return "invalid";
   const companyName = (body as { companyName?: unknown }).companyName;
-  if (typeof companyName !== "string" || !companyName.trim()) return "invalid";
+  if (typeof companyName !== "string" || companyName.length > COMPANY_NAME_MAX_LENGTH) {
+    return "invalid";
+  }
+  if (!companyName.trim()) return "invalid";
   return companyName.trim();
 }
 

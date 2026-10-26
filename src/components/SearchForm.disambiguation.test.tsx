@@ -79,23 +79,23 @@ describe("SearchForm register gates", () => {
     expect(screen.queryByText(/將以/)).toBeNull();
   });
 
-  it("blocks english personal names with no continue link", async () => {
+  it("blocks english personal names and still offers the continue link", async () => {
     const fetchMock = installFetch({ matchCount: 0, windowFull: false, candidates: [] });
     render(<SearchForm variant="landing" />);
     typeAndSearch("alfred ho");
     const status = screen.getByRole("status");
     expect(status.textContent).toContain(personalNameMessageZh("alfred ho"));
-    expect(screen.queryByRole("button", { name: "呢個係公司全名，繼續查" })).toBeNull();
+    expect(screen.getByRole("button", { name: "呢個係公司全名，繼續查" })).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
 
     cleanup();
     render(<SearchForm variant="landing" />);
     typeAndSearch("Tim Ho");
     expect(screen.getByRole("status").textContent).toContain(personalNameMessageZh("Tim Ho"));
-    expect(screen.queryByRole("button", { name: "呢個係公司全名，繼續查" })).toBeNull();
+    expect(screen.getByRole("button", { name: "呢個係公司全名，繼續查" })).toBeTruthy();
   });
 
-  it("offers 繼續查 only for a 3-character Chinese name", async () => {
+  it("continues a 3-character Chinese name as a company search", async () => {
     const fetchMock = installFetch({ matchCount: 0, windowFull: false, candidates: [] });
     render(<SearchForm variant="landing" />);
     typeAndSearch("何文軒");
@@ -107,12 +107,13 @@ describe("SearchForm register gates", () => {
     expect(body.preview).toBe("register");
   });
 
-  it("does not offer 繼續查 for 陳生", () => {
-    installFetch({ matchCount: 0, windowFull: false, candidates: [] });
+  it("offers 繼續查 for a titled Chinese name and does not search yet", () => {
+    const fetchMock = installFetch({ matchCount: 0, windowFull: false, candidates: [] });
     render(<SearchForm variant="landing" />);
     typeAndSearch("陳生");
     expect(screen.getByRole("status").textContent).toContain("好似一個人名");
-    expect(screen.queryByRole("button", { name: "呢個係公司全名，繼續查" })).toBeNull();
+    expect(screen.getByRole("button", { name: "呢個係公司全名，繼續查" })).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("labels the picker as a radio group and tags the exact row", async () => {
@@ -170,6 +171,12 @@ describe("SearchForm register gates", () => {
     render(<SearchForm variant="landing" />);
     typeAndSearch("合成設計");
     expect(await screen.findByRole("heading", { name: "請輸入公司全名" })).toBeTruthy();
+    expect(
+      screen.getByText(
+        "你輸入「合成設計」。名冊入面有好多間都包含呢幾個字，所以未開始查。請輸入報價單或合約上嘅公司全名。",
+      ),
+    ).toBeTruthy();
+    expect(document.body.textContent).not.toContain("屋宇署註冊編號");
     expect(screen.queryByRole("radio")).toBeNull();
 
     cleanup();
@@ -255,5 +262,13 @@ describe("SearchForm register gates", () => {
     typeAndSearch("合成設計");
     expect(await screen.findByText("查詢過於頻繁，請稍後再試。")).toBeTruthy();
     expect(screen.queryByText("名冊暫時對唔到，請稍後再試。")).toBeNull();
+  });
+
+  it("caps the company-name box at 100 characters", () => {
+    const { unmount } = render(<SearchForm variant="landing" />);
+    expect((screen.getByRole("searchbox") as HTMLInputElement).maxLength).toBe(100);
+    unmount();
+    render(<SearchForm variant="card" />);
+    expect((screen.getByLabelText("公司名稱") as HTMLInputElement).maxLength).toBe(100);
   });
 });

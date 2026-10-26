@@ -14,6 +14,22 @@ const TRADING_AS_ZH = "經營";
 
 const ENGLISH_TITLES = new Set(["mr", "mrs", "ms", "miss"]);
 
+/**
+ * Single characters used in trading names (李錦記、大昌行). They are not added
+ * to the generic-alias list: that list also blocks a whole name made only of
+ * trade words, and 行 appears inside ordinary company names.
+ */
+const TRADE_NAME_CHARS = ["記", "行", "號"] as const;
+
+function hasTradeNameChar(text: string): boolean {
+  return TRADE_NAME_CHARS.some((char) => text.includes(char));
+}
+
+/** Exactly three Han and a trading-name character: search it as a company. */
+function isThreeHanTradeName(text: string): boolean {
+  return /^\p{Script=Han}{3}$/u.test(text) && hasTradeNameChar(text);
+}
+
 /** Whole strings that end in 生/太 but are words, not 「X生」/「X太」. */
 const NOT_A_PERSONAL_TITLE = new Set([
   "花生",
@@ -85,7 +101,9 @@ export function isEnglishPersonalName(raw: string): boolean {
 
 export function isPersonalName(raw: string): boolean {
   const text = normalizeCompanyQuery(raw);
-  if (!text || hasDigit(text) || hasSearchTradeMarker(text)) return false;
+  if (!text || hasDigit(text) || hasSearchTradeMarker(text) || hasTradeNameChar(text)) {
+    return false;
+  }
   if (isChineseTitledPersonalName(text)) return true;
   if (isEnglishPersonalName(text)) return true;
   return isBareThreeHanPersonalName(text);
@@ -129,13 +147,9 @@ export function classifyCompanyNameQuery(raw: string): CompanyQueryGate {
 
   const input = trading.query;
   if (isPersonalName(input)) {
-    return {
-      kind: "personal",
-      input,
-      allowCompanyOverride:
-        isBareThreeHanPersonalName(input) && !isChineseTitledPersonalName(input),
-    };
+    return { kind: "personal", input, allowCompanyOverride: true };
   }
+  if (isThreeHanTradeName(input)) return { kind: "search", input };
   if (isGenericSearchAlias(input)) return { kind: "short", input };
   return { kind: "search", input };
 }

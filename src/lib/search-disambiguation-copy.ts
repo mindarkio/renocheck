@@ -25,7 +25,7 @@ export function pickerBodyZh(typed: string): string {
 }
 
 export function tooManyBodyZh(typed: string): string {
-  return `你輸入「${typed}」。名冊入面有好多間都包含呢幾個字，所以未開始查。請輸入報價單或合約上嘅公司全名，或者屋宇署註冊編號。`;
+  return `你輸入「${typed}」。名冊入面有好多間都包含呢幾個字，所以未開始查。請輸入報價單或合約上嘅公司全名。`;
 }
 
 export function shortCompanyNameMessageZh(typed: string): string {

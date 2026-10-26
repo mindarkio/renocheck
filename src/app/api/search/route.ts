@@ -3,7 +3,8 @@ import { searchInputSchema } from "@/lib/report-schema";
 import { normalizeSearchInput } from "@/lib/normalize-search-input";
 import { runSearchPipeline } from "@/lib/search-pipeline";
 import { SearchPipelineError } from "@/lib/search-pipeline-error";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { rateLimitIp, takeAuthRateLimit } from "@/lib/auth/rate-limit";
+import { checkRateLimit, SEARCH_MAX_PER_WINDOW } from "@/lib/rate-limit";
 import { isAnonId } from "@/lib/anon-id";
 import { redactReportForPublicResponse } from "@/lib/redact-public-report";
 import { isSyntheticProbeTerm } from "@/lib/synthetic-probe";
@@ -12,6 +13,28 @@ import {
   readRegisterPreviewCompanyName,
 } from "@/lib/register-preview";
 import { getSupabaseAdmin, isSupabaseAdminConfigured } from "@/lib/supabase/admin";
+
+/** Same one-minute window as search, stored under a different HMAC key. */
+const REGISTER_PREVIEW_WINDOW_MS = 60_000;
+
+function isRegisterPreviewAttempt(body: unknown): boolean {
+  return typeof body === "object" && body !== null && "preview" in body;
+}
+
+async function registerPreviewLimitResponse(ip: string): Promise<NextResponse | null> {
+  const result = await takeAuthRateLimit({
+    key: `register-preview:${rateLimitIp(ip)}`,
+    limit: SEARCH_MAX_PER_WINDOW,
+    windowMs: REGISTER_PREVIEW_WINDOW_MS,
+  });
+  if (result === "limited") {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+  if (result !== "ok") {
+    return NextResponse.json({ error: "register_lookup_failed" }, { status: 503 });
+  }
+  return null;
+}
 
 function anonIdFromBody(body: unknown): string | null {
   if (typeof body !== "object" || body === null || !("anonId" in body)) {
@@ -27,15 +50,21 @@ export async function POST(req: Request) {
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
-  }
-
   let body: unknown;
   try {
     body = await req.json();
   } catch {
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    }
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  }
+
+  if (isRegisterPreviewAttempt(body)) {
+    const limited = await registerPreviewLimitResponse(ip);
+    if (limited) return limited;
+  } else if (!checkRateLimit(ip)) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
   const previewName = readRegisterPreviewCompanyName(body);

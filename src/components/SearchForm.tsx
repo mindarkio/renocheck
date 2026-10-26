@@ -8,6 +8,7 @@ import {
   toSearchInputBody,
 } from "@/lib/parse-unified-search-query";
 import { classifyCompanyNameQuery } from "@/lib/company-query-gate";
+import { COMPANY_NAME_MAX_LENGTH } from "@/lib/report-schema";
 import {
   decideRegisterCandidateGate,
   type PublicMwcCandidate,
@@ -310,6 +311,7 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
               disabled={inputsDisabled}
               aria-describedby={paused ? "service-paused-banner" : undefined}
               className={`${fieldClass} min-h-12`}
+              maxLength={COMPANY_NAME_MAX_LENGTH}
               placeholder="輸入裝修公司名稱、電話或 BR 號碼"
             />
           </div>
@@ -344,6 +346,7 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
               }}
               disabled={inputsDisabled}
               className={fieldClass}
+              maxLength={COMPANY_NAME_MAX_LENGTH}
               placeholder="例：某某裝修工程有限公司"
             />
           </div>

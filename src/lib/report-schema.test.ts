@@ -66,4 +66,9 @@ describe("searchInputSchema", () => {
       true,
     );
   });
+
+  it("rejects a company name longer than 100 characters", () => {
+    expect(searchInputSchema.safeParse({ companyName: "合".repeat(100) }).success).toBe(true);
+    expect(searchInputSchema.safeParse({ companyName: "合".repeat(101) }).success).toBe(false);
+  });
 });
