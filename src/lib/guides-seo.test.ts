@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sitemap from "@/app/sitemap";
 import { GUIDES, getGuide, guideFaqJsonLd, relatedGuides, type Guide } from "@/lib/guides";
+import { safeHttpUrl } from "@/lib/safe-http-url";
 import { LLMS_TXT } from "@/lib/llms-txt";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -72,6 +73,7 @@ describe("2026-10-23 SEO guides", () => {
         const url = new URL(source.url);
         expect(url.protocol).toBe("https:");
         expect(OFFICIAL_HOSTS.has(url.hostname)).toBe(true);
+        expect(safeHttpUrl(source.url)).toBe(source.url);
       }
       expect(guideFaqJsonLd(guide)).toEqual({
         "@type": "FAQPage",
@@ -82,6 +84,9 @@ describe("2026-10-23 SEO guides", () => {
           acceptedAnswer: { "@type": "Answer", text: item.answer },
         })),
       });
+    }
+    for (const source of GUIDES.flatMap((guide) => guide.sources)) {
+      expect(safeHttpUrl(source.url), source.url).toBe(source.url);
     }
     for (const guide of GUIDES) {
       if (!NEW_GUIDES.some((item) => item.slug === guide.slug)) {
