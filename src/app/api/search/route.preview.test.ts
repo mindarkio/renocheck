@@ -5,11 +5,6 @@ const mocks = vi.hoisted(() => ({
   runSearchPipeline: vi.fn(),
   isSupabaseAdminConfigured: vi.fn(() => true),
   checkRateLimit: vi.fn<(key: string, maxPerWindow?: number) => boolean>(() => true),
-  takeAuthRateLimit: vi.fn<
-    (input: { key: string; limit: number; windowMs: number }) => Promise<
-      "ok" | "limited" | "unavailable"
-    >
-  >(async () => "ok"),
 }));
 
 vi.mock("@/lib/register-preview", async (importOriginal) => {
@@ -34,12 +29,6 @@ vi.mock("@/lib/rate-limit", () => ({
   SEARCH_MAX_PER_WINDOW: 5,
 }));
 
-vi.mock("@/lib/auth/rate-limit", () => ({
-  rateLimitIp: (ip: string) => ip,
-  takeAuthRateLimit: (input: { key: string; limit: number; windowMs: number }) =>
-    mocks.takeAuthRateLimit(input),
-}));
-
 import { POST } from "./route";
 
 function previewRequest(body: unknown) {
@@ -50,12 +39,29 @@ function previewRequest(body: unknown) {
   });
 }
 
+function reportResult() {
+  return {
+    fingerprint: "abc",
+    cacheHit: false,
+    report: {
+      reportVersion: "test",
+      summaryZh: "公開資料有限。",
+      signals: {
+        themes: [],
+        retrievalEvidence: [],
+        actionableClauses: [],
+        contractChecklist: ["有無書面合約？"],
+      },
+    },
+    meta: { serpConfigured: false, webHitCount: 0 },
+  };
+}
+
 describe("POST /api/search register preview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.isSupabaseAdminConfigured.mockReturnValue(true);
     mocks.checkRateLimit.mockReturnValue(true);
-    mocks.takeAuthRateLimit.mockResolvedValue("ok");
   });
 
   it("returns public candidate fields and does not run a report", async () => {
@@ -115,49 +121,58 @@ describe("POST /api/search register preview", () => {
       previewRequest({ preview: "register", companyName: "合成設計" }),
     );
     expect(preview.status).toBe(200);
-    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
-    expect(mocks.takeAuthRateLimit).toHaveBeenCalledWith({
-      key: "register-preview:unknown",
-      limit: 5,
-      windowMs: 60_000,
-    });
+    expect(mocks.checkRateLimit.mock.calls).toEqual([["register-preview:unknown", 5]]);
 
-    mocks.takeAuthRateLimit.mockClear();
-    mocks.runSearchPipeline.mockResolvedValue({
-      fingerprint: "abc",
-      cacheHit: false,
-      report: {
-        reportVersion: "test",
-        summaryZh: "公開資料有限。",
-        signals: {
-          themes: [],
-          retrievalEvidence: [],
-          actionableClauses: [],
-          contractChecklist: ["有無書面合約？"],
-        },
-      },
-      meta: { serpConfigured: false, webHitCount: 0 },
-    });
+    mocks.checkRateLimit.mockClear();
+    mocks.runSearchPipeline.mockResolvedValue(reportResult());
     const search = await POST(previewRequest({ companyName: "合成設計" }));
     expect(search.status).toBe(200);
-    expect(mocks.checkRateLimit).toHaveBeenCalled();
-    expect(mocks.takeAuthRateLimit).not.toHaveBeenCalled();
+    expect(mocks.checkRateLimit.mock.calls).toEqual([["unknown", undefined]]);
   });
 
-  it("fails closed when the preview limiter is unavailable", async () => {
-    mocks.takeAuthRateLimit.mockResolvedValue("unavailable");
+  it("still allows a preview when the search bucket is full", async () => {
+    mocks.checkRateLimit.mockImplementation((key) => key.startsWith("register-preview:"));
+    mocks.buildRegisterPreview.mockResolvedValue({ matchCount: 0, windowFull: false, candidates: [] });
     const res = await POST(previewRequest({ preview: "register", companyName: "合成設計" }));
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual({ error: "register_lookup_failed" });
-    expect(mocks.buildRegisterPreview).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+  });
+
+  it("charges a search slot when preview is null", async () => {
+    mocks.checkRateLimit.mockImplementation((key) => key.startsWith("register-preview:"));
+    const res = await POST(previewRequest({ preview: null, companyName: "合成設計" }));
+    expect(res.status).toBe(429);
+    expect(mocks.checkRateLimit.mock.calls).toEqual([["unknown", undefined]]);
+    expect(mocks.runSearchPipeline).not.toHaveBeenCalled();
   });
 
   it("returns 429 when the preview bucket is full", async () => {
-    mocks.takeAuthRateLimit.mockResolvedValue("limited");
+    mocks.checkRateLimit.mockImplementation((key) => !key.startsWith("register-preview:"));
     const res = await POST(previewRequest({ preview: "register", companyName: "合成設計" }));
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({ error: "rate_limited" });
     expect(mocks.buildRegisterPreview).not.toHaveBeenCalled();
+  });
+
+  it("charges a search slot for a body that is not JSON", async () => {
+    mocks.checkRateLimit.mockReturnValue(false);
+    const res = await POST(
+      new Request("http://localhost/api/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{",
+      }),
+    );
+    expect(res.status).toBe(429);
+    expect(mocks.checkRateLimit.mock.calls).toEqual([["unknown", undefined]]);
+  });
+
+  it("accepts a company name of exactly 100 characters", async () => {
+    mocks.buildRegisterPreview.mockResolvedValue({ matchCount: 0, windowFull: false, candidates: [] });
+    const res = await POST(
+      previewRequest({ preview: "register", companyName: "合".repeat(100) }),
+    );
+    expect(res.status).toBe(200);
+    expect(mocks.buildRegisterPreview).toHaveBeenCalledWith(expect.anything(), "合".repeat(100));
   });
 
   it("rejects a company name longer than 100 characters", async () => {

@@ -253,6 +253,62 @@ describe("SearchForm register gates", () => {
     });
   });
 
+  it("posts one report when Enter is pressed twice on a picker row", async () => {
+    const fetchMock = installFetch({
+      matchCount: 2,
+      windowFull: false,
+      candidates: [
+        candidate("合成設計", "MWC(W) 1/2026", true),
+        candidate("合成設計有限公司", "MWC 2/2026"),
+      ],
+    });
+    render(<SearchForm variant="landing" />);
+    typeAndSearch("合成設計");
+    const second = await screen.findByRole("radio", { name: "合成設計有限公司，註冊編號 MWC 2/2026" });
+    fireEvent.keyDown(second, { key: "Enter" });
+    fireEvent.keyDown(second, { key: "Enter" });
+    await waitFor(() => {
+      const reports = fetchMock.mock.calls
+        .map((call) => JSON.parse(String(call[1]?.body ?? "{}")) as { mwcRegistrationNo?: string })
+        .filter((b) => b.mwcRegistrationNo);
+      expect(reports).toHaveLength(1);
+    });
+  });
+
+  it("lets the user pick again after a report request fails", async () => {
+    const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { preview?: string };
+      if (body.preview === "register") {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            matchCount: 2,
+            windowFull: false,
+            candidates: [
+              candidate("合成設計", "MWC(W) 1/2026", true),
+              candidate("合成設計有限公司", "MWC 2/2026"),
+            ],
+          }),
+        };
+      }
+      return { ok: false, status: 500, json: async () => ({ error: "search_failed" }) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const reportCalls = () =>
+      fetchMock.mock.calls.filter(
+        (call) => (JSON.parse(String(call[1]?.body ?? "{}")) as { mwcRegistrationNo?: string }).mwcRegistrationNo,
+      );
+    render(<SearchForm variant="landing" />);
+    typeAndSearch("合成設計");
+    const second = await screen.findByRole("radio", { name: "合成設計有限公司，註冊編號 MWC 2/2026" });
+    fireEvent.keyDown(second, { key: "Enter" });
+    await waitFor(() => expect(reportCalls()).toHaveLength(1));
+    expect(await screen.findByText("報告未能顯示，請稍後再試。")).toBeTruthy();
+    fireEvent.keyDown(second, { key: "Enter" });
+    await waitFor(() => expect(reportCalls()).toHaveLength(2));
+  });
+
   it("shows the rate-limit message when the register check is rate limited", async () => {
     vi.stubGlobal(
       "fetch",

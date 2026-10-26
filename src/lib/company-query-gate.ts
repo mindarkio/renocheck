@@ -25,9 +25,14 @@ function hasTradeNameChar(text: string): boolean {
   return TRADE_NAME_CHARS.some((char) => text.includes(char));
 }
 
-/** Exactly three Han and a trading-name character: search it as a company. */
+/**
+ * Exactly three Han and a trading-name character: search it as a company.
+ * A trade word inside (水電行、工程記) keeps it on the short-name prompt.
+ */
 function isThreeHanTradeName(text: string): boolean {
-  return /^\p{Script=Han}{3}$/u.test(text) && hasTradeNameChar(text);
+  return (
+    /^\p{Script=Han}{3}$/u.test(text) && hasTradeNameChar(text) && !hasSearchTradeMarker(text)
+  );
 }
 
 /** Whole strings that end in 生/太 but are words, not 「X生」/「X太」. */

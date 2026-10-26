@@ -167,4 +167,10 @@ describe("classifyCompanyNameQuery", () => {
     expect(classifyCompanyNameQuery("合成行")).toEqual({ kind: "search", input: "合成行" });
     expect(classifyCompanyNameQuery("合成號")).toEqual({ kind: "search", input: "合成號" });
   });
+
+  it("keeps a generic trade word with 記、行 or 號 on the short-name prompt", () => {
+    for (const input of ["水電行", "工程行", "裝修行", "設計記", "香港號", "合行"]) {
+      expect(classifyCompanyNameQuery(input)).toEqual({ kind: "short", input });
+    }
+  });
 });

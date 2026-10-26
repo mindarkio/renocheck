@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   parseUnifiedSearchQuery,
   parsedSearchQueryLabel,
@@ -85,6 +85,8 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
   const [progressStartedAt, setProgressStartedAt] = useState<number | null>(
     null,
   );
+  /** A held or repeated Enter on a picker row must not post the report twice. */
+  const reportInFlight = useRef(false);
 
   const isLanding = variant === "landing";
 
@@ -113,6 +115,8 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
   }
 
   async function runReport(body: SearchBody) {
+    if (reportInFlight.current) return;
+    reportInFlight.current = true;
     setLoading(true);
     setMessage(null);
     setProgressStartedAt(Date.now());
@@ -163,6 +167,7 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
     } catch {
       setMessage("網絡錯誤，請稍後再試。");
     } finally {
+      reportInFlight.current = false;
       setLoading(false);
       setProgressStartedAt(null);
     }
