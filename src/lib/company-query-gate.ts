@@ -28,12 +28,13 @@ function endsWithTradeNameChar(text: string): boolean {
 }
 
 /**
- * Two or more Han ending in 記 or 號: search it as a company (陳記、李號、李錦記).
+ * Exactly three Han ending in 記 or 號: search it as a company (李錦記、合成號).
+ * Two Han (陳記、登記、型號) stay on the short-name prompt.
  * A generic trade word inside (設計記、香港號) keeps the full-name prompt.
  */
 function isTradeSuffixName(text: string): boolean {
   return (
-    /^\p{Script=Han}{2,}$/u.test(text) &&
+    /^\p{Script=Han}{3}$/u.test(text) &&
     endsWithTradeNameChar(text) &&
     !hasSearchTradeMarker(text)
   );

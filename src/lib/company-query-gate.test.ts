@@ -166,8 +166,12 @@ describe("classifyCompanyNameQuery", () => {
     expect(classifyCompanyNameQuery("李錦記")).toEqual({ kind: "search", input: "李錦記" });
     expect(classifyCompanyNameQuery("　李錦記 ")).toEqual({ kind: "search", input: "李錦記" });
     expect(classifyCompanyNameQuery("合成號")).toEqual({ kind: "search", input: "合成號" });
-    expect(classifyCompanyNameQuery("陳記")).toEqual({ kind: "search", input: "陳記" });
-    expect(classifyCompanyNameQuery("李號")).toEqual({ kind: "search", input: "李號" });
+  });
+
+  it("keeps a two-character name that ends in 記 or 號 on the short-name prompt", () => {
+    for (const input of ["陳記", "李號", "登記", "型號", "記", "號", "A記", "1號"]) {
+      expect(classifyCompanyNameQuery(input)).toEqual({ kind: "short", input });
+    }
   });
 
   it("treats a 3-character name ending in 行 as a personal name with the continue link", () => {
@@ -181,11 +185,13 @@ describe("classifyCompanyNameQuery", () => {
   });
 
   it("keeps a three-character name personal when 記 or 號 is not last", () => {
-    expect(classifyCompanyNameQuery("行文華")).toEqual({
-      kind: "personal",
-      input: "行文華",
-      allowCompanyOverride: true,
-    });
+    for (const input of ["行文華", "記文華", "文號華"]) {
+      expect(classifyCompanyNameQuery(input)).toEqual({
+        kind: "personal",
+        input,
+        allowCompanyOverride: true,
+      });
+    }
   });
 
   it("keeps a generic trade word with 記、行 or 號 on the short-name prompt", () => {
