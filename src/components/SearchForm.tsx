@@ -179,6 +179,10 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preview: "register", companyName }),
       });
+      if (res.status === 429) {
+        setMessage("查詢過於頻繁，請稍後再試。");
+        return;
+      }
       if (!res.ok) {
         setPanel({ kind: "register_error", input: companyName });
         return;
@@ -416,7 +420,7 @@ export function SearchForm({ variant = "card", paused = false }: SearchFormProps
             <button
               type="button"
               onClick={() => void previewRegister(notice.input)}
-              className="mt-2 inline-flex min-h-11 items-center text-sm font-medium underline underline-offset-2"
+              className="mt-2 inline-flex min-h-11 items-center rounded text-sm font-medium underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
             >
               {CONTINUE_AS_COMPANY_ZH}
             </button>

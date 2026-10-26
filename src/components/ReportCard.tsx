@@ -378,6 +378,20 @@ function ReportBlock({
   );
 }
 
+/**
+ * The typed value that produced the heading (DEC-0015 rule 7). A phone or BR
+ * search shows only that number, never other free text sent with it.
+ */
+function scopeTypedText(entity: RiskReport["entity"]): string {
+  if (entity.matchType === "company_name") return entity.queryEcho;
+  const parts = entity.queryEcho.split(" · ");
+  if (entity.matchType === "phone") {
+    return entity.normalizedPhone ?? parts.find((part) => /^\d{8}$/.test(part)) ?? "";
+  }
+  // buildQueryEcho pushes company, phone, then BR, so BR is last.
+  return parts[parts.length - 1] ?? "";
+}
+
 export function ReportCard({
   report,
   onOfficialLinkClick,
@@ -411,7 +425,7 @@ export function ReportCard({
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
   const scopeLine = verificationScopeLine({
-    typed: report.entity.queryEcho,
+    typed: scopeTypedText(report.entity),
     registerName: report.entity.displayName,
     mwcMatched: report.official.mwcMatched,
   });

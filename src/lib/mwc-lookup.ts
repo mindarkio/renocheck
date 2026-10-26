@@ -4,6 +4,7 @@ import {
   escapeIlikePattern,
   mwcCompanyNameLookupTerms,
 } from "./mwc-company-search-terms";
+import { decideRegisterCandidateGate } from "./register-candidate-gate";
 
 export const MWC_CONTRACTOR_SELECT =
   "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at";
@@ -227,24 +228,6 @@ async function collectNameMatches(
   return { rows, windowFull };
 }
 
-async function findMwcByRegistrationNo(
-  supabase: SupabaseClient,
-  registrationNo: string,
-): Promise<{ data: MwcRow | null; error: MwcQueryError | null }> {
-  return withMwcColumns(async (columns) => {
-    const res = await supabase
-      .from("mwc_contractors")
-      .select(columns)
-      .eq("registration_no", registrationNo)
-      .limit(1)
-      .maybeSingle();
-    return {
-      data: (res.data as MwcRow | null) ?? null,
-      error: res.error as MwcQueryError | null,
-    };
-  });
-}
-
 export type MwcCandidateList = {
   rows: MwcRow[];
   windowFull: boolean;
@@ -308,10 +291,20 @@ export async function lookupMwcWithMeta(
 
   if (input.companyName) {
     if (input.mwcRegistrationNo) {
-      const picked = await findMwcByRegistrationNo(supabase, input.mwcRegistrationNo);
-      throwIfMwcLookupFailed(picked.error);
-      if (!picked.data) return { row: null, ambiguous: false, pickedMissing: true };
-      return { row: picked.data, ambiguous: false };
+      // A pick is only valid inside the same picker list the typed name shows
+      // (DEC-0015). Any other registration number is refused, not looked up.
+      const picked = input.mwcRegistrationNo.trim();
+      const listed = await listMwcCompanyCandidates(supabase, input.companyName);
+      const gate = decideRegisterCandidateGate({
+        matchCount: listed.rows.length,
+        windowFull: listed.windowFull,
+      });
+      const row =
+        gate === "picker"
+          ? (listed.rows.find((candidate) => candidate.registration_no === picked) ?? null)
+          : null;
+      if (!row) return { row: null, ambiguous: false, pickedMissing: true };
+      return { row, ambiguous: false };
     }
     for (const term of mwcCompanyNameLookupTerms(input.companyName)) {
       const { rows } = await collectNameMatches(supabase, term);

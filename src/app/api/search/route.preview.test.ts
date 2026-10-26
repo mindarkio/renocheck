@@ -82,4 +82,22 @@ describe("POST /api/search register preview", () => {
     expect(await res.json()).toEqual({ error: "register_lookup_failed" });
     expect(mocks.buildRegisterPreview).not.toHaveBeenCalled();
   });
+
+  it("rejects an unknown preview value instead of running a report", async () => {
+    const res = await POST(previewRequest({ preview: "all", companyName: "合成設計" }));
+    expect(res.status).toBe(400);
+    expect(mocks.buildRegisterPreview).not.toHaveBeenCalled();
+    expect(mocks.runSearchPipeline).not.toHaveBeenCalled();
+  });
+
+  it("refuses synthetic probe names in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    try {
+      const res = await POST(previewRequest({ preview: "register", companyName: "ZZQ_合成設計" }));
+      expect(res.status).toBe(400);
+      expect(mocks.buildRegisterPreview).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

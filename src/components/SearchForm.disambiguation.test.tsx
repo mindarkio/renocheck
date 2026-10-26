@@ -129,7 +129,7 @@ describe("SearchForm register gates", () => {
     const group = await screen.findByRole("radiogroup", { name: PICKER_GROUP_LABEL_ZH });
     expect(group).toBeTruthy();
     expect(
-      screen.getByRole("radio", { name: "合成設計，註冊編號 MWC(W) 1/2026" }),
+      screen.getByRole("radio", { name: "合成設計，註冊編號 MWC(W) 1/2026，同你輸入一樣" }),
     ).toBeTruthy();
     expect(
       screen.getByRole("radio", {
@@ -141,7 +141,9 @@ describe("SearchForm register gates", () => {
     expect(document.body.textContent).not.toContain("90000000");
     expect(document.body.textContent).not.toContain("授權");
 
-    fireEvent.click(screen.getByRole("radio", { name: "合成設計，註冊編號 MWC(W) 1/2026" }));
+    fireEvent.click(
+      screen.getByRole("radio", { name: "合成設計，註冊編號 MWC(W) 1/2026，同你輸入一樣" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "查呢間" }));
     await waitFor(() => {
       const report = fetchMock.mock.calls
@@ -218,5 +220,40 @@ describe("SearchForm register gates", () => {
     };
     expect(body.preview).toBeUndefined();
     expect(body.phone).toBe("9123 4567");
+  });
+
+  it("moves focus to the picker and treats Enter on a row as 查呢間", async () => {
+    const fetchMock = installFetch({
+      matchCount: 2,
+      windowFull: false,
+      candidates: [
+        candidate("合成設計", "MWC(W) 1/2026", true),
+        candidate("合成設計有限公司", "MWC 2/2026"),
+      ],
+    });
+    render(<SearchForm variant="landing" />);
+    typeAndSearch("合成設計");
+    const heading = await screen.findByRole("heading", { name: "名冊有多過一間相符" });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    const second = screen.getByRole("radio", { name: "合成設計有限公司，註冊編號 MWC 2/2026" });
+    fireEvent.keyDown(second, { key: "Enter" });
+    await waitFor(() => {
+      const bodies = fetchMock.mock.calls.map(
+        (call) => JSON.parse(String(call[1]?.body ?? "{}")) as { preview?: string; mwcRegistrationNo?: string },
+      );
+      expect(bodies.filter((b) => b.preview === "register")).toHaveLength(1);
+      expect(bodies.find((b) => b.mwcRegistrationNo)?.mwcRegistrationNo).toBe("MWC 2/2026");
+    });
+  });
+
+  it("shows the rate-limit message when the register check is rate limited", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 429, json: async () => ({ error: "rate_limited" }) })),
+    );
+    render(<SearchForm variant="landing" />);
+    typeAndSearch("合成設計");
+    expect(await screen.findByText("查詢過於頻繁，請稍後再試。")).toBeTruthy();
+    expect(screen.queryByText("名冊暫時對唔到，請稍後再試。")).toBeNull();
   });
 });

@@ -8,7 +8,9 @@ import { hasSearchTradeMarker, isGenericSearchAlias } from "./search-entity-labe
  * it after the box has been read as a company name.
  */
 
-const TRADING_AS_RE = /經營|trading\s+as|t\s*\/\s*a/i;
+/** English markers must stand alone: "Smart/Advance" is not "t/a". */
+const TRADING_AS_EN_RE = /(?:^|[\s,(（])(?:trading\s+as|t\s*\/\s*a\.?)(?=[\s,:：)）]|$)/i;
+const TRADING_AS_ZH = "經營";
 
 const ENGLISH_TITLES = new Set(["mr", "mrs", "ms", "miss"]);
 
@@ -98,9 +100,22 @@ export function tradingNameFromCompanyQuery(raw: string): {
   ownerOnly: boolean;
 } {
   const text = normalizeCompanyQuery(raw);
-  const match = TRADING_AS_RE.exec(text);
-  if (!match) return { query: text, ownerOnly: false };
-  const rest = text.slice(match.index + match[0].length).trim();
+  let rest: string | null = null;
+  const en = TRADING_AS_EN_RE.exec(text);
+  if (en) {
+    rest = text.slice(en.index + en[0].length).trim();
+  } else {
+    // 經營 is also an ordinary word in register names (物業經營管理有限公司).
+    // Split only when what comes before it is empty or reads as a person.
+    const at = text.indexOf(TRADING_AS_ZH);
+    if (at >= 0) {
+      const owner = text.slice(0, at).trim();
+      if (!owner || isPersonalName(owner)) {
+        rest = text.slice(at + TRADING_AS_ZH.length).trim();
+      }
+    }
+  }
+  if (rest == null) return { query: text, ownerOnly: false };
   if (!rest) return { query: text, ownerOnly: true };
   return { query: rest, ownerOnly: false };
 }

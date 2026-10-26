@@ -86,4 +86,63 @@ describe("classifyCompanyNameQuery", () => {
     expect(gate.kind).toBe("personal");
     if (gate.kind === "personal") expect(gate.allowCompanyOverride).toBe(false);
   });
+
+  it("reads t/a and trading as only as whole words", () => {
+    expect(classifyCompanyNameQuery("Smart/Advance Engineering Limited")).toEqual({
+      kind: "search",
+      input: "Smart/Advance Engineering Limited",
+    });
+    expect(classifyCompanyNameQuery("Light/Air Design Co")).toEqual({
+      kind: "search",
+      input: "Light/Air Design Co",
+    });
+    expect(classifyCompanyNameQuery("t/a Synth Works")).toEqual({
+      kind: "search",
+      input: "Synth Works",
+    });
+    expect(classifyCompanyNameQuery("Chan trading as Synth Works")).toEqual({
+      kind: "search",
+      input: "Synth Works",
+    });
+    expect(classifyCompanyNameQuery("Chan t/a").kind).toBe("short");
+    expect(classifyCompanyNameQuery("Synthat/A Design")).toEqual({
+      kind: "search",
+      input: "Synthat/A Design",
+    });
+    expect(classifyCompanyNameQuery("Synth T/Advance Works")).toEqual({
+      kind: "search",
+      input: "Synth T/Advance Works",
+    });
+  });
+
+  it("keeps 經營 inside a register name and splits it after an owner name", () => {
+    expect(classifyCompanyNameQuery("合成物業經營管理有限公司")).toEqual({
+      kind: "search",
+      input: "合成物業經營管理有限公司",
+    });
+    expect(classifyCompanyNameQuery("合成餐飲經營有限公司")).toEqual({
+      kind: "search",
+      input: "合成餐飲經營有限公司",
+    });
+    expect(classifyCompanyNameQuery("合成文經營合成裝修")).toEqual({
+      kind: "search",
+      input: "合成裝修",
+    });
+    expect(classifyCompanyNameQuery("合成生經營合成裝修")).toEqual({
+      kind: "search",
+      input: "合成裝修",
+    });
+    expect(classifyCompanyNameQuery("合成文經營").kind).toBe("short");
+  });
+
+  it("treats titles, word counts and title-like words as approved", () => {
+    const mr = classifyCompanyNameQuery("Mr Synthetic");
+    expect(mr.kind).toBe("personal");
+    expect(classifyCompanyNameQuery("Martin").kind).toBe("search");
+    expect(classifyCompanyNameQuery("Synth Chan Alpha Beta").kind).toBe("search");
+    expect(classifyCompanyNameQuery("合成四字生").kind).toBe("search");
+    for (const word of ["花生", "醫生", "學生", "人生"]) {
+      expect(classifyCompanyNameQuery(word).kind).toBe("short");
+    }
+  });
 });

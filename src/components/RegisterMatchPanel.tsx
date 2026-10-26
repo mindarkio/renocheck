@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PublicMwcCandidate } from "@/lib/register-candidate-gate";
 import {
   EXACT_ROW_TAG_ZH,
@@ -39,6 +39,14 @@ export function RegisterMatchPanel({
   onRetry,
 }: RegisterMatchPanelProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  // The search box is disabled while the register loads, so focus would drop
+  // to <body>. Move it to the panel heading so keyboard and screen-reader
+  // users land on the result.
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [mode]);
 
   if (mode === "register_error") {
     return (
@@ -47,7 +55,7 @@ export function RegisterMatchPanel({
         <button
           type="button"
           onClick={onRetry}
-          className="mt-3 min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          className="mt-3 min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
         >
           {REGISTER_RETRY_ZH}
         </button>
@@ -58,7 +66,12 @@ export function RegisterMatchPanel({
   if (mode === "too_many") {
     return (
       <section className={panelClass} aria-labelledby="register-too-many-heading">
-        <h2 id="register-too-many-heading" className="text-base font-semibold text-foreground">
+        <h2
+          id="register-too-many-heading"
+          ref={headingRef}
+          tabIndex={-1}
+          className="text-base font-semibold text-foreground focus:outline-none"
+        >
           {TOO_MANY_HEADING_ZH}
         </h2>
         <p role="status" className="mt-2 text-sm leading-relaxed text-foreground/90">
@@ -67,7 +80,7 @@ export function RegisterMatchPanel({
         <button
           type="button"
           onClick={onBack}
-          className="mt-3 min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          className="mt-3 min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
         >
           {TOO_MANY_BACK_ZH}
         </button>
@@ -77,13 +90,20 @@ export function RegisterMatchPanel({
 
   return (
     <section className={panelClass} aria-labelledby="register-picker-heading">
-      <h2 id="register-picker-heading" className="text-base font-semibold text-foreground">
+      <h2
+        id="register-picker-heading"
+        ref={headingRef}
+        tabIndex={-1}
+        className="text-base font-semibold text-foreground focus:outline-none"
+      >
         {PICKER_HEADING_ZH}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-foreground/90">{pickerBodyZh(input)}</p>
       <div role="radiogroup" aria-label={PICKER_GROUP_LABEL_ZH} className="mt-3">
         {candidates.map((row) => {
-          const radioLabel = candidateRadioLabelZh(row);
+          const radioLabel = row.exact
+            ? `${candidateRadioLabelZh(row)}，${EXACT_ROW_TAG_ZH}`
+            : candidateRadioLabelZh(row);
           return (
             <label
               key={row.registrationNo}
@@ -95,6 +115,14 @@ export function RegisterMatchPanel({
                 value={row.registrationNo}
                 checked={selected === row.registrationNo}
                 onChange={() => setSelected(row.registrationNo)}
+                onKeyDown={(event) => {
+                  // Enter inside the form would submit it and rerun the
+                  // register check. Treat it as 查呢間 for the focused row.
+                  if (event.key !== "Enter") return;
+                  event.preventDefault();
+                  setSelected(row.registrationNo);
+                  onPick(row.registrationNo);
+                }}
                 aria-label={radioLabel}
                 className="mt-1 size-4 shrink-0 accent-primary"
               />
@@ -126,14 +154,14 @@ export function RegisterMatchPanel({
           onClick={() => {
             if (selected) onPick(selected);
           }}
-          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+          className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
         >
           {PICKER_ACTION_ZH}
         </button>
         <button
           type="button"
           onClick={onBack}
-          className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+          className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2"
         >
           {PICKER_BACK_ZH}
         </button>

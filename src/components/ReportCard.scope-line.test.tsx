@@ -128,6 +128,34 @@ describe("ReportCard verification scope", () => {
     expect(screen.getByText("你輸入「12345678」／名冊名稱「合成設計有限公司」")).toBeTruthy();
   });
 
+  it("shows only the phone or BR when other text was sent with it", () => {
+    const { unmount } = render(
+      <ReportCard
+        report={report({
+          displayName: "合成設計有限公司",
+          queryEcho: "合成任意文字 · 91234567",
+          matchType: "phone",
+          mwcMatched: true,
+        })}
+      />,
+    );
+    expect(screen.getByText("你輸入「91234567」／名冊名稱「合成設計有限公司」")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("合成任意文字");
+    unmount();
+    render(
+      <ReportCard
+        report={report({
+          displayName: "合成設計有限公司",
+          queryEcho: "合成任意文字 · 12345678",
+          matchType: "br",
+          mwcMatched: true,
+        })}
+      />,
+    );
+    expect(screen.getByText("你輸入「12345678」／名冊名稱「合成設計有限公司」")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("合成任意文字");
+  });
+
   it("uses 政府名冊有登記 after an unambiguous pick and 需再核實 when still ambiguous", () => {
     const { unmount } = render(
       <ReportCard

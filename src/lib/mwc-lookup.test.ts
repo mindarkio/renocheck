@@ -365,27 +365,25 @@ describe("lookupMwcWithMeta", () => {
     });
   });
 
-  it("treats an explicit registration pick as one unambiguous row", async () => {
+  it("treats a pick from the typed name's list as one unambiguous row", async () => {
     const picked = mwc({
       company_name: "合成個人裝修",
       registration_no: "MWC(W) 12/2026",
       phone: "90000000",
       primary_signatory_name: "合成簽署",
     });
-    const supabase = {
-      from: () => ({
-        select: () => ({
-          eq: (_column: string, value: string) => ({
-            limit: () => ({
-              maybeSingle: async () => ({
-                data: value === picked.registration_no ? picked : null,
-                error: null,
-              }),
-            }),
-          }),
-        }),
-      }),
-    } as unknown as SupabaseClient;
+    const other = mwc({ company_name: "合成工程有限公司", registration_no: "MWC 13/2026" });
+    const unrelated = mwc({ company_name: "無關機電有限公司", registration_no: "MWC 99/2026" });
+    const rows = [picked, other, unrelated];
+    const supabase = nameLookupClient((column, pattern) => {
+      const needle = pattern.replace(/%/g, "");
+      return {
+        data: rows.filter((row) =>
+          String(column === "company_name" ? row.company_name : row.company_name_en ?? "").includes(needle),
+        ),
+        error: null,
+      };
+    });
     const found = await lookupMwcWithMeta(supabase, {
       matchType: "company_name",
       companyName: "合成",
@@ -403,6 +401,53 @@ describe("lookupMwcWithMeta", () => {
     expect(missing.pickedMissing).toBe(true);
     expect(missing.ambiguous).toBe(false);
     expect(missing.row).toBeNull();
+
+    // A real registration number that the typed name does not list is refused.
+    const forged = await lookupMwcWithMeta(supabase, {
+      matchType: "company_name",
+      companyName: "合成",
+      mwcRegistrationNo: "MWC 99/2026",
+    });
+    expect(forged.pickedMissing).toBe(true);
+    expect(forged.row).toBeNull();
+
+    const unrelatedName = await lookupMwcWithMeta(supabase, {
+      matchType: "company_name",
+      companyName: "完全無關嘅名",
+      mwcRegistrationNo: "MWC(W) 12/2026",
+    });
+    expect(unrelatedName.pickedMissing).toBe(true);
+    expect(unrelatedName.row).toBeNull();
+  });
+
+  it("refuses a pick when the typed name would not show a picker", async () => {
+    const only = mwc({ company_name: "合成單一裝修", registration_no: "MWC 21/2026" });
+    const single = nameLookupClient(() => ({ data: [only], error: null }));
+    const one = await lookupMwcWithMeta(single, {
+      matchType: "company_name",
+      companyName: "合成單一裝修",
+      mwcRegistrationNo: "MWC 21/2026",
+    });
+    expect(one.pickedMissing).toBe(true);
+
+    const nine = Array.from({ length: 9 }, (_, i) =>
+      mwc({ company_name: `合成九${i}工程有限公司`, registration_no: `MWC 3${i}/2026` }),
+    );
+    const many = nameLookupClient(() => ({ data: nine, error: null }));
+    const tooMany = await lookupMwcWithMeta(many, {
+      matchType: "company_name",
+      companyName: "合成九",
+      mwcRegistrationNo: "MWC 30/2026",
+    });
+    expect(tooMany.pickedMissing).toBe(true);
+
+    const eight = nameLookupClient(() => ({ data: nine.slice(0, 8), error: null }));
+    const ok = await lookupMwcWithMeta(eight, {
+      matchType: "company_name",
+      companyName: "合成九",
+      mwcRegistrationNo: "MWC 37/2026",
+    });
+    expect(ok.row?.registration_no).toBe("MWC 37/2026");
   });
 
   it("ranks a contains window by exact match instead of row order", async () => {
