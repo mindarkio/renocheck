@@ -162,16 +162,25 @@ describe("classifyCompanyNameQuery", () => {
     });
   });
 
-  it("searches a three-character name that ends in 記、行 or 號", () => {
+  it("still searches a name that ends in 記 or 號", () => {
     expect(classifyCompanyNameQuery("李錦記")).toEqual({ kind: "search", input: "李錦記" });
     expect(classifyCompanyNameQuery("　李錦記 ")).toEqual({ kind: "search", input: "李錦記" });
-    expect(classifyCompanyNameQuery("合成行")).toEqual({ kind: "search", input: "合成行" });
     expect(classifyCompanyNameQuery("合成號")).toEqual({ kind: "search", input: "合成號" });
-    // 陳志行 ends in 行, so the same rule searches it as a company.
-    expect(classifyCompanyNameQuery("陳志行")).toEqual({ kind: "search", input: "陳志行" });
+    expect(classifyCompanyNameQuery("陳記")).toEqual({ kind: "search", input: "陳記" });
+    expect(classifyCompanyNameQuery("李號")).toEqual({ kind: "search", input: "李號" });
   });
 
-  it("keeps a three-character name personal when 記、行 or 號 is not last", () => {
+  it("treats a 3-character name ending in 行 as a personal name with the continue link", () => {
+    for (const input of ["陳志行", "永發行", "合成行"]) {
+      expect(classifyCompanyNameQuery(input)).toEqual({
+        kind: "personal",
+        input,
+        allowCompanyOverride: true,
+      });
+    }
+  });
+
+  it("keeps a three-character name personal when 記 or 號 is not last", () => {
     expect(classifyCompanyNameQuery("行文華")).toEqual({
       kind: "personal",
       input: "行文華",
