@@ -70,7 +70,7 @@ export function RegisterMatchPanel({
           id="register-too-many-heading"
           ref={headingRef}
           tabIndex={-1}
-          className="text-base font-semibold text-foreground focus:outline-none"
+          className="text-base font-semibold text-foreground"
         >
           {TOO_MANY_HEADING_ZH}
         </h2>
@@ -94,7 +94,7 @@ export function RegisterMatchPanel({
         id="register-picker-heading"
         ref={headingRef}
         tabIndex={-1}
-        className="text-base font-semibold text-foreground focus:outline-none"
+        className="text-base font-semibold text-foreground"
       >
         {PICKER_HEADING_ZH}
       </h2>
