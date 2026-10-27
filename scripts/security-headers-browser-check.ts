@@ -140,7 +140,7 @@ function syntheticReport() {
       contractChecklist: ["有無書面合約？"],
       actionableClauses: [],
     },
-    disclaimerVersion: "1.2.5",
+    disclaimerVersion: "1.2.6",
     generatedAt: "2026-10-27T02:00:00.000Z",
   };
 }
@@ -313,8 +313,8 @@ async function main(): Promise<void> {
     if (faqData["@type"] !== "FAQPage") throw new Error("faq JSON-LD was not an FAQPage");
 
     await visit("/legal/disclaimer");
-    if (!(await page.getByText("版本 1.2.5").count())) {
-      throw new Error("disclaimer version is no longer 1.2.5");
+    if (!(await page.getByText("版本 1.2.6").count())) {
+      throw new Error("disclaimer version is no longer 1.2.6");
     }
 
     await visit("/");

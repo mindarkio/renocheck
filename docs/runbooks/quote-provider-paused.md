@@ -11,7 +11,7 @@ The cap is **US$1 per HKT calendar day** (D36). Free analyses stop at **US$0.80*
 | State | Meaning | What to do |
 |-------|---------|------------|
 | Cap reached (`quote_paused`, spent + reservations at the cap) | App-side US$1 day cap (or the US$0.80 free sub-cap for a free attempt). No Azure call is made. | Nothing. It **auto-resumes at HKT midnight**. Raising the cap needs Aaron. Do not edit the constant in a hurry. |
-| `paused_reason = provider_denied` | 3 × `provider_denied` in 10 minutes (key, deployment, or config). Stays for the rest of the HKT day unless Aaron resets the flag. | Check the key and the `gpt-6-luna` Global Standard deployment on the Japan East resource in the Azure portal. Fix, then clear `paused_reason` on that day's `quote_spend_daily` row. |
+| `paused_reason = provider_denied` | 3 × `provider_denied` in 10 minutes (key, deployment, or config). Stays for the rest of the HKT day unless Aaron resets the flag. | Check the key and the `gpt-6-luna` Global Standard deployment on the Korea Central resource (renocheck-quote-korea-resource, resource group renocheck-prod) in the Azure portal. Fix, then clear `paused_reason` on that day's `quote_spend_daily` row. |
 | Soft pause (`paused_until`, about 10 minutes) | 5 × HTTP 429 in 5 minutes (TPM/RPM). | Wait. It clears when `paused_until` passes. If it repeats, compare deployment TPM (prod 50K / dev 20K, D35b) with the measured per-request estimate. |
 | Call ceiling | 300 provider calls that HKT day (free attempts stop earlier, at 80% of the ceiling). | Resumes at HKT midnight with the new day row. |
 | `QUOTE_PROVIDER_PAUSED=1` | Manual kill switch. | Aaron sets it in Vercel and redeploys Production. Unset and redeploy to resume. The daily cap still applies. |

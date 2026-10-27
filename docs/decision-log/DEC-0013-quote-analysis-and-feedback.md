@@ -1,3 +1,5 @@
+> 2026-10-27: 地區已改為 Korea Central，見 DEC-0016。本文以下 Japan East 內容為歷史記錄。
+
 # DEC-0013: Quote analysis and private report feedback
 
 - **Status:** accepted — Aaron, 2026-10-20.
