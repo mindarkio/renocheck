@@ -225,7 +225,13 @@ async function main(): Promise<void> {
   const external: string[] = [];
 
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 700 } });
+  // The feedback slide-in fades in over 200ms. Reduced motion makes it render at
+  // its end state (motion-reduce:opacity-100, transition-none), so the style
+  // check below never samples a half-finished fade.
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 700 },
+    reducedMotion: "reduce",
+  });
   await context.addInitScript(() => {
     const target = window as unknown as { __cspViolations: Violation[] };
     target.__cspViolations = [];
