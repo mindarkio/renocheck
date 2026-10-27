@@ -239,11 +239,16 @@ export const riskReportSchema = riskReportBaseSchema.superRefine((data, ctx) => 
 
 export type RiskReport = z.infer<typeof riskReportBaseSchema>;
 
+/** Company-name field cap (search box and POST /api/search). */
+export const COMPANY_NAME_MAX_LENGTH = 100;
+
 export const searchInputSchema = z
   .object({
-    companyName: z.string().optional(),
+    companyName: z.string().max(COMPANY_NAME_MAX_LENGTH).optional(),
     phone: z.string().optional(),
     br: z.string().optional(),
+    /** Picker choice. Not a report field. DEC-0015. */
+    mwcRegistrationNo: z.string().max(80).optional(),
   })
   .refine(
     (data) =>

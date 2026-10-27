@@ -20,6 +20,25 @@ function jsonResponse(status: number, error: string) {
   };
 }
 
+/** Company-name submit checks the register first. Zero rows then run today's report. */
+function stubSearchFetch(
+  search: () => ReturnType<typeof jsonResponse>,
+) {
+  const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body ?? "{}")) as { preview?: string };
+    if (body.preview === "register") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ matchCount: 0, windowFull: false, candidates: [] }),
+      };
+    }
+    return search();
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -71,10 +90,7 @@ describe("SearchForm pause and errors", () => {
   });
 
   it("shows B1 but keeps the search box enabled after 503 service_paused", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => jsonResponse(503, "service_paused")),
-    );
+    stubSearchFetch(() => jsonResponse(503, "service_paused"));
     render(<SearchForm variant="landing" />);
     fireEvent.change(screen.getByRole("searchbox"), {
       target: { value: "示例裝修有限公司" },
@@ -93,10 +109,7 @@ describe("SearchForm pause and errors", () => {
   it.each(["llm_busy"] as const)(
     "shows B1 and disables input after 503 %s",
     async (code) => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn(async () => jsonResponse(503, code)),
-      );
+      stubSearchFetch(() => jsonResponse(503, code));
       render(<SearchForm variant="landing" />);
       fireEvent.change(screen.getByRole("searchbox"), {
         target: { value: "示例裝修有限公司" },
@@ -114,10 +127,7 @@ describe("SearchForm pause and errors", () => {
     async (code) => {
       vi.useFakeTimers();
       try {
-        vi.stubGlobal(
-          "fetch",
-          vi.fn(async () => jsonResponse(503, code)),
-        );
+      stubSearchFetch(() => jsonResponse(503, code));
         render(<SearchForm variant="landing" />);
         fireEvent.change(screen.getByRole("searchbox"), {
           target: { value: "示例裝修有限公司" },
@@ -147,10 +157,7 @@ describe("SearchForm pause and errors", () => {
   it.each(["supabase_unavailable", "serp_unavailable", "llm_unavailable"] as const)(
     "hides the %s env hint",
     async (code) => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn(async () => jsonResponse(503, code)),
-      );
+      stubSearchFetch(() => jsonResponse(503, code));
       render(<SearchForm variant="landing" />);
       fireEvent.change(screen.getByRole("searchbox"), {
         target: { value: "示例裝修有限公司" },
@@ -168,20 +175,23 @@ describe("SearchForm pause and errors", () => {
   );
 
   it("sends the localStorage anonymous id with the search and does not use a cookie", async () => {
-    const fetchMock = vi.fn<
-      (input: RequestInfo | URL, init?: RequestInit) => Promise<ReturnType<typeof jsonResponse>>
-    >(async () => jsonResponse(400, "invalid_input"));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = stubSearchFetch(() => jsonResponse(400, "invalid_input"));
     render(<SearchForm variant="landing" />);
     fireEvent.change(screen.getByRole("searchbox"), {
       target: { value: "示例裝修有限公司" },
     });
     fireEvent.click(screen.getByRole("button", { name: "查閱公開資料摘要" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const payload = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body ?? "{}")) as {
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1));
+    const searchCall = fetchMock.mock.calls.find((call) => {
+      const body = JSON.parse(String(call[1]?.body ?? "{}")) as { preview?: string };
+      return body.preview !== "register";
+    });
+    const payload = JSON.parse(String(searchCall?.[1]?.body ?? "{}")) as {
       anonId?: string;
       companyName?: string;
+      preview?: string;
     };
+    expect(payload.preview).toBeUndefined();
     expect(isAnonId(payload.anonId)).toBe(true);
     expect(payload.companyName).toBe("示例裝修有限公司");
     expect(localStorage.getItem(ANON_ID_STORAGE_KEY)).toBe(payload.anonId);

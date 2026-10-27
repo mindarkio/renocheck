@@ -4,6 +4,7 @@ import {
   escapeIlikePattern,
   mwcCompanyNameLookupTerms,
 } from "./mwc-company-search-terms";
+import { decideRegisterCandidateGate } from "./register-candidate-gate";
 
 export const MWC_CONTRACTOR_SELECT =
   "company_name, phone, registration_no, expiry_date, primary_signatory_name, source_updated_at";
@@ -60,6 +61,8 @@ export function isMissingMwcCompanyNameEnColumn(
 export type MwcLookupResult = {
   row: MwcRow | null;
   ambiguous: boolean;
+  /** The user chose a registration number that is no longer on the register. */
+  pickedMissing?: boolean;
 };
 
 function throwIfMwcLookupFailed(error: { message: string } | null): void {
@@ -92,10 +95,9 @@ function mwcNameMatchTier(row: MwcRow, term: string): number {
   return Math.min(...tiers);
 }
 
-/** Exact match, then prefix match, then shortest company_name. */
-export function pickRankedMwcRow(rows: MwcRow[], term: string): MwcRow | null {
-  if (rows.length === 0) return null;
-  const ranked = [...rows].sort((a, b) => {
+/** Exact name, then a name starting with the typed text, then shorter Chinese name, then registration number. */
+export function rankMwcRows(rows: MwcRow[], term: string): MwcRow[] {
+  return [...rows].sort((a, b) => {
     const tier = mwcNameMatchTier(a, term) - mwcNameMatchTier(b, term);
     if (tier !== 0) return tier;
     const length = [...a.company_name].length - [...b.company_name].length;
@@ -104,7 +106,16 @@ export function pickRankedMwcRow(rows: MwcRow[], term: string): MwcRow | null {
     if (reg !== 0) return reg;
     return a.company_name.localeCompare(b.company_name);
   });
-  return ranked[0] ?? null;
+}
+
+/** Exact match, then prefix match, then shortest company_name. */
+export function pickRankedMwcRow(rows: MwcRow[], term: string): MwcRow | null {
+  return rankMwcRows(rows, term)[0] ?? null;
+}
+
+/** Chinese or English register name equals the typed text (case and full-width folded). */
+export function isExactMwcNameMatch(row: MwcRow, term: string): boolean {
+  return mwcNameMatchTier(row, term) === 0;
 }
 
 function columnsForMwcSelect(): string {
@@ -172,22 +183,70 @@ async function matchNameColumn(
   supabase: SupabaseClient,
   column: "company_name" | "company_name_en",
   term: string,
-): Promise<{ data: MwcRow[] | null; error: MwcQueryError | null }> {
+): Promise<{ data: MwcRow[] | null; error: MwcQueryError | null; windowFull: boolean }> {
   const escaped = escapeIlikePattern(term);
   const contains = await ilikeContractors(supabase, column, `%${escaped}%`);
-  if (contains.error || !contains.data) return contains;
+  if (contains.error || !contains.data) {
+    return { data: contains.data, error: contains.error, windowFull: false };
+  }
   const windowFull = contains.data.length >= MWC_NAME_CANDIDATE_LIMIT;
   const sawExact = contains.data.some((row) => mwcNameMatchTier(row, term) === 0);
-  if (!windowFull || sawExact) return contains;
+  if (!windowFull || sawExact) {
+    return { data: contains.data, error: null, windowFull };
+  }
 
   const exact = await ilikeContractors(supabase, column, escaped);
-  if (exact.error) return exact;
+  if (exact.error) return { data: exact.data, error: exact.error, windowFull: true };
   const prefix = await ilikeContractors(supabase, column, `${escaped}%`);
-  if (prefix.error) return prefix;
+  if (prefix.error) return { data: prefix.data, error: prefix.error, windowFull: true };
   return {
     data: mergeMwcRows(contains.data, mergeMwcRows(exact.data ?? [], prefix.data ?? [])),
     error: null,
+    windowFull: true,
   };
+}
+
+async function collectNameMatches(
+  supabase: SupabaseClient,
+  term: string,
+): Promise<{ rows: MwcRow[]; windowFull: boolean }> {
+  const nameRes = await matchNameColumn(supabase, "company_name", term);
+  throwIfMwcLookupFailed(nameRes.error);
+  let rows = nameRes.data ?? [];
+  let windowFull = nameRes.windowFull;
+  if (shouldQueryCompanyNameEn(term)) {
+    const enRes = await matchNameColumn(supabase, "company_name_en", term);
+    if (isMissingMwcCompanyNameEnColumn(enRes.error)) {
+      markEnColumnAbsent();
+    } else {
+      throwIfMwcLookupFailed(enRes.error);
+      mwcCompanyNameEnColumn = "present";
+      rows = mergeMwcRows(rows, enRes.data ?? []);
+      windowFull = windowFull || enRes.windowFull;
+    }
+  }
+  return { rows, windowFull };
+}
+
+export type MwcCandidateList = {
+  rows: MwcRow[];
+  windowFull: boolean;
+  /** The typed company name, used for the exact-row tag. */
+  typed: string;
+};
+
+/** Ranked contains-matches for the picker. Does not pick a row or run a report. */
+export async function listMwcCompanyCandidates(
+  supabase: SupabaseClient,
+  companyName: string,
+): Promise<MwcCandidateList> {
+  const typed = companyName.trim();
+  for (const term of mwcCompanyNameLookupTerms(typed)) {
+    const { rows, windowFull } = await collectNameMatches(supabase, term);
+    if (rows.length === 0 && !windowFull) continue;
+    return { rows: rankMwcRows(rows, term), windowFull, typed };
+  }
+  return { rows: [], windowFull: false, typed };
 }
 
 export async function lookupMwcWithMeta(
@@ -231,20 +290,24 @@ export async function lookupMwcWithMeta(
   }
 
   if (input.companyName) {
+    if (input.mwcRegistrationNo) {
+      // A pick is only valid inside the same picker list the typed name shows
+      // (DEC-0015). Any other registration number is refused, not looked up.
+      const picked = input.mwcRegistrationNo.trim();
+      const listed = await listMwcCompanyCandidates(supabase, input.companyName);
+      const gate = decideRegisterCandidateGate({
+        matchCount: listed.rows.length,
+        windowFull: listed.windowFull,
+      });
+      const row =
+        gate === "picker"
+          ? (listed.rows.find((candidate) => candidate.registration_no === picked) ?? null)
+          : null;
+      if (!row) return { row: null, ambiguous: false, pickedMissing: true };
+      return { row, ambiguous: false };
+    }
     for (const term of mwcCompanyNameLookupTerms(input.companyName)) {
-      const nameRes = await matchNameColumn(supabase, "company_name", term);
-      throwIfMwcLookupFailed(nameRes.error);
-      let rows = nameRes.data ?? [];
-      if (shouldQueryCompanyNameEn(term)) {
-        const enRes = await matchNameColumn(supabase, "company_name_en", term);
-        if (isMissingMwcCompanyNameEnColumn(enRes.error)) {
-          markEnColumnAbsent();
-        } else {
-          throwIfMwcLookupFailed(enRes.error);
-          mwcCompanyNameEnColumn = "present";
-          rows = mergeMwcRows(rows, enRes.data ?? []);
-        }
-      }
+      const { rows } = await collectNameMatches(supabase, term);
       if (rows.length === 0) continue;
       return {
         row: pickRankedMwcRow(rows, term) ?? rows[0] ?? null,

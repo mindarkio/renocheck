@@ -15,6 +15,7 @@ import {
 import type { ReactNode } from "react";
 import { buildBdMwcRegistrySearchUrl } from "@/lib/bd-mwc-registry-url";
 import { focusOnPrimaryClass } from "@/lib/focus-ring";
+import { verificationScopeLine } from "@/lib/verification-scope-line";
 import { DailyCauseListSearchForm } from "@/components/DailyCauseListSearchForm";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
 import { CompanyIdentityCard } from "@/components/CompanyIdentityCard";
@@ -392,6 +393,20 @@ function ReportBlock({
   );
 }
 
+/**
+ * The typed value that produced the heading (DEC-0015 rule 7). A phone or BR
+ * search shows only that number, never other free text sent with it.
+ */
+function scopeTypedText(entity: RiskReport["entity"]): string {
+  if (entity.matchType === "company_name") return entity.queryEcho;
+  const parts = entity.queryEcho.split(" · ");
+  if (entity.matchType === "phone") {
+    return entity.normalizedPhone ?? parts.find((part) => /^\d{8}$/.test(part)) ?? "";
+  }
+  // buildQueryEcho pushes company, phone, then BR, so BR is last.
+  return parts[parts.length - 1] ?? "";
+}
+
 export function ReportCard({
   report,
   onOfficialLinkClick,
@@ -424,6 +439,11 @@ export function ReportCard({
       evidenceCount > 0);
   const officialRegister = report.official.details;
   const license = licenseStatusChip(report);
+  const scopeLine = verificationScopeLine({
+    typed: scopeTypedText(report.entity),
+    registerName: report.entity.displayName,
+    mwcMatched: report.official.mwcMatched,
+  });
   const mwcRegistryHref = safeHttpUrl(mwcRegistrySearchHref(report) ?? "");
   const licenseChipClass = `${reportHeroChipClass} ${heroChipToneClass(license.tone)}`;
   const disputeTone =
@@ -622,6 +642,12 @@ export function ReportCard({
         <h1 className={`mt-0.5 ${reportH1Class}`}>
           {report.entity.displayName}
         </h1>
+        {scopeLine ? (
+          <div className="mt-3">
+            <h2 className={`font-semibold ${reportHeroMetaClass}`}>{scopeLine.heading}</h2>
+            <p className={`mt-1 ${reportHeroMetaClass}`}>{scopeLine.line}</p>
+          </div>
+        ) : null}
 
         <div className="mt-4 border-t border-primary-foreground/15 pt-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-primary-foreground">

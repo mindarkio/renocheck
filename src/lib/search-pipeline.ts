@@ -142,6 +142,9 @@ export async function runSearchPipeline(
   const pipelineStart = performance.now();
   const mwcStart = performance.now();
   const mwcLookup = await lookupMwcWithMeta(supabase, input);
+  if (mwcLookup.pickedMissing) {
+    throw new SearchPipelineError("search_failed");
+  }
   const mwc = mwcLookup.row;
   const mwcMs = Math.round(performance.now() - mwcStart);
 
