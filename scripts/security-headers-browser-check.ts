@@ -10,6 +10,8 @@
  *
  * Fixture names are synthetic and exist only in this process.
  */
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   chromium,
   type APIResponse,
@@ -22,6 +24,12 @@ import {
   buildContentSecurityPolicy,
   buildSecurityHeaders,
 } from "../src/lib/security-headers";
+import { DISCLAIMER_VERSION, REPORT_VERSION } from "../src/lib/constants";
+
+// Same source as next.config.ts NEXT_PUBLIC_APP_VERSION, so a version bump needs no edit here.
+const APP_VERSION = (
+  JSON.parse(readFileSync(path.join(process.cwd(), "package.json"), "utf8")) as { version: string }
+).version;
 
 const FINGERPRINT = "c0ffee00c0ffee00c0ffee00c0ffee00";
 const COMPANY = "合成測試有限公司";
@@ -95,7 +103,7 @@ async function assertSecurityHeaders(response: HeaderSource, path: string): Prom
 
 function syntheticReport() {
   return {
-    reportVersion: "2.7.0",
+    reportVersion: REPORT_VERSION,
     entity: {
       displayName: COMPANY,
       matchType: "company_name",
@@ -140,7 +148,7 @@ function syntheticReport() {
       contractChecklist: ["有無書面合約？"],
       actionableClauses: [],
     },
-    disclaimerVersion: "1.2.5",
+    disclaimerVersion: DISCLAIMER_VERSION,
     generatedAt: "2026-10-27T02:00:00.000Z",
   };
 }
@@ -268,7 +276,7 @@ async function main(): Promise<void> {
 
   try {
     await visit("/");
-    const home = await page.evaluate(async () => {
+    const home = await page.evaluate(async (appVersion) => {
       await document.fonts.ready;
       const images = [...document.images].map((image) => ({
         src: image.currentSrc || image.src,
@@ -281,14 +289,14 @@ async function main(): Promise<void> {
         images,
         jsonLd,
         canonical: document.querySelector('link[rel="canonical"]')?.getAttribute("href") ?? "",
-        version: document.body.innerText.includes("v0.9.14"),
+        version: document.body.innerText.includes(`v${appVersion}`),
         fontFamily: getComputedStyle(document.body).fontFamily,
         notoLoaded: [...document.fonts].some(
           (face) => /Noto/i.test(face.family) && face.status === "loaded",
         ),
       };
-    });
-    if (!home.version) throw new Error("home footer is not v0.9.14");
+    }, APP_VERSION);
+    if (!home.version) throw new Error(`home footer is not v${APP_VERSION}`);
     if (!home.notoLoaded) throw new Error(`Noto Sans TC did not load (${home.fontFamily})`);
     const broken = home.images.filter((image) => image.width === 0);
     if (broken.length > 0) throw new Error(`home images failed: ${JSON.stringify(broken)}`);
@@ -313,8 +321,8 @@ async function main(): Promise<void> {
     if (faqData["@type"] !== "FAQPage") throw new Error("faq JSON-LD was not an FAQPage");
 
     await visit("/legal/disclaimer");
-    if (!(await page.getByText("版本 1.2.5").count())) {
-      throw new Error("disclaimer version is no longer 1.2.5");
+    if (!(await page.getByText(`版本 ${DISCLAIMER_VERSION}`).count())) {
+      throw new Error(`disclaimer page does not show 版本 ${DISCLAIMER_VERSION}`);
     }
 
     await visit("/");

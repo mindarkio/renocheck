@@ -1,3 +1,5 @@
+> 2026-10-27: 地區已改為 Korea Central，見 DEC-0016。本文以下 Japan East 內容為歷史記錄。
+
 # PRF: Quote analysis + suggested reply (A) and report rating/feedback (B): implementation PLAN
 
 - Status: [Rev6.1] **蟲 PASS on Rev 6; F0/F1 may start.** **PLAN for review (蟲 → Aaron). No code, no PR, no migration applied.**

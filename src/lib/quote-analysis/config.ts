@@ -3,7 +3,7 @@ export const QUOTE_MODEL_ID = "gpt-6-luna";
 
 export const QUOTE_FREE_ANALYSES_PER_DAY = 2;
 
-/** US$0.10 / 1M input, US$0.50 / 1M output. Global Standard, Japan East meter (DEC-0013). */
+/** US$0.10 / 1M input, US$0.50 / 1M output. Global Standard, Korea Central resource (DEC-0016); price to re-verify for Korea Central. */
 export const QUOTE_INPUT_USD_PER_MILLION = 0.1;
 export const QUOTE_OUTPUT_USD_PER_MILLION = 0.5;
 

@@ -53,7 +53,7 @@ function report(partial: {
       contractChecklist: ["佔位"],
       actionableClauses: [],
     },
-    disclaimerVersion: "1.2.5",
+    disclaimerVersion: "1.2.6",
     generatedAt: "2026-10-26T00:00:00.000Z",
   };
 }

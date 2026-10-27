@@ -50,6 +50,11 @@ describe("quote analysis copy and flag", () => {
     expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
       "如報價單上載分析未開放，閣下可電郵至 hello@renocheck.homes 要求刪除帳戶。",
     );
+    // DEC-0016: the resource region is Aaron-approved copy; a revert to Japan East must fail here.
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
+      "（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）",
+    );
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).not.toContain("日本");
   });
 
   it("keeps new copy clear of report-trust forbidden words", () => {

@@ -101,7 +101,7 @@ describe("how it works register picker paragraph", () => {
     expect(section1.indexOf(existing)).toBeGreaterThanOrEqual(0);
     expect(section1.indexOf(HOW_IT_WORKS_PICKER_PARAGRAPH)).toBeGreaterThan(section1.indexOf(existing));
     expect(section1.split(HOW_IT_WORKS_PICKER_PARAGRAPH)).toHaveLength(2);
-    expect(DISCLAIMER_VERSION).toBe("1.2.5");
+    expect(DISCLAIMER_VERSION).toBe("1.2.6");
     expect(REPORT_VERSION).toBe("2.7.0");
   });
 });

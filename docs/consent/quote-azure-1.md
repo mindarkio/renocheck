@@ -13,7 +13,7 @@ Current Microsoft docs do not state an abuse-monitoring retention period. Older 
 
 > 上載之前請睇清楚：
 > - 報價單會原檔傳送俾 Microsoft 嘅 Azure OpenAI 服務做分析。Microsoft 係以資料處理者身份，代 RenoCheck（MindArk IO Ltd）處理。
-> - 分析會喺香港以外地方進行，可能係任何一個有提供呢個 AI 模型嘅 Azure 地區（例如美國、歐洲或者亞太區）；如果有內容需要儲存，會儲存喺日本。
+> - 分析會喺香港以外地方進行，可能係任何一個有提供呢個 AI 模型嘅 Azure 地區（例如美國、歐洲或者亞太區）；如果有內容需要儲存，會儲存喺南韓。
 > - 按 Microsoft 公布嘅說明，傳送嘅內容唔會用嚟訓練或者改進 AI 模型，OpenAI 公司亦睇唔到。
 > - Microsoft 會用自動系統檢查有冇濫用。如果內容被標記，或者被認為屬於可能濫用嘅使用模式，Microsoft 可能會儲存相關內容，並可能由獲授權嘅 Microsoft 員工人手審閱。Microsoft 現時嘅公開文件冇寫明保存期（以往文件寫最多 30 日）。
 > - 報價單上面嘅個人資料，包括其他人（例如師傅、公司職員）嘅姓名、電話、地址同簽名，都會一齊傳送。
