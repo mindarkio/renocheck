@@ -6,7 +6,7 @@
 
 ## Context
 
-DEC-0013 D31 placed the quote-analysis Azure OpenAI resource in Japan East. Azure denied the Japan East quota increase (no capacity, 2026-10-25) and approved Korea Central (2026-10-27). Southeast Asia was the backup. Aaron approved the disclaimer wording change and the `DISCLAIMER_VERSION` bump on 2026-10-27.
+DEC-0013 D31 placed the quote-analysis Azure OpenAI resource in Japan East. Azure denied the Japan East quota increase (no capacity, 2026-10-25) and approved Korea Central (2026-10-27). Southeast Asia was the backup. [Aaron-reported, 2026-10-27; Azure quota request IDs not recorded here] Aaron approved the disclaimer wording change and the `DISCLAIMER_VERSION` bump on 2026-10-27.
 
 ## Options
 
@@ -30,7 +30,14 @@ The user-facing disclaimer parenthetical changes from `（資源位於日本東�
 ## Consequences
 
 - The region sentence in DEC-0013 D31 and the Japan East text in `docs/plans/PRF-quote-analysis-plan.md` are historical. Both files point here and are otherwise unchanged.
-- The live disclaimer, the DPIA processing line, the quote-provider pause runbook, and the draft consent storage sentence name Korea Central (南韓 for the consent sentence).
+- The live disclaimer, the DPIA (processing line, balancing test, transfer row, abuse-monitoring storage), the quote-provider pause runbook, and the draft consent storage sentence name Korea Central (南韓 for the consent sentence).
+
+## Follow-ups (before `QUOTE_ANALYSIS_ENABLED` is on in Production)
+
+- Production `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_DEPLOYMENT` point at `renocheck-quote-korea-resource`. Code does not tie the disclaimer to the endpoint, so a Japan East endpoint left in env would make the copy wrong.
+- Re-read the `gpt-6-luna` Global Standard price for a Korea Central resource. `QUOTE_INPUT_USD_PER_MILLION` and `QUOTE_OUTPUT_USD_PER_MILLION` still carry the DEC-0013 numbers. [Unverified for Korea Central]
+- Confirm the DPIA transfer mechanism (UK adequacy regulations for the Republic of Korea). [Likely; verify]
+- Name the dev resource. DEC-0013 kept separate prod and dev resources and keys; this decision names only the prod resource.
 
 ## Reversal
 

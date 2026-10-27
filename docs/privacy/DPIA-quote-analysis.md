@@ -40,7 +40,7 @@ The upload checkbox is a transparency and acceptance step. It is not the UK GDPR
 
 **Necessity.** The quote content is the input. RenoCheck does not mask it before Azure (the "original" is the content, not the camera bytes). A server-side mask would still have to read the same data. The practical reduction is on the user's side: the tip, the photo crop/mask, and photographing terms pages rather than signature or ID pages.
 
-**Balancing.** Those other people have not asked for this service and do not expect their details to go to an AI provider in Japan (processing possibly in any Azure region). Weight against the interest: no RenoCheck copy of the original, output redaction before display or storage, `store: false`, no Files API, no training use by Microsoft's published terms, and a required unticked checkbox that tells the uploader other people's data will be sent. Weight for the risk: the checkbox cannot consent for them; abuse monitoring may store content and a person at Microsoft may review it; the retention period is not stated in current Microsoft docs.
+**Balancing.** Those other people have not asked for this service and do not expect their details to go to an AI provider whose resource is in South Korea (Korea Central; processing possibly in any Azure region). Weight against the interest: no RenoCheck copy of the original, output redaction before display or storage, `store: false`, no Files API, no training use by Microsoft's published terms, and a required unticked checkbox that tells the uploader other people's data will be sent. Weight for the risk: the checkbox cannot consent for them; abuse monitoring may store content and a person at Microsoft may review it; the retention period is not stated in current Microsoft docs.
 
 **Draft conclusion.** Legitimate interests is the proposed basis, with the residual risk accepted only when Aaron signs this DPIA. Until then the feature stays off. This LIA is not a determination by a lawyer.
 
@@ -60,7 +60,7 @@ Each mechanism is **verify**. Do not treat a row as closed.
 
 | Destination | What moves | Mechanism | Status |
 |-------------|------------|-----------|--------|
-| Azure Japan (data at rest, abuse-monitoring store, any stored state) | Quote bytes and model output, for the request | UK adequacy regulations for Japan | **verify** [Likely; not confirmed in this draft] |
+| Azure Korea Central, South Korea (data at rest, abuse-monitoring store, any stored state) | Quote bytes and model output, for the request | UK adequacy regulations for the Republic of Korea | **verify** [Likely; not confirmed in this draft] |
 | Any Azure geography (Global Standard processing) | The same request, transiently | Microsoft DPA / UK IDTA or Addendum, as incorporated in the Azure subscription | **verify** |
 | Vercel `sin1` (Singapore) | Request body in function memory, including the upload | Vercel DPA; UK IDTA or Addendum | **verify** |
 | Supabase `ap-southeast-1` (Singapore) | Anonymised quote result (later), hashed device id, feedback row. Not the original file | Supabase DPA; UK IDTA or Addendum | **verify** |
@@ -81,7 +81,7 @@ No other processor is added for F0/F1. There is no Sentry SDK in the repo today.
 
 ## 6. Abuse monitoring and possible human review
 
-Microsoft reviews requests with automated classifiers and models. Authorised Microsoft employees may review content when it is flagged, when it is part of a possibly abusive pattern, or when automation is below confidence or unavailable (not only flagged content). Storage is in the resource geography (Japan). **Retention period: not stated on the current docs [Unverified]** (checked 2026-10-19). Older material said up to 30 days. Severe or repeated abuse can throttle or suspend the resource.
+Microsoft reviews requests with automated classifiers and models. Authorised Microsoft employees may review content when it is flagged, when it is part of a possibly abusive pattern, or when automation is below confidence or unavailable (not only flagged content). Storage is in the resource geography (South Korea, Korea Central; DEC-0016). **Retention period: not stated on the current docs [Unverified]** (checked 2026-10-19). Older material said up to 30 days. Severe or repeated abuse can throttle or suspend the resource.
 
 Modified abuse monitoring is not requested (D33). If it is ever approved, the consent version, §八, and `DISCLAIMER_VERSION` change together, with Aaron's sign-off.
 
