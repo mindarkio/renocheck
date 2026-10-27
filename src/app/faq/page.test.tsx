@@ -19,7 +19,7 @@ const REGISTER_PICKER_FAQ = [
   },
   {
     question: "點解輸入三個字會話好似人名？",
-    answer: "如果輸入啱啱好係 3 個中文字，而最後一個字唔係「記」或「號」，好容易係一個人名。Renocheck 只查公司同商號，唔會用個人姓名對公司，避免同名嘅人被對上另一間舖。請改輸入公司全名、商號或者商業登記號碼；如果你輸入嘅真係公司全名，可以撳「呢個係公司全名，繼續查」。英文人名或者帶稱呼嘅人名就冇呢個選項。",
+    answer: "如果輸入啱啱好係 3 個中文字，而最後一個字唔係「記」或「號」，好容易係一個人名。Renocheck 只查公司同商號，唔會用個人姓名對公司，避免同名嘅人被對上另一間舖。請改輸入公司全名、商號或者商業登記號碼；如果你輸入嘅真係公司全名，可以撳「呢個係公司全名，繼續查」。",
   },
   {
     question: "報告頂嘅「本次查證範圍」點睇？",
@@ -72,11 +72,13 @@ describe("register name picker FAQ copy", () => {
         answer: item.acceptedAnswer.text,
       })),
     ).toEqual(FAQ_ITEMS);
+    // Check the visible <dl>, not the JSON-LD script that also carries the text.
+    const visible = html.replace(/<script\b[\s\S]*?<\/script>/g, "");
     for (const item of data.mainEntity) {
       expect(item["@type"]).toBe("Question");
       expect(item.acceptedAnswer["@type"]).toBe("Answer");
-      expect(html).toContain(item.name);
-      expect(html).toContain(item.acceptedAnswer.text);
+      expect(visible).toContain(`>${item.name}</dt>`);
+      expect(visible).toContain(`>${item.acceptedAnswer.text}</dd>`);
     }
     for (const item of REGISTER_PICKER_FAQ) {
       expect(data.mainEntity.some((row) => row.name === item.question && row.acceptedAnswer.text === item.answer)).toBe(true);
