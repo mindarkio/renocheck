@@ -44,7 +44,7 @@ type Violation = {
   sample: string;
 };
 
-type HeaderSource = Pick<Response, "headersArray"> | Pick<APIResponse, "headersArray">;
+type HeaderSource = Response | APIResponse;
 
 function assertLocalBase(baseUrl: string): URL {
   const url = new URL(baseUrl);
@@ -61,27 +61,34 @@ function isLocalHost(hostname: string): boolean {
   return hostname === "127.0.0.1" || hostname === "localhost";
 }
 
-function valuesOf(response: HeaderSource, name: string): string[] {
-  return response
-    .headersArray()
+async function listHeaders(
+  response: HeaderSource,
+): Promise<{ name: string; value: string }[]> {
+  const listed = response.headersArray();
+  return listed instanceof Promise ? listed : listed;
+}
+
+async function valuesOf(response: HeaderSource, name: string): Promise<string[]> {
+  const headers = await listHeaders(response);
+  return headers
     .filter((header) => header.name.toLowerCase() === name.toLowerCase())
     .map((header) => header.value);
 }
 
-function assertSecurityHeaders(response: HeaderSource, path: string): void {
+async function assertSecurityHeaders(response: HeaderSource, path: string): Promise<void> {
   for (const header of buildSecurityHeaders({ dev: false })) {
-    const values = valuesOf(response, header.key);
+    const values = await valuesOf(response, header.key);
     if (values.length !== 1 || values[0] !== header.value) {
       throw new Error(
         `${path} ${header.key} = ${JSON.stringify(values)}, expected one ${JSON.stringify(header.value)}`,
       );
     }
   }
-  const hsts = valuesOf(response, "strict-transport-security");
+  const hsts = await valuesOf(response, "strict-transport-security");
   if (hsts.length > 0) {
     throw new Error(`${path} must not set HSTS (leave it to Vercel): ${hsts.join(" | ")}`);
   }
-  if (valuesOf(response, "content-security-policy-report-only").length > 0) {
+  if ((await valuesOf(response, "content-security-policy-report-only")).length > 0) {
     throw new Error(`${path} must enforce CSP, not Report-Only`);
   }
 }
@@ -249,7 +256,7 @@ async function main(): Promise<void> {
     const response = await page.goto(`${origin}${path}`, { waitUntil: "load" });
     if (!response) throw new Error(`${path} did not return a response`);
     if (!response.ok()) throw new Error(`${path} status ${response.status()}`);
-    assertSecurityHeaders(response, path);
+    await assertSecurityHeaders(response, path);
     violations.push(...(await readViolations(page)));
   }
 
@@ -350,10 +357,10 @@ async function main(): Promise<void> {
 
     const reportDoc = await context.request.get(`${origin}/report/${FINGERPRINT}`);
     if (!reportDoc.ok()) throw new Error(`report document status ${reportDoc.status()}`);
-    assertSecurityHeaders(reportDoc, `/report/${FINGERPRINT}`);
+    await assertSecurityHeaders(reportDoc, `/report/${FINGERPRINT}`);
 
     for (const path of ["/robots.txt", "/sitemap.xml", "/llms.txt", "/og.png", "/admin", "/guides/this-guide-does-not-exist"]) {
-      assertSecurityHeaders(await context.request.get(`${origin}${path}`), path);
+      await assertSecurityHeaders(await context.request.get(`${origin}${path}`), path);
     }
 
     const robots = await (await context.request.get(`${origin}/robots.txt`)).text();
@@ -370,17 +377,18 @@ async function main(): Promise<void> {
     }
 
     const login = await context.request.get(`${origin}/login`);
-    const robotsTag = valuesOf(login, "x-robots-tag");
+    const robotsTag = await valuesOf(login, "x-robots-tag");
     if (robotsTag.length !== 1 || robotsTag[0] !== "noindex, nofollow") {
       throw new Error(`/login X-Robots-Tag changed: ${JSON.stringify(robotsTag)}`);
     }
-    if (!valuesOf(login, "cache-control").includes("private, no-store")) {
-      throw new Error(`/login Cache-Control missing private, no-store: ${JSON.stringify(valuesOf(login, "cache-control"))}`);
+    const loginCache = await valuesOf(login, "cache-control");
+    if (!loginCache.includes("private, no-store")) {
+      throw new Error(`/login Cache-Control missing private, no-store: ${JSON.stringify(loginCache)}`);
     }
-    const faqRobots = valuesOf(await context.request.get(`${origin}/faq`), "x-robots-tag");
+    const faqRobots = await valuesOf(await context.request.get(`${origin}/faq`), "x-robots-tag");
     if (faqRobots.length > 0) throw new Error(`/faq gained X-Robots-Tag: ${JSON.stringify(faqRobots)}`);
 
-    const llmsCache = valuesOf(await context.request.get(`${origin}/llms.txt`), "cache-control");
+    const llmsCache = await valuesOf(await context.request.get(`${origin}/llms.txt`), "cache-control");
     if (!llmsCache.includes("public, max-age=86400")) {
       throw new Error(`llms.txt Cache-Control changed: ${JSON.stringify(llmsCache)}`);
     }
