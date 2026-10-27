@@ -289,8 +289,9 @@ async function main(): Promise<void> {
     if (!home.images.some((image) => image.src.includes("/logo/"))) {
       throw new Error("home did not render a same-origin logo");
     }
-    if (home.jsonLd.length === 0 || !home.canonical.endsWith("/")) {
-      throw new Error(`home JSON-LD or canonical missing (${home.canonical})`);
+    if (home.jsonLd.length === 0) throw new Error("home JSON-LD missing");
+    if (home.canonical !== "https://renocheck.homes" && home.canonical !== "https://renocheck.homes/") {
+      throw new Error(`home canonical changed: ${home.canonical}`);
     }
     for (const block of home.jsonLd) JSON.parse(block);
     violations.push(...(await readViolations(page)));
