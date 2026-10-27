@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { NextConfig } from "next";
+import {
+  SECURITY_HEADERS_SOURCE,
+  buildSecurityHeaders,
+} from "./src/lib/security-headers";
 
 // 必須喺 repo 根目錄 build（process.cwd()）
 function readPackageVersion(): string {
@@ -26,6 +30,12 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: SECURITY_HEADERS_SOURCE,
+        headers: buildSecurityHeaders({
+          dev: process.env.NODE_ENV === "development",
+        }),
+      },
       {
         source: "/admin/:path*",
         headers: [
