@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { JUDICIARY_DCL_SEARCH_ACTION } from "@/lib/judiciary-search-deep-links";
 import {
-  JUDICIARY_FORM_ACTION_ORIGIN,
+  JUDICIARY_FORM_ACTION_URL,
   SECURITY_HEADERS_SOURCE,
   buildContentSecurityPolicy,
   buildSecurityHeaders,
@@ -10,12 +11,14 @@ import {
 const PRODUCTION_DIRECTIVES = [
   "default-src",
   "script-src",
+  "script-src-attr",
   "style-src",
   "img-src",
   "font-src",
   "connect-src",
   "manifest-src",
   "frame-src",
+  "worker-src",
   "object-src",
   "base-uri",
   "form-action",
@@ -64,12 +67,14 @@ describe("buildSecurityHeaders", () => {
       "X-Content-Type-Options",
       "Referrer-Policy",
       "Permissions-Policy",
+      "Cross-Origin-Opener-Policy",
     ]);
     expect(map.has("Strict-Transport-Security")).toBe(false);
     expect(map.has("Content-Security-Policy-Report-Only")).toBe(false);
     expect(map.get("X-Frame-Options")).toBe("DENY");
     expect(map.get("X-Content-Type-Options")).toBe("nosniff");
     expect(map.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
+    expect(map.get("Cross-Origin-Opener-Policy")).toBe("same-origin");
     expect(map.get("Permissions-Policy")).toBe(
       "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
     );
@@ -79,6 +84,7 @@ describe("buildSecurityHeaders", () => {
     expect([...directives.keys()]).toEqual([...PRODUCTION_DIRECTIVES]);
     expect(directives.get("default-src")).toBe("'self'");
     expect(directives.get("script-src")).toBe("'self' 'unsafe-inline'");
+    expect(directives.get("script-src-attr")).toBe("'none'");
     expect(policy).not.toContain("'unsafe-eval'");
     expect(policy).not.toContain("vercel.live");
     expect(directives.get("style-src")).toBe("'self' 'unsafe-inline'");
@@ -87,10 +93,12 @@ describe("buildSecurityHeaders", () => {
     expect(directives.get("connect-src")).toBe("'self'");
     expect(directives.get("manifest-src")).toBe("'self'");
     expect(directives.get("frame-src")).toBe("'none'");
+    expect(directives.get("worker-src")).toBe("'none'");
     expect(directives.get("object-src")).toBe("'none'");
-    expect(directives.get("base-uri")).toBe("'self'");
+    expect(directives.get("base-uri")).toBe("'none'");
+    // Literal pin: a loosened constant ("https:", "*", another host) must fail here.
     expect(directives.get("form-action")).toBe(
-      `'self' ${JUDICIARY_FORM_ACTION_ORIGIN}`,
+      "'self' https://e-services.judiciary.hk/dcl/search.jsp",
     );
     expect(directives.get("frame-ancestors")).toBe("'none'");
     expect(directives.get("upgrade-insecure-requests")).toBe("");
@@ -105,9 +113,19 @@ describe("buildSecurityHeaders", () => {
       "'self' 'unsafe-inline' 'unsafe-eval'",
     );
     expect(prod.get("script-src")).toBe("'self' 'unsafe-inline'");
+    expect(dev.has("upgrade-insecure-requests")).toBe(false);
+    expect(prod.get("upgrade-insecure-requests")).toBe("");
     expect(buildSecurityHeaders({ dev: true }).map((header) => header.key)).not.toContain(
       "Strict-Transport-Security",
     );
+  });
+});
+
+describe("form-action matches the cause-list form", () => {
+  it("allows exactly the URL DailyCauseListSearchForm posts to", () => {
+    expect(JUDICIARY_FORM_ACTION_URL).toBe(JUDICIARY_DCL_SEARCH_ACTION);
+    const formAction = directiveMap(buildContentSecurityPolicy({ dev: false })).get("form-action") ?? "";
+    expect(formAction.split(" ")).toContain(JUDICIARY_DCL_SEARCH_ACTION);
   });
 });
 

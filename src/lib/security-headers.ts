@@ -17,8 +17,13 @@ export type SecurityHeader = {
 /** Next.js path-to-regexp source that matches `/` and every nested path. */
 export const SECURITY_HEADERS_SOURCE = "/:path*";
 
-/** Judiciary daily cause list search. The report form posts here in a new tab. */
-export const JUDICIARY_FORM_ACTION_ORIGIN = "https://e-services.judiciary.hk";
+/**
+ * Judiciary daily cause list search. The report form posts here in a new tab.
+ * Must equal `JUDICIARY_DCL_SEARCH_ACTION` (pinned by security-headers.test.ts).
+ * A full URL scopes form-action to that one endpoint; CSP ignores the path
+ * after a redirect, so a same-host redirect from the judiciary still works.
+ */
+export const JUDICIARY_FORM_ACTION_URL = "https://e-services.judiciary.hk/dcl/search.jsp";
 
 const PERMISSIONS_POLICY = [
   "camera=()",
@@ -36,17 +41,22 @@ export function buildContentSecurityPolicy(options: { dev: boolean }): string {
   return [
     "default-src 'self'",
     `script-src ${scriptSrc.join(" ")}`,
+    "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",
     "manifest-src 'self'",
     "frame-src 'none'",
+    "worker-src 'none'",
     "object-src 'none'",
-    "base-uri 'self'",
-    `form-action 'self' ${JUDICIARY_FORM_ACTION_ORIGIN}`,
+    "base-uri 'none'",
+    `form-action 'self' ${JUDICIARY_FORM_ACTION_URL}`,
     "frame-ancestors 'none'",
-    "upgrade-insecure-requests",
+    // Production is HTTPS-only (Vercel HSTS). In `next dev` over plain HTTP, WebKit
+    // upgrades even loopback subresources and every browser upgrades a LAN IP, so
+    // an iPhone hitting http://<lan-ip>:3000 would load no JS or CSS.
+    ...(options.dev ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 }
 
@@ -60,5 +70,6 @@ export function buildSecurityHeaders(options: { dev: boolean }): SecurityHeader[
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     { key: "Permissions-Policy", value: PERMISSIONS_POLICY },
+    { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   ];
 }

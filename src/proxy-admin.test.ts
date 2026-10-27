@@ -20,6 +20,22 @@ function enable() {
   return pin;
 }
 
+/** next.config headers() owns these. A proxy response that sets one replaces the config value. */
+const CONFIG_SECURITY_HEADERS = [
+  "content-security-policy",
+  "content-security-policy-report-only",
+  "x-frame-options",
+  "x-content-type-options",
+  "referrer-policy",
+  "permissions-policy",
+  "cross-origin-opener-policy",
+  "strict-transport-security",
+] as const;
+
+function expectNoSecurityHeaders(res: Response) {
+  for (const key of CONFIG_SECURITY_HEADERS) expect(res.headers.has(key)).toBe(false);
+}
+
 describe("proxy /admin gate", () => {
   afterEach(() => vi.unstubAllEnvs());
 
@@ -38,6 +54,7 @@ describe("proxy /admin gate", () => {
       const res = await proxy(req(p));
       expect(res.status).toBe(404);
       expect(res.headers.get("x-robots-tag")).toContain("noindex");
+      expectNoSecurityHeaders(res);
     }
   });
 
@@ -49,6 +66,7 @@ describe("proxy /admin gate", () => {
       expect(new URL(res.headers.get("location")!).pathname).toBe("/admin/login");
       expect(res.headers.get("cache-control")).toBe("no-store");
       expect(res.headers.get("x-robots-tag")).toContain("noindex");
+      expectNoSecurityHeaders(res);
     }
   });
 

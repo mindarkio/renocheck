@@ -64,8 +64,8 @@ function isLocalHost(hostname: string): boolean {
 async function listHeaders(
   response: HeaderSource,
 ): Promise<{ name: string; value: string }[]> {
-  const listed = response.headersArray();
-  return listed instanceof Promise ? listed : listed;
+  // Page Response.headersArray() is async; APIResponse.headersArray() is sync. await covers both.
+  return await response.headersArray();
 }
 
 async function valuesOf(response: HeaderSource, name: string): Promise<string[]> {
