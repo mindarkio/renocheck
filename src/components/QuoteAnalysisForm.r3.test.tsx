@@ -7,7 +7,7 @@ import {
   QUOTE_COMPANY_CONFIRM_ZH,
   QUOTE_FILE_LABEL_ZH,
   QUOTE_NOT_QUOTATION_ZH,
-  QUOTE_SEAL_CLOSE_ZH,
+  QUOTE_VERIFY_ABANDON_ZH,
 } from "@/lib/quote-analysis/copy";
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
@@ -101,7 +101,7 @@ describe("quote upload r3 edge cases", () => {
     expect(forms[1]?.get("extractedCompanyName")).toBeNull();
     expect(forms[1]?.get("confirmedCompanyName")).toBe(NAME);
     expect(signal?.aborted).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_CLOSE_ZH }));
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_VERIFY_ABANDON_ZH }));
     await waitFor(() => expect(signal?.aborted).toBe(true));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();

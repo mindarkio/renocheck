@@ -14,7 +14,7 @@ import {
   QUOTE_COMPANY_MISSING_ZH,
   QUOTE_COMPANY_NEED_NAME_ZH,
   QUOTE_COMPANY_RESULT_HEADING_ZH,
-  QUOTE_SEAL_EXPIRED_ZH,
+  QUOTE_VERIFY_EXPIRED_ZH,
   quoteCompanyFoundZh,
 } from "@/lib/quote-analysis/copy";
 import { COMPANY_NAME_MAX_LENGTH, type RiskReport } from "@/lib/report-schema";
@@ -265,7 +265,7 @@ export function QuoteCompanyConfirm({
         className="space-y-3"
       >
         {storedName === UNKNOWN_NAME ? (
-          <p className="text-sm leading-relaxed text-foreground">{QUOTE_SEAL_EXPIRED_ZH}</p>
+          <p className="text-sm leading-relaxed text-foreground">{QUOTE_VERIFY_EXPIRED_ZH}</p>
         ) : null}
         {extracted ? (
           <p className="text-sm leading-relaxed text-foreground">{quoteCompanyFoundZh(extracted)}</p>

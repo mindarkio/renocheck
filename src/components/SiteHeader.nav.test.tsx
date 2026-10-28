@@ -69,6 +69,12 @@ const STRONG_HEADER_RING = [
 ];
 
 describe("SiteHeader quote link", () => {
+  it("clears a leftover sealed-result flag once", () => {
+    sessionStorage.setItem("renocheck:quote-seal-pending", "1");
+    render(<SiteHeader />);
+    expect(sessionStorage.getItem("renocheck:quote-seal-pending")).toBeNull();
+  });
+
   it("uses the quote page title and keeps the mobile menu button", () => {
     mockPath = "/faq";
     render(<SiteHeader />);

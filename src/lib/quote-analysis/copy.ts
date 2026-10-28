@@ -42,19 +42,18 @@ export const QUOTE_UNAVAILABLE_ZH = "報價單上載分析暫時未開放。";
 /** Owner-written and approved. */
 export const HOME_QUOTE_UPLOAD_LINK_ZH = "我有報價單，直接上載分析";
 export const HEADER_UPLOAD_ZH = "上載報價";
-export const QUOTE_SEAL_MODAL_TITLE_ZH = "驗證電郵以查看結果";
-export const QUOTE_SEAL_MODAL_BODY_ZH =
+export const QUOTE_VERIFY_MODAL_TITLE_ZH = "驗證電郵以查看結果";
+export const QUOTE_VERIFY_MODAL_BODY_ZH =
   "請輸入電郵地址及驗證碼。完成驗證後，方會進行報價清單分析並顯示結果。完成驗證前，此處不會顯示報價分析內容。";
 export const QUOTE_ANALYSIS_SECTION_ZH = "報價清單分析";
 export const QUOTE_ANALYSIS_LOCKED_ZH =
   "完成電郵驗證後，方會按清單檢視這份報價是否列明清楚。驗證前不會顯示分析內容。";
 export const QUOTE_ANALYSIS_VERIFY_CTA_ZH = "驗證電郵以查看報價分析";
-export const QUOTE_SEAL_REOPEN_ZH = "驗證並查看結果";
-export const QUOTE_SEAL_CLOSE_ZH = "放棄分析";
+export const QUOTE_VERIFY_REOPEN_ZH = "驗證並查看結果";
+export const QUOTE_VERIFY_ABANDON_ZH = "放棄分析";
 /** Inline verify-first fallback, before analysis has run. The site login button stays 登入. */
 export const QUOTE_VERIFY_EMAIL_ZH = "驗證電郵";
-export const QUOTE_SEAL_EXPIRED_ZH = "此結果已過期，請重新上載。";
-export const QUOTE_SEAL_USED_ZH = "此結果已被使用，請重新上載。";
+export const QUOTE_VERIFY_EXPIRED_ZH = "此結果已過期，請重新上載。";
 export const QUOTE_ANON_LIMIT_ZH =
   "此網絡今日的免費分析次數已用完，請於明天（香港時間）再試。";
 
@@ -168,16 +167,15 @@ export function quoteAnalysisUserFacingCopy(): readonly string[] {
     QUOTE_UNAVAILABLE_ZH,
     HOME_QUOTE_UPLOAD_LINK_ZH,
     HEADER_UPLOAD_ZH,
-    QUOTE_SEAL_MODAL_TITLE_ZH,
-    QUOTE_SEAL_MODAL_BODY_ZH,
+    QUOTE_VERIFY_MODAL_TITLE_ZH,
+    QUOTE_VERIFY_MODAL_BODY_ZH,
     QUOTE_ANALYSIS_SECTION_ZH,
     QUOTE_ANALYSIS_LOCKED_ZH,
     QUOTE_ANALYSIS_VERIFY_CTA_ZH,
-    QUOTE_SEAL_REOPEN_ZH,
-    QUOTE_SEAL_CLOSE_ZH,
+    QUOTE_VERIFY_REOPEN_ZH,
+    QUOTE_VERIFY_ABANDON_ZH,
     QUOTE_VERIFY_EMAIL_ZH,
-    QUOTE_SEAL_EXPIRED_ZH,
-    QUOTE_SEAL_USED_ZH,
+    QUOTE_VERIFY_EXPIRED_ZH,
     QUOTE_ANON_LIMIT_ZH,
     ACCOUNT_UPLOAD_BODY_ZH,
     ACCOUNT_UPLOAD_ACTION_ZH,

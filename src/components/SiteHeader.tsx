@@ -66,6 +66,11 @@ function useHeaderFlags(): { upload: boolean; signedIn: boolean } {
     } catch {
       // Private mode can block storage. The old self-check is no longer shown.
     }
+    try {
+      sessionStorage.removeItem("renocheck:quote-seal-pending");
+    } catch {
+      // The sealed-result path is gone. Drop a leftover flag if storage allows it.
+    }
     if (typeof fetch !== "function") return;
     let cancelled = false;
     fetch("/api/quote/availability")

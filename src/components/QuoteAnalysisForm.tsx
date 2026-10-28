@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { QuoteCompanyConfirm } from "@/components/QuoteCompanyConfirm";
-import { QuoteReportSkeleton, QuoteSealDialog } from "@/components/QuoteSealDialog";
+import { QuoteReportSkeleton, QuoteVerifyDialog } from "@/components/QuoteVerifyDialog";
 import { holdQuoteCompanyName } from "@/lib/quote-analysis/company-name-handoff";
 import {
   QUOTE_ACK_ERROR_ZH,
@@ -355,7 +355,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
           </ol>
         </section>
       ) : null}
-      <QuoteSealDialog
+      <QuoteVerifyDialog
         open={modalOpen}
         onClose={() => {
           setModalOpen(false);

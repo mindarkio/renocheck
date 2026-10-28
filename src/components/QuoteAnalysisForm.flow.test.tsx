@@ -6,8 +6,8 @@ import {
   QUOTE_ANALYSIS_VERIFY_CTA_ZH,
   QUOTE_COMPANY_CONFIRM_ZH,
   QUOTE_FILE_LABEL_ZH,
-  QUOTE_SEAL_CLOSE_ZH,
-  QUOTE_SEAL_MODAL_TITLE_ZH,
+  QUOTE_VERIFY_ABANDON_ZH,
+  QUOTE_VERIFY_MODAL_TITLE_ZH,
 } from "@/lib/quote-analysis/copy";
 import { QuoteAnalysisForm } from "./QuoteAnalysisForm";
 
@@ -92,8 +92,8 @@ describe("logged-out quote upload", () => {
     fireEvent.click(screen.getByRole("button", { name: QUOTE_COMPANY_CONFIRM_ZH }));
     await screen.findByRole("button", { name: QUOTE_ANALYSIS_VERIFY_CTA_ZH });
     fireEvent.click(screen.getByRole("button", { name: QUOTE_ANALYSIS_VERIFY_CTA_ZH }));
-    await screen.findByRole("dialog", { name: QUOTE_SEAL_MODAL_TITLE_ZH });
-    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_CLOSE_ZH }));
+    await screen.findByRole("dialog", { name: QUOTE_VERIFY_MODAL_TITLE_ZH });
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_VERIFY_ABANDON_ZH }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });

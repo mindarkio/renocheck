@@ -3,16 +3,16 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { SignInForm } from "@/components/SignInForm";
 import {
-  QUOTE_SEAL_CLOSE_ZH,
-  QUOTE_SEAL_MODAL_BODY_ZH,
-  QUOTE_SEAL_MODAL_TITLE_ZH,
-  QUOTE_SEAL_REOPEN_ZH,
+  QUOTE_VERIFY_ABANDON_ZH,
+  QUOTE_VERIFY_MODAL_BODY_ZH,
+  QUOTE_VERIFY_MODAL_TITLE_ZH,
+  QUOTE_VERIFY_REOPEN_ZH,
 } from "@/lib/quote-analysis/copy";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function QuoteSealDialog({
+export function QuoteVerifyDialog({
   open,
   onClose,
   onAbandon,
@@ -87,14 +87,14 @@ export function QuoteSealDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="quote-seal-title"
+        aria-labelledby="quote-verify-title"
         className="max-h-[min(92vh,40rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-background px-5 py-6 shadow-lg motion-reduce:transition-none sm:px-6"
       >
-        <h2 id="quote-seal-title" className="text-xl font-semibold leading-snug text-primary">
-          {QUOTE_SEAL_MODAL_TITLE_ZH}
+        <h2 id="quote-verify-title" className="text-xl font-semibold leading-snug text-primary">
+          {QUOTE_VERIFY_MODAL_TITLE_ZH}
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {QUOTE_SEAL_MODAL_BODY_ZH}
+          {QUOTE_VERIFY_MODAL_BODY_ZH}
         </p>
         {pending && pendingLabel ? (
           <p className="mt-4 text-sm text-muted-foreground" role="status">
@@ -115,7 +115,7 @@ export function QuoteSealDialog({
               disabled={pending}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
             >
-              {QUOTE_SEAL_REOPEN_ZH}
+              {QUOTE_VERIFY_REOPEN_ZH}
             </button>
             <div className="flex justify-center">
               <button
@@ -123,16 +123,16 @@ export function QuoteSealDialog({
                 onClick={onAbandon}
                 className="inline-flex min-h-11 items-center justify-center px-3 text-sm text-muted-foreground underline-offset-2 hover:underline"
               >
-                {QUOTE_SEAL_CLOSE_ZH}
+                {QUOTE_VERIFY_ABANDON_ZH}
               </button>
             </div>
           </div>
         ) : (
           <SignInForm
             onVerified={onVerified}
-            submitLabel={QUOTE_SEAL_REOPEN_ZH}
+            submitLabel={QUOTE_VERIFY_REOPEN_ZH}
             onAbandon={onAbandon}
-            abandonLabel={QUOTE_SEAL_CLOSE_ZH}
+            abandonLabel={QUOTE_VERIFY_ABANDON_ZH}
           />
         )}
       </div>
