@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAuthOtpSendFailed, logAuthRouteUnavailable } from "@/lib/auth/diagnostics";
 import { normalizeLoginEmail } from "@/lib/auth/email";
 import { rateLimitIp, takeAuthRateLimit } from "@/lib/auth/rate-limit";
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
@@ -20,7 +21,15 @@ export async function POST(req: Request) {
   if (!sameOrigin(req)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  if (!isQuoteAnalysisFlagOn() || !isSupabaseAuthConfigured()) {
+  if (!isQuoteAnalysisFlagOn()) {
+    logAuthRouteUnavailable("otp", "flag_off");
+    return NextResponse.json(
+      { error: "unavailable", message: LOGIN_UNAVAILABLE_ZH },
+      { status: 503 },
+    );
+  }
+  if (!isSupabaseAuthConfigured()) {
+    logAuthRouteUnavailable("otp", "auth_unconfigured");
     return NextResponse.json(
       { error: "unavailable", message: LOGIN_UNAVAILABLE_ZH },
       { status: 503 },
@@ -53,6 +62,7 @@ export async function POST(req: Request) {
     windowMs: FIFTEEN_MINUTES,
   });
   if (ipLimit === "unavailable") {
+    logAuthRouteUnavailable("otp", "ip_rate_limit");
     return NextResponse.json(
       { error: "unavailable", message: LOGIN_UNAVAILABLE_ZH },
       { status: 503 },
@@ -70,6 +80,7 @@ export async function POST(req: Request) {
     windowMs: FIFTEEN_MINUTES,
   });
   if (emailLimit === "unavailable") {
+    logAuthRouteUnavailable("otp", "email_rate_limit");
     return NextResponse.json(
       { error: "unavailable", message: LOGIN_UNAVAILABLE_ZH },
       { status: 503 },
@@ -84,6 +95,7 @@ export async function POST(req: Request) {
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
+    logAuthRouteUnavailable("otp", "no_server_client");
     return NextResponse.json(
       { error: "unavailable", message: LOGIN_UNAVAILABLE_ZH },
       { status: 503 },
@@ -95,6 +107,7 @@ export async function POST(req: Request) {
     options: { shouldCreateUser: true },
   });
   if (error) {
+    logAuthOtpSendFailed(error);
     return NextResponse.json(
       { error: "unavailable", message: LOGIN_SEND_FAILED_ZH },
       { status: 503 },
