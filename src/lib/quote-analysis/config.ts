@@ -134,10 +134,18 @@ export function microUsdFromTokens(inputTokens: number, outputTokens: number): n
   return Math.ceil(usd * USD_TO_MICRO);
 }
 
-/** Conservative reserve before the call. Output is the 4,000 token cap. */
+/** Conservative reserve before the full checklist call. Output is the 4,000 token cap. */
 export function reserveMicroUsd(pageCount: number): number {
   const inputTokens = 2_500 + pageCount * 3_800;
   return microUsdFromTokens(inputTokens, 4_000);
+}
+
+/** Logged-out extraction returns a name only. The PDF is still the input; output is capped. */
+export const QUOTE_EXTRACT_MAX_OUTPUT_TOKENS = 64;
+
+export function reserveExtractionMicroUsd(pageCount: number): number {
+  const inputTokens = 400 + pageCount * 3_800;
+  return microUsdFromTokens(inputTokens, QUOTE_EXTRACT_MAX_OUTPUT_TOKENS);
 }
 
 /**

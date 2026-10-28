@@ -53,7 +53,7 @@ describe("GET /api/quote/availability", () => {
     enableAzure();
     state.row = { spent_micro_usd: 0, reserved_micro_usd: 0, calls: 0 };
     const res = await GET();
-    expect(await res.json()).toEqual({ enabled: true, anonymous: false });
+    expect(await res.json()).toEqual({ enabled: true, anonymous: true });
   });
 
   it("is closed when the shared daily budget is full", async () => {

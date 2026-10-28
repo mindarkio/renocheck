@@ -14,7 +14,7 @@ describe("quote acknowledgement", () => {
     vi.restoreAllMocks();
   });
 
-  it("starts unticked and does not upload until it is ticked", () => {
+  it("starts unticked and does not upload until it is ticked", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     render(<QuoteAnalysisForm signedIn />);
     const checkbox = screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH });
@@ -26,6 +26,6 @@ describe("quote acknowledgement", () => {
     expect(
       fetchSpy.mock.calls.some((call) => String(call[0]).includes("/api/quote/analyze")),
     ).toBe(false);
-    expect(screen.getByRole("alert").textContent).toContain("請先剔選");
+    expect((await screen.findByRole("alert")).textContent).toContain("請先剔選");
   });
 });

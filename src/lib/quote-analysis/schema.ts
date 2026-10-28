@@ -53,6 +53,10 @@ function statusSchema() {
   return z.enum(STATUS_VALUES);
 }
 
+export const quoteExtractSchema = z.object({
+  companyName: z.string().nullable(),
+});
+
 export function quoteLlmSchema(ids: readonly string[]) {
   const idTuple = ids as [string, ...string[]];
   return z.object({

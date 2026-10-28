@@ -93,7 +93,8 @@ RenoCheck cannot delete Microsoft's copy after send. The DRAFT consent says that
 |------|--------|-------------|
 | Original quote bytes | Not stored | Dropped when the function returns |
 | Company name on the quote (extracted and confirmed) | Retained with the `quote_analyses` row | 180 days or account deletion, whichever is earlier. Personal data (people's names, phones, addresses, signatures, bank accounts) is not stored. A company search the user confirms is written to `search_cache` and `search_events` like any other search. |
-| Sealed result before email verification | Not stored on the server | The browser holds the sealed blob. After verification, the checklist and the company name are stored on that row for the same retention. If the user abandons after the claim request has reached the server, the row and the company name may already be saved. |
+| Logged-out company-name extraction | Not stored | Before email verification the server sends the PDF only to read the company name. No checklist is produced and no `quote_analyses` row is written. Personal data is not stored. |
+| Company search after the user confirms the name | `search_cache` and `search_events` | The same path as any other company search. The search result is shown before verification and is not gated on an account. |
 | `report_feedback` | **12 months** (locked for feedback) | Daily purge. F1 adds `/api/cron/purge-feedback`. Aaron applies M1 himself |
 | `quote_usage` | Plan default 30 days — not separately locked in the F0 brief | Later purge |
 | `quote_analyses` (anonymised result, no evidence text) | Plan default 180 days | Later purge |

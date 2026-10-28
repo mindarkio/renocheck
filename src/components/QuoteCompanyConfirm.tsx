@@ -76,10 +76,17 @@ const PENDING_NAME = "\u0000";
 export function QuoteCompanyConfirm({
   analysisId,
   extractedFromServer,
+  deferPersist = false,
+  onConfirmed,
+  onReport,
 }: {
   analysisId: string;
   /** Undefined when this view does not know whether a name was extracted. */
   extractedFromServer?: string | null;
+  /** Skip the authenticated name write. Used before a checklist row exists. */
+  deferPersist?: boolean;
+  onConfirmed?: (companyName: string) => void;
+  onReport?: () => void;
 }) {
   const storedName = useSyncExternalStore(
     () => () => {},
@@ -110,6 +117,8 @@ export function QuoteCompanyConfirm({
   }
 
   async function rememberConfirmed(companyName: string) {
+    onConfirmed?.(companyName);
+    if (deferPersist) return;
     try {
       await fetch("/api/quote/company-name", {
         method: "POST",
@@ -155,6 +164,7 @@ export function QuoteCompanyConfirm({
         return;
       }
       setReport(data.report);
+      onReport?.();
     } catch {
       setMessage("網絡錯誤，請稍後再試。");
     } finally {

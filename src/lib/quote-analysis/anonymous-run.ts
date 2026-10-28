@@ -4,7 +4,7 @@ import { takeMemoryRateLimit } from "@/lib/memory-rate-limit";
 import {
   isQuoteAnalysisAvailable,
   microUsdFromTokens,
-  reserveMicroUsd,
+  reserveExtractionMicroUsd,
 } from "@/lib/quote-analysis/config";
 import {
   reserveAnonymousQuoteSpend,
@@ -16,7 +16,6 @@ import {
   QUOTE_ANON_LIMIT_ZH,
   QUOTE_BUDGET_ZH,
   QUOTE_FAILED_ZH,
-  QUOTE_NOT_QUOTATION_ZH,
   QUOTE_PDF_ENCRYPTED_ZH,
   QUOTE_PDF_MAGIC_ZH,
   QUOTE_PDF_PAGES_ZH,
@@ -28,8 +27,7 @@ import {
 } from "@/lib/quote-analysis/copy";
 import { inspectPdf, type PdfRejectReason } from "@/lib/quote-analysis/pdf";
 import type { QuoteModelResult } from "@/lib/quote-analysis/provider";
-import { parseQuoteModelObject, type StoredQuoteItem } from "@/lib/quote-analysis/schema";
-import { quoteSealKey, sealQuoteResult } from "@/lib/quote-analysis/seal";
+import { normalizeQuoteCompanyName, quoteExtractSchema } from "@/lib/quote-analysis/schema";
 
 const ANALYZE_WINDOW_MS = 60_000;
 const ANALYZE_LIMIT = 5;
@@ -44,15 +42,14 @@ const PDF_MESSAGE: Record<PdfRejectReason, string> = {
   unreadable: QUOTE_PDF_UNREADABLE_ZH,
 };
 
-export type AnonymousAnalysisBody = {
+export type AnonymousExtractionBody = {
   error?: string;
   message?: string;
-  sealed?: string;
+  companyName?: string | null;
 };
 
 /**
- * Logged-out analysis. The HTTP body is only a sealed blob or an error.
- * Checklist rows and the company name stay inside the ciphertext.
+ * Logged-out step. Returns only a company name. No checklist and no stored row.
  */
 export async function runAnonymousQuoteAnalysis(input: {
   acknowledged: boolean;
@@ -62,13 +59,13 @@ export async function runAnonymousQuoteAnalysis(input: {
   env?: Record<string, string | undefined>;
   now?: number;
   model: (bytes: Uint8Array) => Promise<QuoteModelResult>;
-}): Promise<{ status: number; body: AnonymousAnalysisBody }> {
+}): Promise<{ status: number; body: AnonymousExtractionBody }> {
   const env = input.env ?? process.env;
   const now = input.now ?? Date.now();
-  if (!isQuoteAnalysisAvailable(env) || !quoteSealKey(env)) {
-    return { status: 401, body: { error: "auth_required", message: QUOTE_UNAVAILABLE_API_ZH } };
+  if (!isQuoteAnalysisAvailable(env)) {
+    return { status: 503, body: { error: "quote_unavailable", message: QUOTE_UNAVAILABLE_API_ZH } };
   }
-  if (!takeMemoryRateLimit(`quote:${input.ip}`, ANALYZE_LIMIT, ANALYZE_WINDOW_MS, now)) {
+  if (!takeMemoryRateLimit(`quote-extract:${input.ip}`, ANALYZE_LIMIT, ANALYZE_WINDOW_MS, now)) {
     return { status: 429, body: { error: "rate_limited", message: QUOTE_RATE_LIMIT_ZH } };
   }
   if (!input.acknowledged) {
@@ -93,7 +90,7 @@ export async function runAnonymousQuoteAnalysis(input: {
     return { status: 503, body: { error: "quote_unavailable", message: QUOTE_FAILED_ZH } };
   }
 
-  const reserve = reserveMicroUsd(pdf.pageCount);
+  const reserve = reserveExtractionMicroUsd(pdf.pageCount);
   const hold = await reserveAnonymousQuoteSpend(reserve, env);
   if (hold === "budget") {
     return { status: 503, body: { error: "quote_paused", message: QUOTE_BUDGET_ZH } };
@@ -113,36 +110,13 @@ export async function runAnonymousQuoteAnalysis(input: {
     modelResult.inputTokens == null || modelResult.outputTokens == null
       ? null
       : microUsdFromTokens(modelResult.inputTokens, modelResult.outputTokens);
-  // Book every provider call, including invalid and not-a-quotation results.
   await settleAnonymousQuoteSpend(hold, actual);
-  const parsed = parseQuoteModelObject(modelResult.object);
-  if (parsed.kind === "invalid") {
+  const parsed = quoteExtractSchema.safeParse(modelResult.object);
+  if (!parsed.success) {
     return { status: 503, body: { error: "quote_llm_failed", message: QUOTE_FAILED_ZH } };
   }
-  if (parsed.kind === "not_quotation") {
-    return { status: 200, body: { error: "not_quotation", message: QUOTE_NOT_QUOTATION_ZH } };
-  }
-
-  const items: StoredQuoteItem[] = parsed.items.map((item) => ({
-    id: item.id,
-    status: item.status,
-  }));
-  let sealed: string;
-  try {
-    sealed = sealQuoteResult(
-      {
-        items,
-        companyName: parsed.companyName,
-        pageCount: pdf.pageCount,
-        inputTokens: modelResult.inputTokens,
-        outputTokens: modelResult.outputTokens,
-        actualMicroUsd: actual,
-      },
-      env,
-      now,
-    ).sealed;
-  } catch {
-    return { status: 503, body: { error: "quote_unavailable", message: QUOTE_FAILED_ZH } };
-  }
-  return { status: 200, body: { sealed } };
+  return {
+    status: 200,
+    body: { companyName: normalizeQuoteCompanyName(parsed.data.companyName) },
+  };
 }

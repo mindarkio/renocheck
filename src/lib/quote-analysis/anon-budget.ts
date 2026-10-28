@@ -3,7 +3,6 @@ import "server-only";
 import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
 import { takeAuthRateLimit, rateLimitIp } from "@/lib/auth/rate-limit";
 import {
-  QUOTE_MODEL_ID,
   quoteAnonDailyLimit,
   quoteDailyBudgetMicroUsd,
   quoteDailyCallCap,
@@ -92,74 +91,4 @@ export async function settleAnonymousQuoteSpend(
     p_reserve: hold.reserve,
     p_actual: actual,
   });
-}
-
-export async function countUserQuoteUsesToday(userId: string): Promise<number | null> {
-  try {
-    assertNotProdDbOutsideProd();
-  } catch {
-    return null;
-  }
-  const admin = getSupabaseAdmin();
-  if (!admin) return null;
-  const day = hktDayKey();
-  const analyses = await admin
-    .from("quote_analyses")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("day_hkt", day);
-  const claims = await admin
-    .from("quote_analysis_claims")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("day_hkt", day)
-    .eq("status", "claimed");
-  if (analyses.error || claims.error) return null;
-  return (analyses.count ?? 0) + (claims.count ?? 0);
-}
-
-export type QuoteChecklistInsert =
-  | { ok: true; id: string }
-  | { ok: false; reason: "duplicate" | "unavailable" };
-
-/**
- * Store one claimed checklist. `sealNonce` is unique on `quote_analyses`
- * (migration 20261028160000), so a second insert for the same sealed result
- * fails with 23505 and is reported as `duplicate`: insert and consume are one
- * atomic step, and nothing is consumed when the insert fails.
- */
-export async function insertQuoteChecklist(input: {
-  userId: string;
-  pageCount: number;
-  items: unknown;
-  inputTokens: number | null;
-  outputTokens: number | null;
-  actualMicroUsd: number | null;
-  sealNonce: string;
-}): Promise<QuoteChecklistInsert> {
-  try {
-    assertNotProdDbOutsideProd();
-  } catch {
-    return { ok: false, reason: "unavailable" };
-  }
-  const admin = getSupabaseAdmin();
-  if (!admin) return { ok: false, reason: "unavailable" };
-  const { data, error } = await admin
-    .from("quote_analyses")
-    .insert({
-      user_id: input.userId,
-      day_hkt: hktDayKey(),
-      page_count: input.pageCount,
-      items: input.items,
-      input_tokens: input.inputTokens,
-      output_tokens: input.outputTokens,
-      est_cost_micro_usd: input.actualMicroUsd,
-      model_id: QUOTE_MODEL_ID,
-      seal_nonce: input.sealNonce,
-    })
-    .select("id")
-    .single();
-  if (error?.code === "23505") return { ok: false, reason: "duplicate" };
-  if (error || !data || typeof data.id !== "string") return { ok: false, reason: "unavailable" };
-  return { ok: true, id: data.id };
 }

@@ -22,9 +22,9 @@ export const QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH =
 
 export const QUOTE_UPLOAD_TITLE_ZH = "上載報價單分析";
 export const QUOTE_UPLOAD_LEAD_ZH =
-  "請上載一份 PDF 報價單。我們會按清單檢視報價內容是否列明清楚。確認公司名稱後，方會進行公司查冊。本服務不評估價格高低。";
+  "請上載一份 PDF 報價單。驗證電郵前，我們只讀取公司名稱。確認公司名稱後，方會進行公司查冊。完成電郵驗證後，方會按清單檢視報價內容是否列明清楚。本服務不評估價格高低。";
 export const QUOTE_UPLOAD_NOTICE_ZH =
-  "PDF 檔案將交由 Microsoft Azure OpenAI 讀取一次，RenoCheck 不會儲存原檔。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。報價單上的公司名稱將與分析結果一併保存，個人資料則不會保存。";
+  "驗證電郵前，PDF 檔案只會交由 Microsoft Azure OpenAI 讀取公司名稱，不會進行報價清單分析，RenoCheck 亦不會儲存原檔。完成電郵驗證後，方會進行完整報價分析。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。公司名稱將與分析結果一併保存，個人資料則不會保存。";
 export const QUOTE_ACK_LABEL_ZH =
   "我確認已經遮好報價單上面嘅個人資料，包括我自己同其他人嘅姓名、電話、地址、簽名同銀行戶口。";
 export const QUOTE_ACK_ERROR_ZH = "請先剔選確認你已經遮好個人資料。";
@@ -44,7 +44,11 @@ export const HOME_QUOTE_UPLOAD_LINK_ZH = "我有報價單，直接上載分析";
 export const HEADER_UPLOAD_ZH = "上載報價";
 export const QUOTE_SEAL_MODAL_TITLE_ZH = "驗證電郵以查看結果";
 export const QUOTE_SEAL_MODAL_BODY_ZH =
-  "分析已完成。請輸入電郵地址及驗證碼，即可查看報告。完成驗證前，此處不會顯示你的報價單內容。";
+  "請輸入電郵地址及驗證碼。完成驗證後，方會進行報價清單分析並顯示結果。完成驗證前，此處不會顯示報價分析內容。";
+export const QUOTE_ANALYSIS_SECTION_ZH = "報價清單分析";
+export const QUOTE_ANALYSIS_LOCKED_ZH =
+  "完成電郵驗證後，方會按清單檢視這份報價是否列明清楚。驗證前不會顯示分析內容。";
+export const QUOTE_ANALYSIS_VERIFY_CTA_ZH = "驗證電郵以查看報價分析";
 export const QUOTE_SEAL_REOPEN_ZH = "驗證並查看結果";
 export const QUOTE_SEAL_CLOSE_ZH = "放棄分析";
 /** Inline verify-first fallback, before analysis has run. The site login button stays 登入. */
@@ -59,7 +63,7 @@ export const ACCOUNT_UPLOAD_BODY_ZH =
 export const ACCOUNT_UPLOAD_ACTION_ZH = "上載報價單";
 
 export const QUOTE_PICK_FIRST_ZH =
-  "請先選擇 PDF 檔案。如尚未驗證電郵，選擇檔案後方需輸入電郵驗證碼。驗證前，檔案只會留在此頁面，不會傳送。";
+  "請先選擇 PDF 檔案。如尚未驗證電郵，系統只會先讀取公司名稱，不會進行報價清單分析。驗證前，檔案只會留在此頁面，不會儲存。";
 export const QUOTE_LOGIN_AFTER_FILE_ZH =
   "已選擇檔案。完成驗證後將即時開始分析，無須重新選擇。";
 export const QUOTE_FILE_RESELECT_ZH =
@@ -166,6 +170,9 @@ export function quoteAnalysisUserFacingCopy(): readonly string[] {
     HEADER_UPLOAD_ZH,
     QUOTE_SEAL_MODAL_TITLE_ZH,
     QUOTE_SEAL_MODAL_BODY_ZH,
+    QUOTE_ANALYSIS_SECTION_ZH,
+    QUOTE_ANALYSIS_LOCKED_ZH,
+    QUOTE_ANALYSIS_VERIFY_CTA_ZH,
     QUOTE_SEAL_REOPEN_ZH,
     QUOTE_SEAL_CLOSE_ZH,
     QUOTE_VERIFY_EMAIL_ZH,

@@ -25,7 +25,7 @@ The extracted company name and the name the user confirms are retained with the 
 - The model may return `companyName` (the contracting company or business name, or null). Checklist rows stay `{ id, status }`. The extracted name and the name the user confirms are retained on that user's `quote_analyses` row for 180 days or until account deletion, whichever is earlier. Personal data is not stored. The name is not logged. The user confirms or edits it before any company search. That search is written to `search_cache` and `search_events` like any other search.
 - Confirming runs the existing company-name search, including the register picker, the too-many prompt, the three-character personal-name gate, the 記/號 trade-suffix rule, rate limits, and the 100-character cap.
 - `DISCLAIMER_VERSION` goes 1.2.6 → 1.2.7. `REPORT_VERSION` stays 2.7.0. The report shape did not change.
-- Company-name columns, the anonymous spend hold, and the seal nonce are migrations the owner applies manually.
+- Company-name columns and the anonymous spend hold are migrations the owner applies manually. There is no sealed result and no seal-nonce column.
 
 ## Consequences
 
