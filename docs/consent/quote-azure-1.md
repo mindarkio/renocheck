@@ -42,4 +42,4 @@ The checkbox is unticked by default, once per upload, with no "remember me". Wit
 
 Not approved. Not inserted into the live disclaimer. §七 stays the retention proposal already in this draft.
 
-> 未登入時上載的報價單會先行分析，其結果不會儲存於伺服器；完成電郵驗證後，結果方會連同帳戶一併保存。
+> 未驗證電郵而上載時，報價單只會交由伺服器及 Azure 讀取公司名稱，不會進行清單分析，亦不會保存該次讀取。完成電郵驗證後，同一份報價單會再次傳送，以進行完整分析，公司名稱與分析結果方會連同帳戶一併保存。

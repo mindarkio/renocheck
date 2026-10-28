@@ -101,6 +101,8 @@ RenoCheck cannot delete Microsoft's copy after send. The DRAFT consent says that
 | `quote_consent_daily` (counts only, no device hash) | Plan default 2 years (D30) | Later |
 | Payment rows | No card data. Expiry of a credit is an open product decision (D13, proposal 30 days) | Airwallex holds payer data under its policy |
 
+A quote that is uploaded while signed out and then verified goes to Azure twice. The first request only reads the company name and is not stored. After email verification the same PDF is sent again for the full checklist, which is the stored `quote_analyses` row.
+
 ## 8. US$1 cap and quota hashing
 
 - App-side cap **US$1 per HKT day** for quote analysis (D36). Free use stops at US$0.80; US$0.20 remains for paid credits (D36b). Pause copy and resume are in [`quote-provider-paused.md`](../runbooks/quote-provider-paused.md).

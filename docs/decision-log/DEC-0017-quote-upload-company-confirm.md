@@ -19,8 +19,8 @@ The extracted company name and the name the user confirms are retained with the 
 
 ## Decision
 
-- `/quote/upload` stays reachable while logged out when analysis is available. The visitor picks the PDF, then completes the existing email OTP on the same page. After verify, the page submits the file already in memory.
-- The PDF is not written to localStorage, IndexedDB, or the server before authentication. `POST /api/quote/analyze` still requires a session and the existing daily limits.
+- `/quote/upload` stays reachable while logged out when analysis is available. The visitor picks the PDF. Before email verification, that PDF is sent to the server and then to Azure so the model can read the company name only. After verification, the page submits the same in-memory file for the full checklist.
+- The PDF is not written to localStorage or IndexedDB. The name-only call does not write a `quote_analyses` row. The full checklist on `POST /api/quote/analyze` still requires a session and the existing per-account daily limits.
 - If the page reloads after a file was chosen, the page asks for the file again. The pending flag in sessionStorage is only `"1"`.
 - The model may return `companyName` (the contracting company or business name, or null). Checklist rows stay `{ id, status }`. The extracted name and the name the user confirms are retained on that user's `quote_analyses` row for 180 days or until account deletion, whichever is earlier. Personal data is not stored. The name is not logged. The user confirms or edits it before any company search. That search is written to `search_cache` and `search_events` like any other search.
 - Confirming runs the existing company-name search, including the register picker, the too-many prompt, the three-character personal-name gate, the 記/號 trade-suffix rule, rate limits, and the 100-character cap.
