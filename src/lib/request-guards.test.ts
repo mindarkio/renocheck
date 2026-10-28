@@ -33,14 +33,14 @@ describe("safeNextPath", () => {
       "//evil.example",
       "/\\evil.example",
     ]) {
-      expect(safeNextPath(raw)).toBe("/account");
+      expect(safeNextPath(raw)).toBe("/quote/upload");
     }
   });
 
   it("rejects control characters the URL parser strips", () => {
     for (const ch of ["\t", "\n", "\r", "\u0000", "\u007f", " "]) {
-      expect(safeNextPath(`/${ch}/evil.example`)).toBe("/account");
+      expect(safeNextPath(`/${ch}/evil.example`)).toBe("/quote/upload");
     }
-    expect(safeNextPath(`/${"a".repeat(600)}`)).toBe("/account");
+    expect(safeNextPath(`/${"a".repeat(600)}`)).toBe("/quote/upload");
   });
 });

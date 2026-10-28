@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { HEADER_UPLOAD_ZH } from "@/lib/quote-analysis/copy";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
 import { SiteHeader } from "./SiteHeader";
 
@@ -25,6 +26,19 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   mockPath = "/";
+  vi.unstubAllGlobals();
+});
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      new Response(JSON.stringify({ enabled: false }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    ),
+  );
 });
 
 function quoteLinks() {
@@ -233,5 +247,28 @@ describe("SiteHeader mobile menu lifecycle (PR #43 review)", () => {
     } finally {
       window.matchMedia = original;
     }
+  });
+});
+
+describe("SiteHeader upload link", () => {
+  it("adds an upload link when analysis is available", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ enabled: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+    render(<SiteHeader />);
+    const link = await screen.findByRole("link", { name: HEADER_UPLOAD_ZH });
+    expect(link.getAttribute("href")).toBe("/quote/upload");
+    expect(link.className).toContain("hidden");
+    expect(link.className).toContain("lg:inline-flex");
+    openMenu();
+    const mobile = dialogLinks().find((anchor) => anchor.getAttribute("href") === "/quote/upload");
+    expect(mobile?.textContent).toBe(HEADER_UPLOAD_ZH);
+    expect(dialogLinks()).toHaveLength(7);
   });
 });

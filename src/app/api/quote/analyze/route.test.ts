@@ -72,6 +72,7 @@ describe("POST /api/quote/analyze", () => {
     mocks.completeQuotePdf.mockResolvedValue({
       object: {
         isQuotation: true,
+        companyName: "合成測試工程有限公司",
         items: [{ id: "waterproofing", status: "vague" }],
       },
       inputTokens: 100,
@@ -213,6 +214,8 @@ describe("POST /api/quote/analyze", () => {
     expect(stored.items.every((item) => Object.keys(item).sort().join() === "id,status")).toBe(
       true,
     );
+    expect(JSON.stringify(stored.items)).not.toContain("合成測試工程有限公司");
+    expect(body.companyName).toBe("合成測試工程有限公司");
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

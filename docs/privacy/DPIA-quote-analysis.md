@@ -92,6 +92,7 @@ RenoCheck cannot delete Microsoft's copy after send. The DRAFT consent says that
 | Data | Period | How it ends |
 |------|--------|-------------|
 | Original quote bytes | Not stored | Dropped when the function returns |
+| Contracting company or business name read from the quote | Not stored on the quote-analysis row and not logged | Returned in the analysis response for the current browser view, so the user can confirm it before the existing company search. A reload drops it. It is not written to `quote_analyses`. If the user confirms, the existing company-search cache rules apply to that search, which is a separate process. |
 | `report_feedback` | **12 months** (locked for feedback) | Daily purge. F1 adds `/api/cron/purge-feedback`. Aaron applies M1 himself |
 | `quote_usage` | Plan default 30 days — not separately locked in the F0 brief | Later purge |
 | `quote_analyses` (anonymised result, no evidence text) | Plan default 180 days | Later purge |

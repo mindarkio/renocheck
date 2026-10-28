@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { COMPANY_NAME_MAX_LENGTH } from "@/lib/report-schema";
 import { QUOTE_CHECK_ITEMS, type QuoteCheckStatus } from "@/lib/quote-selfcheck";
 import { isQuoteArithmeticEnabled } from "@/lib/quote-analysis/config";
 import {
@@ -31,8 +32,24 @@ export type StoredQuoteItem = {
 
 export type ParsedQuoteModel =
   | { kind: "not_quotation" }
-  | { kind: "quotation"; items: StoredQuoteItem[] }
+  | { kind: "quotation"; items: StoredQuoteItem[]; companyName: string | null }
   | { kind: "invalid" };
+
+/** Company name for the current response only. Not written onto stored checklist rows. */
+export function normalizeQuoteCompanyName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  let text = "";
+  for (const char of value) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code <= 0x1f || code === 0x7f) continue;
+    text += char;
+  }
+  text = text.replace(/\s+/g, " ").trim();
+  if (!text) return null;
+  const chars = Array.from(text);
+  if (chars.length <= COMPANY_NAME_MAX_LENGTH) return text;
+  return chars.slice(0, COMPANY_NAME_MAX_LENGTH).join("");
+}
 
 function statusSchema() {
   return z.enum(STATUS_VALUES);
@@ -42,6 +59,7 @@ export function quoteLlmSchema(ids: readonly string[]) {
   const idTuple = ids as [string, ...string[]];
   return z.object({
     isQuotation: z.boolean(),
+    companyName: z.string().nullable(),
     items: z
       .array(
         z.object({
@@ -76,7 +94,11 @@ export function parseQuoteModelObject(
   if (!parsed.data.isQuotation && !informative) {
     return { kind: "not_quotation" };
   }
-  return { kind: "quotation", items };
+  return {
+    kind: "quotation",
+    items,
+    companyName: normalizeQuoteCompanyName(parsed.data.companyName),
+  };
 }
 
 export function quoteFindingText(item: StoredQuoteItem): string {

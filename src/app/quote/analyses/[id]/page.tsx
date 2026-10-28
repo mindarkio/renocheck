@@ -7,6 +7,7 @@ import {
   ContentPageLead,
   ContentPageTitle,
 } from "@/components/ContentPage";
+import { QuoteCompanyConfirm } from "@/components/QuoteCompanyConfirm";
 import { QUOTE_STATUS_OPTIONS } from "@/lib/quote-selfcheck";
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import {
@@ -97,7 +98,10 @@ export default async function QuoteAnalysisResultPage({ params }: PageProps) {
         <ContentPageTitle>{QUOTE_RESULT_TITLE_ZH}</ContentPageTitle>
         {items ? (
           <>
-            <ContentPageLead>{QUOTE_RESULT_LEAD_ZH}</ContentPageLead>
+            <QuoteCompanyConfirm analysisId={id} />
+            <div className="mt-10">
+              <ContentPageLead>{QUOTE_RESULT_LEAD_ZH}</ContentPageLead>
+            </div>
             <ol className="mt-6 space-y-4">
               {items.map((item) => (
                 <li key={item.id} className="text-sm leading-relaxed">

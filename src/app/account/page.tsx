@@ -9,6 +9,7 @@ import {
   ContentPageTitle,
 } from "@/components/ContentPage";
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
+import { isQuoteUploadOpen } from "@/lib/quote-analysis/availability";
 import {
   ACCOUNT_DELETE_BODY_ZH,
   ACCOUNT_DELETE_CLOSED_ZH,
@@ -17,6 +18,8 @@ import {
   ACCOUNT_SIGNED_OUT_PROMPT_ZH,
   ACCOUNT_SIGN_IN_LINK_ZH,
   ACCOUNT_TITLE_ZH,
+  ACCOUNT_UPLOAD_ACTION_ZH,
+  ACCOUNT_UPLOAD_BODY_ZH,
 } from "@/lib/quote-analysis/copy";
 import { contentLinkClass } from "@/lib/ui-surfaces";
 import { getAuthUser } from "@/lib/supabase/server";
@@ -31,6 +34,7 @@ export const instant = false;
 export default async function AccountPage() {
   await connection();
   const user = await getAuthUser();
+  const quoteOpen = user ? await isQuoteUploadOpen() : false;
 
   return (
     <ContentPage>
@@ -41,13 +45,29 @@ export default async function AccountPage() {
             <ContentPageLead>
               {ACCOUNT_EMAIL_LABEL_ZH}：{user.email ?? "—"}
             </ContentPageLead>
-            <h2 className="mt-8 text-sm font-semibold text-primary">
-              {ACCOUNT_DELETE_HEADING_ZH}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              {ACCOUNT_DELETE_BODY_ZH}
-            </p>
-            <AccountActions />
+            {quoteOpen ? (
+              <div className="mt-6">
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {ACCOUNT_UPLOAD_BODY_ZH}
+                </p>
+                <Link
+                  href="/quote/upload"
+                  className="mt-3 inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+                >
+                  {ACCOUNT_UPLOAD_ACTION_ZH}
+                </Link>
+              </div>
+            ) : null}
+            <AccountActions part="session" />
+            <section className="mt-16 border-t border-border pt-6" aria-label={ACCOUNT_DELETE_HEADING_ZH}>
+              <h2 className="text-sm font-medium text-muted-foreground">
+                {ACCOUNT_DELETE_HEADING_ZH}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {ACCOUNT_DELETE_BODY_ZH}
+              </p>
+              <AccountActions part="danger" />
+            </section>
           </>
         ) : (
           <>

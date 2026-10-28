@@ -14,7 +14,8 @@ export function sameOrigin(req: Request): boolean {
   }
 }
 
-const NEXT_FALLBACK = "/account";
+/** Default after OTP when `next` is missing or unsafe. Honour a safe `next` first. */
+const NEXT_FALLBACK = "/quote/upload";
 const NEXT_BASE = "https://next-path.invalid";
 
 function hasControlOrBackslash(raw: string): boolean {

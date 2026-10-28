@@ -6,7 +6,10 @@ import {
   quoteAzureBaseUrl,
   readQuoteAzureEnv,
 } from "@/lib/quote-analysis/config";
-import { quoteAnalysisSystemPrompt } from "@/lib/quote-analysis/prompt";
+import {
+  QUOTE_ANALYSIS_USER_TEXT,
+  quoteAnalysisSystemPrompt,
+} from "@/lib/quote-analysis/prompt";
 import {
   activeQuoteCheckIds,
   quoteLlmSchema,
@@ -119,7 +122,7 @@ export async function completeQuotePdf(
         content: [
           {
             type: "text",
-            text: "請只按清單判斷這份報價單。唔好抄姓名、電話、地址或者戶口。",
+            text: QUOTE_ANALYSIS_USER_TEXT,
           },
           {
             type: "file",

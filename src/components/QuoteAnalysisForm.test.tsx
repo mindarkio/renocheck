@@ -16,7 +16,7 @@ describe("quote acknowledgement", () => {
 
   it("starts unticked and does not upload until it is ticked", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
-    render(<QuoteAnalysisForm />);
+    render(<QuoteAnalysisForm signedIn />);
     const checkbox = screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH });
     expect((checkbox as HTMLInputElement).checked).toBe(false);
     expect(checkbox.hasAttribute("required")).toBe(true);

@@ -1,11 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
+import { LandingChoices, FocusCompanySearchOnHash } from "@/components/LandingChoices";
 import { LandingStats } from "@/components/LandingStats";
-import {
-  marketingPageInnerClass,
-  marketingPageShellClass,
-} from "@/components/ContentPage";
+import { marketingPageShellClass } from "@/components/ContentPage";
 import { SearchForm } from "@/components/SearchForm";
 import { ServiceBanner } from "@/components/ServiceBanner";
 import { getLandingPublicStats } from "@/lib/landing-public-stats";
@@ -16,6 +14,7 @@ import { contentLinkClass } from "@/lib/ui-surfaces";
 import type { Metadata } from "next";
 import { HOME_DESCRIPTION, pageMetadata } from "@/lib/site-metadata";
 import { buildSiteJsonLd } from "@/lib/site-jsonld";
+import { isQuoteUploadOpen } from "@/lib/quote-analysis/availability";
 import { getServiceStatus } from "@/lib/service-status";
 
 export const metadata: Metadata = pageMetadata({
@@ -29,6 +28,7 @@ export const instant = false;
 export default async function Home() {
   await connection();
   const landingStats = await getLandingPublicStats();
+  const quoteOpen = await isQuoteUploadOpen();
   const paused = getServiceStatus().paused;
   const jsonLd = buildSiteJsonLd(getSiteUrl());
 
@@ -37,7 +37,7 @@ export default async function Home() {
       className={`relative items-center justify-start ${marketingPageShellClass}`}
     >
       <JsonLd data={jsonLd} />
-      <div className={`flex flex-col items-center ${marketingPageInnerClass}`}>
+      <div className="flex w-full max-w-3xl flex-col items-center">
         <h1 className="sr-only">香港裝修公司風險參考搜尋</h1>
         <Link
           href="/"
@@ -64,8 +64,12 @@ export default async function Home() {
             {BRAND_TAGLINE_LINES[1]}
           </p>
         </div>
+        <LandingChoices quoteOpen={quoteOpen} />
+        <FocusCompanySearchOnHash />
         {paused ? <ServiceBanner /> : null}
-        <SearchForm variant="landing" paused={paused} />
+        <div id="company-search" className="w-full max-w-[584px] scroll-mt-24">
+          <SearchForm variant="landing" paused={paused} />
+        </div>
         <p className="mt-5 text-center text-sm">
           <Link
             href="/quote"
@@ -76,10 +80,7 @@ export default async function Home() {
         </p>
       </div>
       {landingStats ? (
-        <div
-          // Width comes from left/right. `w-full` plus `inset-x-4` overflows the viewport by 1rem.
-          className="absolute inset-x-4 bottom-2 mx-auto min-w-0 max-w-[584px] sm:bottom-3"
-        >
+        <div className="mt-10 w-full max-w-[584px]">
           <LandingStats stats={landingStats} />
         </div>
       ) : null}

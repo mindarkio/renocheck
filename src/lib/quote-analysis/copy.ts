@@ -5,7 +5,7 @@
  */
 
 const QUOTE_ANALYSIS_DISCLAIMER_OPENING_ZH =
-  "如閣下設立帳戶以使用報價單上載分析，本服務會收集閣下的電郵地址，用途限於發送一次性登入驗證碼、識別帳戶，以及處理刪除帳戶的要求。閣下上載的報價單（只限 PDF）僅在分析期間於伺服器記憶體中處理，並會傳送至 Microsoft Azure OpenAI（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）作自動分析。本服務不會保留報價單原檔。分析完成後，本服務保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。閣下可於帳戶頁面要求刪除帳戶；帳戶刪除後，該電郵帳戶及其報價分析結果會一併移除。登入驗證碼經 Supabase 認證服務以電郵發送，電郵傳遞由 Resend 負責。設立帳戶屬自願；不設立帳戶仍可使用公司查冊及報價自查清單。";
+  "如閣下設立帳戶以使用報價單上載分析，本服務會收集閣下的電郵地址，用途限於發送一次性登入驗證碼、識別帳戶，以及處理刪除帳戶的要求。閣下上載的報價單（只限 PDF）僅在分析期間於伺服器記憶體中處理，並會傳送至 Microsoft Azure OpenAI（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）作自動分析。本服務不會保留報價單原檔。報價單所載的承辦公司或商號名稱會被抽出，僅供閣下確認後進行公司查冊，本服務不會保留該名稱。分析完成後，本服務保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。閣下可於帳戶頁面要求刪除帳戶；帳戶刪除後，該電郵帳戶及其報價分析結果會一併移除。登入驗證碼經 Supabase 認證服務以電郵發送，電郵傳遞由 Resend 負責。設立帳戶屬自願；不設立帳戶仍可使用公司查冊及報價自查清單。";
 
 /** Aaron's verbatim wording. Do not edit. */
 export const QUOTE_ANALYSIS_DISCLAIMER_AZURE_ZH =
@@ -23,9 +23,9 @@ export const QUOTE_ANALYSIS_ENTRY_ZH = "用 AI 對住同一張清單睇一份 PD
 
 export const QUOTE_UPLOAD_TITLE_ZH = "上載報價單分析";
 export const QUOTE_UPLOAD_LEAD_ZH =
-  "上載一份 PDF 報價單。系統只會對住自查清單，標示有冇寫清楚，唔會評價價錢或者公司。";
+  "上載一份 PDF 報價單。我哋會對住清單睇吓寫得清唔清楚。你確認公司名之後，先至查公司。唔會評價價錢。";
 export const QUOTE_UPLOAD_NOTICE_ZH =
-  "PDF 會交俾 Microsoft Azure OpenAI 讀一次，RenoCheck 唔會儲存原檔。請先遮好你自己同其他人嘅姓名、電話、地址、簽名同銀行戶口。";
+  "PDF 會交俾 Microsoft Azure OpenAI 讀一次，RenoCheck 唔會儲存原檔。請先遮好你自己同其他人嘅姓名、電話、地址、簽名同銀行戶口。報價單上嘅公司名會抽出嚟，等你確認之後先查公司，我哋唔會儲存個名。";
 export const QUOTE_ACK_LABEL_ZH =
   "我確認已經遮好報價單上面嘅個人資料，包括我自己同其他人嘅姓名、電話、地址、簽名同銀行戶口。";
 export const QUOTE_ACK_ERROR_ZH = "請先剔選確認你已經遮好個人資料。";
@@ -40,6 +40,44 @@ export const QUOTE_ACCOUNT_LINK_ZH = "帳戶";
 export const QUOTE_BACK_TO_CHECKLIST_ZH = "返回報價自查";
 export const QUOTE_UNAVAILABLE_ZH =
   "上載分析暫時未開放。你可以繼續用報價自查清單。";
+
+export const LANDING_CHOICE_HEADING_ZH = "你而家有報價單未？";
+export const LANDING_QUOTE_TITLE_ZH = "我有報價單";
+export const LANDING_QUOTE_BODY_ZH =
+  "上載一份 PDF。我哋會睇吓間公司，同埋張報價寫得清唔清楚。免費，要電郵登入，幾分鐘搞掂。";
+export const LANDING_QUOTE_ACTION_ZH = "上載報價單";
+export const LANDING_QUOTE_UNAVAILABLE_ZH = "暫時未開放";
+export const LANDING_SEARCH_TITLE_ZH = "未有報價，想先查公司";
+export const LANDING_SEARCH_BODY_ZH =
+  "未有報價都得。用公司名、電話或者 BR，先查公開資料摘要。";
+export const LANDING_SEARCH_ACTION_ZH = "去查公司";
+export const HEADER_UPLOAD_ZH = "上載報價";
+
+export const ACCOUNT_UPLOAD_BODY_ZH =
+  "有報價單？上載 PDF，我哋會睇吓間公司同埋寫得清唔清楚。";
+export const ACCOUNT_UPLOAD_ACTION_ZH = "上載報價單";
+
+export const QUOTE_PICK_FIRST_ZH =
+  "先揀 PDF。未登入的話，揀完檔先至要電郵驗證碼。檔案留喺呢版，未登入之前唔會送出去。";
+export const QUOTE_LOGIN_AFTER_FILE_ZH =
+  "檔案揀好咗。登入之後會即刻開始分析，唔使再揀。";
+export const QUOTE_FILE_RESELECT_ZH =
+  "頁面重新載入之後，之前揀嘅 PDF 冇留低。請再揀一次檔案。";
+
+export const QUOTE_COMPANY_FOUND_PREFIX_ZH = "我哋喺報價單上搵到「";
+export const QUOTE_COMPANY_FOUND_SUFFIX_ZH = "」。係咪呢間公司？";
+export const QUOTE_COMPANY_MISSING_ZH =
+  "報價單上搵唔到公司名。請打返個公司名，確認之後先至查。";
+export const QUOTE_COMPANY_LABEL_ZH = "公司名稱";
+export const QUOTE_COMPANY_CONFIRM_ZH = "確認，開始查公司";
+export const QUOTE_COMPANY_HOLD_ZH =
+  "未撳確認之前，唔會開始查。公司名唔會儲存。";
+export const QUOTE_COMPANY_NEED_NAME_ZH = "請輸入公司名稱。";
+export const QUOTE_COMPANY_RESULT_HEADING_ZH = "公司查冊結果";
+
+export function quoteCompanyFoundZh(name: string): string {
+  return `${QUOTE_COMPANY_FOUND_PREFIX_ZH}${name}${QUOTE_COMPANY_FOUND_SUFFIX_ZH}`;
+}
 
 export const QUOTE_QUOTA_ZH =
   "今日免費分析次數已用完。聽日（香港時間）先可以再分析。";
@@ -61,7 +99,7 @@ export const QUOTE_UNAVAILABLE_API_ZH = "報價分析暫時未開放。";
 
 export const QUOTE_RESULT_TITLE_ZH = "報價分析結果";
 export const QUOTE_RESULT_LEAD_ZH =
-  "呢個結果由 AI 對住清單整理，只講有冇寫清楚，唔會評價價錢或者公司。請自己對返原本報價單。";
+  "下面呢個清單由 AI 對住項目整理，只講有冇寫清楚，唔會評價價錢。請自己對返原本報價單。";
 export const QUOTE_RESULT_MISSING_ZH =
   "搵唔到呢份分析。可能已經刪除，或者唔係你個帳戶嘅。";
 export const QUOTE_RESULT_ROBOTS = { index: false, follow: false } as const;
@@ -124,6 +162,28 @@ export function quoteAnalysisUserFacingCopy(): readonly string[] {
     QUOTE_ACCOUNT_LINK_ZH,
     QUOTE_BACK_TO_CHECKLIST_ZH,
     QUOTE_UNAVAILABLE_ZH,
+    LANDING_CHOICE_HEADING_ZH,
+    LANDING_QUOTE_TITLE_ZH,
+    LANDING_QUOTE_BODY_ZH,
+    LANDING_QUOTE_ACTION_ZH,
+    LANDING_QUOTE_UNAVAILABLE_ZH,
+    LANDING_SEARCH_TITLE_ZH,
+    LANDING_SEARCH_BODY_ZH,
+    LANDING_SEARCH_ACTION_ZH,
+    HEADER_UPLOAD_ZH,
+    ACCOUNT_UPLOAD_BODY_ZH,
+    ACCOUNT_UPLOAD_ACTION_ZH,
+    QUOTE_PICK_FIRST_ZH,
+    QUOTE_LOGIN_AFTER_FILE_ZH,
+    QUOTE_FILE_RESELECT_ZH,
+    QUOTE_COMPANY_FOUND_PREFIX_ZH,
+    QUOTE_COMPANY_FOUND_SUFFIX_ZH,
+    QUOTE_COMPANY_MISSING_ZH,
+    QUOTE_COMPANY_LABEL_ZH,
+    QUOTE_COMPANY_CONFIRM_ZH,
+    QUOTE_COMPANY_HOLD_ZH,
+    QUOTE_COMPANY_NEED_NAME_ZH,
+    QUOTE_COMPANY_RESULT_HEADING_ZH,
     QUOTE_QUOTA_ZH,
     QUOTE_BUDGET_ZH,
     QUOTE_NOT_QUOTATION_ZH,

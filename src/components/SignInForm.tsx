@@ -16,7 +16,14 @@ import {
 const fieldClass =
   "mt-1 w-full min-h-11 rounded-lg border border-border bg-background px-3 text-base text-foreground";
 
-export function SignInForm({ nextPath }: { nextPath?: string }) {
+export function SignInForm({
+  nextPath,
+  onVerified,
+}: {
+  nextPath?: string;
+  /** When set, stay on this page instead of following `next`. */
+  onVerified?: () => void | Promise<void>;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -60,6 +67,10 @@ export function SignInForm({ nextPath }: { nextPath?: string }) {
       const data = (await res.json().catch(() => null)) as { message?: string } | null;
       if (!res.ok) {
         setError(data?.message ?? LOGIN_CODE_INVALID_ZH);
+        return;
+      }
+      if (onVerified) {
+        await onVerified();
         return;
       }
       router.push(safeNextPath(nextPath));
