@@ -7,8 +7,8 @@ import {
   reserveMicroUsd,
 } from "@/lib/quote-analysis/config";
 import {
-  anonymousBudgetAllows,
-  noteAnonymousSpend,
+  reserveAnonymousQuoteSpend,
+  settleAnonymousQuoteSpend,
   takeAnonymousQuoteSlot,
 } from "@/lib/quote-analysis/anon-budget";
 import {
@@ -94,11 +94,11 @@ export async function runAnonymousQuoteAnalysis(input: {
   }
 
   const reserve = reserveMicroUsd(pdf.pageCount);
-  const budget = await anonymousBudgetAllows(reserve, env);
-  if (budget === "budget") {
+  const hold = await reserveAnonymousQuoteSpend(reserve, env);
+  if (hold === "budget") {
     return { status: 503, body: { error: "quote_paused", message: QUOTE_BUDGET_ZH } };
   }
-  if (budget !== "ok") {
+  if (hold === "unavailable") {
     return { status: 503, body: { error: "quote_unavailable", message: QUOTE_FAILED_ZH } };
   }
 
@@ -106,12 +106,15 @@ export async function runAnonymousQuoteAnalysis(input: {
   try {
     modelResult = await input.model(input.bytes);
   } catch {
+    await settleAnonymousQuoteSpend(hold, null);
     return { status: 503, body: { error: "quote_llm_failed", message: QUOTE_FAILED_ZH } };
   }
   const actual =
     modelResult.inputTokens == null || modelResult.outputTokens == null
       ? null
       : microUsdFromTokens(modelResult.inputTokens, modelResult.outputTokens);
+  // Book every provider call, including invalid and not-a-quotation results.
+  await settleAnonymousQuoteSpend(hold, actual);
   const parsed = parseQuoteModelObject(modelResult.object);
   if (parsed.kind === "invalid") {
     return { status: 503, body: { error: "quote_llm_failed", message: QUOTE_FAILED_ZH } };
@@ -141,6 +144,5 @@ export async function runAnonymousQuoteAnalysis(input: {
   } catch {
     return { status: 503, body: { error: "quote_unavailable", message: QUOTE_FAILED_ZH } };
   }
-  await noteAnonymousSpend(actual ?? reserve);
   return { status: 200, body: { sealed } };
 }

@@ -71,7 +71,7 @@ describe("quote analysis parser", () => {
     const parsed = parseQuoteModelObject(
       {
         isQuotation: true,
-        companyName: "合成\u202e測試\u200b工程\u2066有限公司\n",
+        companyName: "合成\u202e測試\u200b工程\u2066有限\u200f\u061c\u0085\u009b公司\n",
         items: [],
       },
       ids,

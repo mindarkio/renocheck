@@ -32,6 +32,9 @@ describe("safeNextPath", () => {
       "https://evil.example/",
       "//evil.example",
       "/\\evil.example",
+      "/..//evil.example",
+      "/./..//evil.example",
+      "/a/../..//evil.example",
     ]) {
       expect(safeNextPath(raw)).toBe("/quote/upload");
     }

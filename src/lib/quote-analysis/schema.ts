@@ -37,9 +37,9 @@ export type ParsedQuoteModel =
 
 /** Control chars, bidi overrides/isolates, and zero-width characters. */
 const COMPANY_NAME_STRIP =
-  /[\u0000-\u001f\u007f\u200b-\u200d\u202a-\u202e\u2060\u2066-\u2069\ufeff]/gu;
+  /[\u0000-\u001f\u007f-\u009f\u061c\u200b-\u200f\u202a-\u202e\u2060\u2066-\u2069\ufeff]/gu;
 
-/** Company name for the current response only. Not written onto stored checklist rows. */
+/** Cleans the company name for display and for the company-name columns on quote_analyses. */
 export function normalizeQuoteCompanyName(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const text = value.replace(COMPANY_NAME_STRIP, "").replace(/\s+/gu, " ").trim();

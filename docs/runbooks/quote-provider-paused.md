@@ -18,7 +18,7 @@ The cap is **US$1 per HKT calendar day** (D36). Free analyses stop at **US$0.80*
 
 While paused, or when the flag is off or Azure is not configured, the homepage quote card shows a disabled 「暫時未開放」 state. The header upload link and the `/quote` upload entry stay hidden. Company search still works. The daily budget check reads `quote_spend_daily` for the Hong Kong day; if that read fails, the card stays available and `POST /api/quote/analyze` still enforces the cap.
 
-The company or business name read from a quote is not stored on `quote_analyses` and is not logged. It is held in the browser only for the current result view.
+The company name read from a quote — both the extracted name and the name the user confirms — is retained on that user's `quote_analyses` row for 180 days or until account deletion, whichever is earlier. Personal data is not stored. The name is not logged.
 
 While paused, the product copy (still DRAFT) tells the user quote analysis is paused until tomorrow and company search still works. A paid credit is not consumed by a pause; the plan extends its expiry by one day if the cap trips while they hold a credit (F5).
 

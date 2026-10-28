@@ -42,5 +42,7 @@ export function safeNextPath(raw: string | null | undefined): string {
     return NEXT_FALLBACK;
   }
   if (url.origin !== NEXT_BASE) return NEXT_FALLBACK;
+  // "/..//host" normalises to "//host". Re-check so the output is safe on its own.
+  if (url.pathname.startsWith("//")) return NEXT_FALLBACK;
   return `${url.pathname}${url.search}${url.hash}`;
 }

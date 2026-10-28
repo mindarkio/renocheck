@@ -60,6 +60,9 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   const anonymousRef = useRef(false);
   const sealedRef = useRef<string | null>(null);
   const inFlight = useRef(false);
+  const claimAbort = useRef<AbortController | null>(null);
+  /** Bumped by 放棄分析 so a verify that is already in flight does not claim. */
+  const flowEpoch = useRef(0);
   const [file, setFile] = useState<File | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [authed, setAuthed] = useState(signedIn);
@@ -137,6 +140,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
       }
       clearFlag(QUOTE_FILE_PENDING_KEY);
       if (body.sealed && !body.id) {
+        flowEpoch.current += 1;
         sealedRef.current = body.sealed;
         writeFlag(SEAL_PENDING_KEY);
         setSealed(true);
@@ -161,8 +165,11 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   }
 
   async function claimSealed() {
+    const epoch = flowEpoch.current;
     const blob = sealedRef.current;
     if (!blob || inFlight.current) return;
+    const controller = new AbortController();
+    claimAbort.current = controller;
     inFlight.current = true;
     setPending(true);
     setError(null);
@@ -171,7 +178,9 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ sealed: blob }),
+        signal: controller.signal,
       });
+      if (epoch !== flowEpoch.current) return;
       const body = (await res.json().catch(() => null)) as {
         id?: string;
         companyName?: string | null;
@@ -191,11 +200,16 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
         typeof body.companyName === "string" ? body.companyName : null,
       );
       setClaimed({ id: body.id, items: body.items ?? [] });
-    } catch {
+    } catch (error) {
+      if (epoch !== flowEpoch.current) return;
+      if (error instanceof DOMException && error.name === "AbortError") return;
       setError(QUOTE_FAILED_ZH);
     } finally {
-      inFlight.current = false;
-      setPending(false);
+      if (claimAbort.current === controller) claimAbort.current = null;
+      if (epoch === flowEpoch.current) {
+        inFlight.current = false;
+        setPending(false);
+      }
     }
   }
 
@@ -210,11 +224,15 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   }
 
   function abandonSealed() {
+    flowEpoch.current += 1;
+    claimAbort.current?.abort();
+    claimAbort.current = null;
     sealedRef.current = null;
     clearFlag(SEAL_PENDING_KEY);
     clearFlag(QUOTE_FILE_PENDING_KEY);
     fileRef.current = null;
     ackRef.current = false;
+    inFlight.current = false;
     setFile(null);
     setAcknowledged(false);
     setSealed(false);
@@ -223,11 +241,15 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
     setPending(false);
   }
 
+  const epochAtRender = flowEpoch.current;
+
   async function afterLogin() {
+    // 放棄分析 bumps flowEpoch. This closure still has the epoch from before that click.
+    if (flowEpoch.current !== epochAtRender) return;
     authedRef.current = true;
     setAuthed(true);
+    if (flowEpoch.current !== epochAtRender) return;
     if (sealedRef.current) {
-      setModalOpen(false);
       await claimSealed();
       return;
     }

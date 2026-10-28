@@ -8,7 +8,6 @@ import {
   quoteDailyBudgetMicroUsd,
   quoteDailyCallCap,
   quoteFreeDailyBudgetMicroUsd,
-  spendDecision,
 } from "@/lib/quote-analysis/config";
 import { hktDayKey } from "@/lib/quote-analysis/availability";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -43,72 +42,56 @@ export async function takeAnonymousQuoteSlot(
   });
 }
 
-async function spendRow() {
+export type AnonymousSpendHold = { day: string; reserve: number };
+
+/**
+ * Atomic hold on the locked HKT day row, same caps as begin_quote_analysis.
+ * Fails closed when the database or guard is unavailable.
+ */
+export async function reserveAnonymousQuoteSpend(
+  reserveMicroUsd: number,
+  env: Record<string, string | undefined> = process.env,
+): Promise<AnonymousSpendHold | "budget" | "unavailable"> {
   try {
     assertNotProdDbOutsideProd();
   } catch {
-    return { kind: "unavailable" as const };
+    return "unavailable";
   }
   const admin = getSupabaseAdmin();
-  if (!admin) return { kind: "unavailable" as const };
-  const day = hktDayKey();
-  const { data, error } = await admin
-    .from("quote_spend_daily")
-    .select("spent_micro_usd, reserved_micro_usd, calls")
-    .eq("day_hkt", day)
-    .maybeSingle();
-  if (error) return { kind: "unavailable" as const };
-  const spent = Number(data?.spent_micro_usd ?? 0);
-  const reserved = Number(data?.reserved_micro_usd ?? 0);
-  const calls = Number(data?.calls ?? 0);
-  if (![spent, reserved, calls].every((n) => Number.isFinite(n))) {
-    return { kind: "unavailable" as const };
-  }
-  return {
-    kind: "row" as const,
-    day,
-    spent,
-    reserved,
-    calls,
-    admin,
-  };
-}
-
-/** Fresh read. Not the homepage cache. Fail closed when the row cannot be read. */
-export async function anonymousBudgetAllows(
-  reserveMicroUsd: number,
-  env: Record<string, string | undefined> = process.env,
-): Promise<"ok" | "budget" | "unavailable"> {
-  const row = await spendRow();
-  if (row.kind === "unavailable") return "unavailable";
-  const decision = spendDecision({
-    used: 0,
-    limit: 1,
-    spent: row.spent,
-    reserved: row.reserved,
-    reserve: reserveMicroUsd,
-    cap: quoteDailyBudgetMicroUsd(env),
-    freeCap: quoteFreeDailyBudgetMicroUsd(env),
-    calls: row.calls,
-    callCap: quoteDailyCallCap(env),
+  if (!admin) return "unavailable";
+  const reserve = Math.ceil(reserveMicroUsd);
+  const { data, error } = await admin.rpc("reserve_anonymous_quote_spend", {
+    p_reserve: reserve,
+    p_cap_micro: quoteDailyBudgetMicroUsd(env),
+    p_free_cap_micro: quoteFreeDailyBudgetMicroUsd(env),
+    p_call_cap: quoteDailyCallCap(env),
   });
-  return decision === "budget" ? "budget" : "ok";
+  if (error) return "unavailable";
+  if (typeof data !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(data)) return "budget";
+  return { day: data, reserve };
 }
 
-/** Best-effort booking after Azure has already run. Does not log amounts tied to a result. */
-export async function noteAnonymousSpend(microUsd: number): Promise<void> {
-  const row = await spendRow();
-  if (row.kind === "unavailable") return;
-  const add = Number.isFinite(microUsd) && microUsd > 0 ? Math.ceil(microUsd) : 0;
-  await row.admin.from("quote_spend_daily").upsert(
-    {
-      day_hkt: row.day,
-      spent_micro_usd: row.spent + add,
-      reserved_micro_usd: row.reserved,
-      calls: row.calls + 1,
-    },
-    { onConflict: "day_hkt" },
-  );
+/** Moves the hold to spent. Null books the full hold. Call once after Azure ran or threw. */
+export async function settleAnonymousQuoteSpend(
+  hold: AnonymousSpendHold,
+  actualMicroUsd: number | null,
+): Promise<void> {
+  try {
+    assertNotProdDbOutsideProd();
+  } catch {
+    return;
+  }
+  const admin = getSupabaseAdmin();
+  if (!admin) return;
+  const actual =
+    actualMicroUsd != null && Number.isFinite(actualMicroUsd) && actualMicroUsd >= 0
+      ? Math.ceil(actualMicroUsd)
+      : null;
+  await admin.rpc("settle_anonymous_quote_spend", {
+    p_day: hold.day,
+    p_reserve: hold.reserve,
+    p_actual: actual,
+  });
 }
 
 export async function countUserQuoteUsesToday(userId: string): Promise<number | null> {

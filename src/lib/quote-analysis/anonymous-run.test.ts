@@ -3,12 +3,13 @@ import { resetMemoryRateLimitForTests } from "@/lib/memory-rate-limit";
 
 vi.mock("@/lib/quote-analysis/anon-budget", () => ({
   takeAnonymousQuoteSlot: vi.fn(async () => "ok"),
-  anonymousBudgetAllows: vi.fn(async () => "ok"),
-  noteAnonymousSpend: vi.fn(async () => {}),
+  reserveAnonymousQuoteSpend: vi.fn(async () => ({ day: "2026-10-28", reserve: 5_000 })),
+  settleAnonymousQuoteSpend: vi.fn(async () => {}),
 }));
 
 import {
-  anonymousBudgetAllows,
+  reserveAnonymousQuoteSpend,
+  settleAnonymousQuoteSpend,
   takeAnonymousQuoteSlot,
 } from "@/lib/quote-analysis/anon-budget";
 import { runAnonymousQuoteAnalysis } from "./anonymous-run";
@@ -28,7 +29,8 @@ describe("runAnonymousQuoteAnalysis", () => {
   beforeEach(() => {
     resetMemoryRateLimitForTests();
     vi.mocked(takeAnonymousQuoteSlot).mockResolvedValue("ok");
-    vi.mocked(anonymousBudgetAllows).mockResolvedValue("ok");
+    vi.mocked(reserveAnonymousQuoteSpend).mockResolvedValue({ day: "2026-10-28", reserve: 5_000 });
+    vi.mocked(settleAnonymousQuoteSpend).mockClear();
   });
 
   it("returns a sealed blob and no report fields", async () => {
@@ -76,7 +78,7 @@ describe("runAnonymousQuoteAnalysis", () => {
 
     resetMemoryRateLimitForTests();
     vi.mocked(takeAnonymousQuoteSlot).mockResolvedValue("ok");
-    vi.mocked(anonymousBudgetAllows).mockResolvedValue("budget");
+    vi.mocked(reserveAnonymousQuoteSpend).mockResolvedValue("budget");
     const paused = await runAnonymousQuoteAnalysis({
       acknowledged: true,
       mediaType: "application/pdf",
@@ -90,6 +92,76 @@ describe("runAnonymousQuoteAnalysis", () => {
     });
     expect(paused.status).toBe(503);
     expect(paused.body.error).toBe("quote_paused");
+    expect(settleAnonymousQuoteSpend).not.toHaveBeenCalled();
+  });
+
+  it("settles the hold once for every provider call", async () => {
+    const base = {
+      acknowledged: true,
+      mediaType: "application/pdf",
+      bytes: PDF,
+      env,
+    };
+    const ok = await runAnonymousQuoteAnalysis({
+      ...base,
+      ip: "203.0.113.20",
+      now: 5_000,
+      model: async () => ({
+        object: { isQuotation: true, companyName: null, items: [{ id: "demolition", status: "clear" }] },
+        inputTokens: 1_000_000,
+        outputTokens: 0,
+      }),
+    });
+    expect(ok.status).toBe(200);
+    expect(settleAnonymousQuoteSpend).toHaveBeenLastCalledWith(
+      { day: "2026-10-28", reserve: 5_000 },
+      100_000,
+    );
+
+    const thrown = await runAnonymousQuoteAnalysis({
+      ...base,
+      ip: "203.0.113.21",
+      now: 6_000,
+      model: async () => {
+        throw new Error("provider down");
+      },
+    });
+    expect(thrown.status).toBe(503);
+    expect(settleAnonymousQuoteSpend).toHaveBeenLastCalledWith(
+      { day: "2026-10-28", reserve: 5_000 },
+      null,
+    );
+
+    const notQuote = await runAnonymousQuoteAnalysis({
+      ...base,
+      ip: "203.0.113.22",
+      now: 7_000,
+      model: async () => ({
+        object: { isQuotation: false, companyName: null, items: [] },
+        inputTokens: 10,
+        outputTokens: 10,
+      }),
+    });
+    expect(notQuote.body.error).toBe("not_quotation");
+    expect(settleAnonymousQuoteSpend).toHaveBeenCalledTimes(3);
+  });
+
+  it("fails closed when the hold cannot be taken", async () => {
+    vi.mocked(reserveAnonymousQuoteSpend).mockResolvedValue("unavailable");
+    const result = await runAnonymousQuoteAnalysis({
+      acknowledged: true,
+      mediaType: "application/pdf",
+      bytes: PDF,
+      ip: "203.0.113.23",
+      env,
+      now: 8_000,
+      model: async () => {
+        throw new Error("should not run");
+      },
+    });
+    expect(result.status).toBe(503);
+    expect(result.body.error).toBe("quote_unavailable");
+    expect(settleAnonymousQuoteSpend).not.toHaveBeenCalled();
   });
 
   it("requires sign-in when the seal secret is missing", async () => {

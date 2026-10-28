@@ -60,8 +60,7 @@ function checklistItems(value: unknown): StoredQuoteItem[] | null {
 
 /**
  * Decrypt a sealed result, reject expiry and replay, then store checklist
- * statuses only. The company name is returned to this signed-in caller and
- * is not written on the row.
+ * statuses and the extracted company name on the caller's row.
  */
 export async function claimSealedQuote(input: {
   userId: string;
@@ -90,18 +89,6 @@ export async function claimSealedQuote(input: {
     return { status: 400, body: { error: "seal_invalid", message: QUOTE_FAILED_ZH } };
   }
 
-  const slot = await takeAuthRateLimit({
-    key: `quote-seal:${opened.nonce}`,
-    limit: 1,
-    windowMs: SEAL_SLOT_WINDOW_MS,
-  });
-  if (slot === "limited") {
-    return { status: 409, body: { error: "seal_used", message: QUOTE_SEAL_USED_ZH } };
-  }
-  if (slot !== "ok") {
-    return { status: 503, body: { error: "quote_unavailable", message: QUOTE_FAILED_ZH } };
-  }
-
   const used = await countUserQuoteUsesToday(input.userId);
   if (used == null) {
     return { status: 503, body: { error: "quote_unavailable", message: QUOTE_FAILED_ZH } };
@@ -121,6 +108,20 @@ export async function claimSealedQuote(input: {
   if (!analysisId) {
     return { status: 503, body: { error: "quote_unavailable", message: QUOTE_BUDGET_ZH } };
   }
+
+  // After the quota and insert succeed, so a 429 or 503 does not burn the seal.
+  const slot = await takeAuthRateLimit({
+    key: `quote-seal:${opened.nonce}`,
+    limit: 1,
+    windowMs: SEAL_SLOT_WINDOW_MS,
+  });
+  if (slot === "limited") {
+    return { status: 409, body: { error: "seal_used", message: QUOTE_SEAL_USED_ZH } };
+  }
+  if (slot !== "ok") {
+    return { status: 503, body: { error: "quote_unavailable", message: QUOTE_FAILED_ZH } };
+  }
+
   await saveQuoteCompanyNames({
     analysisId,
     userId: input.userId,

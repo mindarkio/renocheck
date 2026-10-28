@@ -77,8 +77,8 @@ describe("saveQuoteCompanyNames", () => {
     );
     expect(migration).toContain("add column if not exists extracted_company_name text");
     expect(migration).toContain("add column if not exists confirmed_company_name text");
-    expect(migration).toContain("char_length(extracted_company_name) <= 100");
-    expect(migration).toContain("char_length(confirmed_company_name) <= 100");
+    expect(migration).toMatch(/char_length\(extracted_company_name\) <= 100\b/);
+    expect(migration).toMatch(/char_length\(confirmed_company_name\) <= 100\b/);
     expect(migration).not.toMatch(/pg_catalog\.(least|greatest)/);
     const purge = readFileSync("supabase/migrations/20261023220000_quote_analysis.sql", "utf8");
     expect(purge).toContain("delete from public.quote_analyses");

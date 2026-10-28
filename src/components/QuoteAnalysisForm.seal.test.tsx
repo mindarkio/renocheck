@@ -2,6 +2,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  LOGIN_CODE_LABEL_ZH,
+  LOGIN_EMAIL_LABEL_ZH,
   QUOTE_ACK_LABEL_ZH,
   QUOTE_ANALYSING_ZH,
   QUOTE_FILE_LABEL_ZH,
@@ -95,6 +97,63 @@ describe("sealed quote upload", () => {
     expect(document.querySelector("[data-quote-report-skeleton]")).toBeNull();
     expect(screen.getByLabelText(QUOTE_FILE_LABEL_ZH)).toBeTruthy();
     expect(document.body.textContent).not.toContain(NAME);
+  });
+
+  it("abandon drops the sealed blob and does not claim after verify returns", async () => {
+    let releaseVerify: (response: Response) => void = () => {};
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const href = String(url);
+        calls.push(href);
+        if (href.includes("/api/quote/availability")) {
+          return new Response(JSON.stringify({ enabled: true, anonymous: true }), { status: 200 });
+        }
+        if (href.includes("/api/quote/analyze")) {
+          return new Response(JSON.stringify({ sealed: "opaque-blob" }), { status: 200 });
+        }
+        if (href.includes("/api/auth/verify")) {
+          return new Promise<Response>((resolve) => {
+            releaseVerify = resolve;
+          });
+        }
+        if (href.includes("/api/quote/claim")) {
+          return new Response(JSON.stringify({ id: "33333333-3333-4333-8333-333333333333", items: [] }), {
+            status: 200,
+          });
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }),
+    );
+    render(<QuoteAnalysisForm signedIn={false} />);
+    await waitFor(() => {
+      expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();
+    });
+    fireEvent.change(screen.getByLabelText(QUOTE_FILE_LABEL_ZH), {
+      target: { files: [pdfFile()] },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
+    await screen.findByRole("dialog", { name: QUOTE_SEAL_MODAL_TITLE_ZH });
+    expect(sessionStorage.getItem("renocheck:quote-seal-pending")).toBe("1");
+    fireEvent.change(screen.getByLabelText(LOGIN_EMAIL_LABEL_ZH), {
+      target: { value: "person@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(LOGIN_CODE_LABEL_ZH), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_REOPEN_ZH }));
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_CLOSE_ZH }));
+    releaseVerify(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    await waitFor(() => {
+      expect(screen.getByLabelText(QUOTE_FILE_LABEL_ZH)).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(calls.some((href) => href.includes("/api/auth/verify"))).toBe(true);
+    });
+    expect(calls.some((href) => href.includes("/api/quote/claim"))).toBe(false);
+    expect(sessionStorage.getItem("renocheck:quote-seal-pending")).toBeNull();
+    expect(screen.queryByRole("button", { name: QUOTE_SEAL_REOPEN_ZH })).toBeNull();
   });
 
   it("does not send a second analysis while the first is in flight", async () => {
