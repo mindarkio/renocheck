@@ -1,6 +1,12 @@
 import "server-only";
 
 import { createHmac } from "node:crypto";
+import {
+  logAuthRateLimitUnavailable,
+  readPostgrestError,
+  rpcDataType,
+  serviceRoleEnvFlags,
+} from "@/lib/auth/diagnostics";
 import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -16,6 +22,10 @@ function rateLimitSecret(): string | null {
   const secret = process.env.AUTH_RATE_LIMIT_SECRET?.trim() ?? "";
   if (secret.length < AUTH_RATE_LIMIT_SECRET_MIN_LENGTH) return null;
   return secret;
+}
+
+function rateLimitSecretPresent(): boolean {
+  return (process.env.AUTH_RATE_LIMIT_SECRET?.trim() ?? "").length > 0;
 }
 
 /** HMAC-SHA256 hex. The table stores this, never the email or IP. */
@@ -59,16 +69,28 @@ export async function takeAuthRateLimit(input: {
   limit: number;
   windowMs: number;
 }): Promise<AuthRateLimitResult> {
-  if (!input.key || input.limit <= 0 || input.windowMs <= 0) return "unavailable";
+  if (!input.key || input.limit <= 0 || input.windowMs <= 0) {
+    logAuthRateLimitUnavailable("bad_input");
+    return "unavailable";
+  }
   const secret = rateLimitSecret();
-  if (!secret) return "unavailable";
+  if (!secret) {
+    logAuthRateLimitUnavailable("no_secret", {
+      secret_present: rateLimitSecretPresent(),
+    });
+    return "unavailable";
+  }
   try {
     assertNotProdDbOutsideProd();
   } catch {
+    logAuthRateLimitUnavailable("guard");
     return "unavailable";
   }
   const admin = getSupabaseAdmin();
-  if (!admin) return "unavailable";
+  if (!admin) {
+    logAuthRateLimitUnavailable("no_admin", serviceRoleEnvFlags());
+    return "unavailable";
+  }
 
   const bucket = authRateLimitBucket(input.key, secret);
   const windowSeconds = Math.ceil(input.windowMs / 1000);
@@ -78,6 +100,16 @@ export async function takeAuthRateLimit(input: {
     p_window_seconds: windowSeconds,
     p_max_rows: AUTH_RATE_LIMIT_MAX_ROWS,
   });
-  if (error || typeof data !== "boolean") return "unavailable";
+  if (error) {
+    logAuthRateLimitUnavailable("rpc_error", {
+      ...readPostgrestError(error),
+      ...serviceRoleEnvFlags(),
+    });
+    return "unavailable";
+  }
+  if (typeof data !== "boolean") {
+    logAuthRateLimitUnavailable("non_boolean", { type: rpcDataType(data) });
+    return "unavailable";
+  }
   return data ? "ok" : "limited";
 }
