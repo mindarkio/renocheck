@@ -8,6 +8,7 @@ import {
   ContentPageTitle,
 } from "@/components/ContentPage";
 import { QuoteCompanyConfirm } from "@/components/QuoteCompanyConfirm";
+import { QuoteResultHeading } from "@/components/QuoteResultHeading";
 import { QUOTE_STATUS_OPTIONS } from "@/lib/quote-selfcheck";
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import {
@@ -114,9 +115,9 @@ export default async function QuoteAnalysisResultPage({ params }: PageProps) {
   return (
     <ContentPage>
       <ContentCard>
-        <ContentPageTitle>{QUOTE_RESULT_TITLE_ZH}</ContentPageTitle>
         {items ? (
           <>
+            <QuoteResultHeading>{QUOTE_RESULT_TITLE_ZH}</QuoteResultHeading>
             <QuoteCompanyConfirm analysisId={id} extractedFromServer={extractedFromServer} />
             <div className="mt-10">
               <ContentPageLead>{QUOTE_RESULT_LEAD_ZH}</ContentPageLead>
@@ -134,7 +135,10 @@ export default async function QuoteAnalysisResultPage({ params }: PageProps) {
             </ol>
           </>
         ) : (
-          <ContentPageLead>{QUOTE_RESULT_MISSING_ZH}</ContentPageLead>
+          <>
+            <ContentPageTitle>{QUOTE_RESULT_TITLE_ZH}</ContentPageTitle>
+            <ContentPageLead>{QUOTE_RESULT_MISSING_ZH}</ContentPageLead>
+          </>
         )}
         <p className="mt-6 text-sm">
           <Link href="/quote" className={`inline-flex min-h-11 items-center ${contentLinkClass}`}>

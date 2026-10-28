@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { QuoteCompanyConfirm } from "@/components/QuoteCompanyConfirm";
 import { QuoteReportSkeleton, QuoteSealDialog } from "@/components/QuoteSealDialog";
 import { holdQuoteCompanyName } from "@/lib/quote-analysis/company-name-handoff";
@@ -61,6 +61,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   const requestAbort = useRef<AbortController | null>(null);
   const confirmedRef = useRef<string | null>(null);
   const reopenRef = useRef<HTMLButtonElement>(null);
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [authed, setAuthed] = useState(signedIn);
@@ -79,6 +80,12 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   useEffect(() => {
     authedRef.current = signedIn;
   }, [signedIn]);
+
+  // The checklist replaces the dialog. Land keyboard focus on its heading.
+  useLayoutEffect(() => {
+    if (!reportItems) return;
+    resultHeadingRef.current?.focus();
+  }, [reportItems]);
 
   function rememberFile(next: File | null) {
     fileRef.current = next;
@@ -330,7 +337,13 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
       ) : null}
       {reportItems ? (
         <section className="mt-8" aria-label={QUOTE_ANALYSIS_SECTION_ZH}>
-          <h2 className="text-sm font-semibold text-primary">{QUOTE_ANALYSIS_SECTION_ZH}</h2>
+          <h2
+            ref={resultHeadingRef}
+            tabIndex={-1}
+            className="text-sm font-semibold text-primary"
+          >
+            {QUOTE_ANALYSIS_SECTION_ZH}
+          </h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{QUOTE_RESULT_LEAD_ZH}</p>
           <ol className="mt-4 space-y-4">
             {reportItems.map((item) => (

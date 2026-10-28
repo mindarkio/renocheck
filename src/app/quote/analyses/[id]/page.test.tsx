@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   QUOTE_COMPANY_CONFIRM_ZH,
   QUOTE_RESULT_MISSING_ZH,
+  QUOTE_RESULT_TITLE_ZH,
   QUOTE_UNAVAILABLE_ZH,
 } from "@/lib/quote-analysis/copy";
 
@@ -70,6 +71,9 @@ describe("quote result page flag", () => {
       }),
     });
     render(await QuoteAnalysisResultPage({ params: Promise.resolve({ id: ID }) }));
+    const heading = screen.getByRole("heading", { name: QUOTE_RESULT_TITLE_ZH, level: 1 });
+    expect(heading.tabIndex).toBe(-1);
+    expect(document.activeElement).toBe(heading);
     expect(screen.getByRole("button", { name: QUOTE_COMPANY_CONFIRM_ZH })).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
