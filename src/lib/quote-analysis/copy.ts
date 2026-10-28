@@ -1,11 +1,12 @@
 /**
  * User-facing quote-analysis copy.
- * UI strings are colloquial Cantonese. The disclaimer paragraph is formal 書面語.
- * Aaron must approve every string in this file before the draft merges.
+ * Quote-upload strings added in this draft are formal 書面語 and still need owner approval.
+ * The homepage line HOME_QUOTE_UPLOAD_LINK_ZH is owner-written. Login and account-delete
+ * strings outside this flow are unchanged. The disclaimer paragraph is formal 書面語.
  */
 
 const QUOTE_ANALYSIS_DISCLAIMER_OPENING_ZH =
-  "如閣下設立帳戶以使用報價單上載分析，本服務會收集閣下的電郵地址，用途限於發送一次性登入驗證碼、識別帳戶，以及處理刪除帳戶的要求。閣下上載的報價單（只限 PDF）僅在分析期間於伺服器記憶體中處理，並會傳送至 Microsoft Azure OpenAI（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）作自動分析。本服務不會保留報價單原檔。分析完成後，本服務保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。閣下可於帳戶頁面要求刪除帳戶；帳戶刪除後，該電郵帳戶及其報價分析結果會一併移除。登入驗證碼經 Supabase 認證服務以電郵發送，電郵傳遞由 Resend 負責。設立帳戶屬自願；不設立帳戶仍可使用公司查冊及報價自查清單。";
+  "如閣下設立帳戶以使用報價單上載分析，本服務會收集閣下的電郵地址，用途限於發送一次性登入驗證碼、識別帳戶，以及處理刪除帳戶的要求。閣下上載的報價單（只限 PDF）僅在分析期間於伺服器記憶體中處理，並會傳送至 Microsoft Azure OpenAI（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）作自動分析。本服務不會保留報價單原檔。報價單所載的承辦公司或商號名稱會被抽出，並與結構化分析結果一併保存，保存期相同（直至 180 日屆滿或閣下刪除帳戶，以較早者為準）。該名稱用於公司查冊，以及本服務的分析與改進。個人資料（個人姓名、電話、地址、簽名及銀行戶口）不會保留。閣下確認後進行的公司查冊，與其他公司查冊一樣處理。分析完成後，本服務保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。閣下可於帳戶頁面要求刪除帳戶；帳戶刪除後，該電郵帳戶及其報價分析結果會一併移除。登入驗證碼經 Supabase 認證服務以電郵發送，電郵傳遞由 Resend 負責。設立帳戶屬自願；不設立帳戶仍可使用公司查冊及報價自查清單。";
 
 /** Aaron's verbatim wording. Do not edit. */
 export const QUOTE_ANALYSIS_DISCLAIMER_AZURE_ZH =
@@ -19,27 +20,68 @@ export const QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH =
   QUOTE_ANALYSIS_DISCLAIMER_AZURE_ZH +
   QUOTE_ANALYSIS_DISCLAIMER_CLOSED_ZH;
 
-export const QUOTE_ANALYSIS_ENTRY_ZH = "用 AI 對住同一張清單睇一份 PDF 報價單";
-
 export const QUOTE_UPLOAD_TITLE_ZH = "上載報價單分析";
 export const QUOTE_UPLOAD_LEAD_ZH =
-  "上載一份 PDF 報價單。系統只會對住自查清單，標示有冇寫清楚，唔會評價價錢或者公司。";
+  "請上載一份 PDF 報價單。驗證電郵前，我們只讀取公司名稱。確認公司名稱後，方會進行公司查冊。完成電郵驗證後，方會按清單檢視報價內容是否列明清楚。本服務不評估價格高低。";
 export const QUOTE_UPLOAD_NOTICE_ZH =
-  "PDF 會交俾 Microsoft Azure OpenAI 讀一次，RenoCheck 唔會儲存原檔。請先遮好你自己同其他人嘅姓名、電話、地址、簽名同銀行戶口。";
+  "驗證電郵前，PDF 檔案只會交由 Microsoft Azure OpenAI 讀取公司名稱，不會進行報價清單分析，RenoCheck 亦不會儲存原檔。完成電郵驗證後，方會進行完整報價分析。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。公司名稱將與分析結果一併保存，個人資料則不會保存。";
 export const QUOTE_ACK_LABEL_ZH =
   "我確認已經遮好報價單上面嘅個人資料，包括我自己同其他人嘅姓名、電話、地址、簽名同銀行戶口。";
 export const QUOTE_ACK_ERROR_ZH = "請先剔選確認你已經遮好個人資料。";
 export const QUOTE_FILE_LABEL_ZH = "PDF 報價單";
 export const QUOTE_FILE_HINT_ZH = "只收 PDF，最大 4 MB，最多 6 頁。";
 export const QUOTE_SUBMIT_ZH = "開始分析";
-export const QUOTE_ANALYSING_ZH = "分析緊，請稍等。";
-export const QUOTE_SIGN_IN_PROMPT_ZH =
-  "上載分析要先登入。公司查冊同自查清單唔使登入。";
-export const QUOTE_SIGN_IN_LINK_ZH = "用電郵驗證碼登入";
+export const QUOTE_ANALYSING_ZH = "分析進行中，請稍候。";
+export const QUOTE_SIGN_IN_PROMPT_ZH = "上載分析需先驗證電郵。公司查冊無需驗證電郵。";
+export const QUOTE_SIGN_IN_LINK_ZH = "驗證電郵";
 export const QUOTE_ACCOUNT_LINK_ZH = "帳戶";
-export const QUOTE_BACK_TO_CHECKLIST_ZH = "返回報價自查";
-export const QUOTE_UNAVAILABLE_ZH =
-  "上載分析暫時未開放。你可以繼續用報價自查清單。";
+/** Link back to the static /quote guide. Same label as the footer. */
+export const QUOTE_GUIDE_LINK_ZH = "報價內容指南";
+export const QUOTE_UNAVAILABLE_ZH = "報價單上載分析暫時未開放。";
+
+/** Owner-written and approved. */
+export const HOME_QUOTE_UPLOAD_LINK_ZH = "我有報價單，直接上載分析";
+export const HEADER_UPLOAD_ZH = "上載報價";
+export const QUOTE_VERIFY_MODAL_TITLE_ZH = "驗證電郵以查看結果";
+export const QUOTE_VERIFY_MODAL_BODY_ZH =
+  "請輸入電郵地址及驗證碼。完成驗證後，方會進行報價清單分析並顯示結果。完成驗證前，此處不會顯示報價分析內容。";
+export const QUOTE_ANALYSIS_SECTION_ZH = "報價清單分析";
+export const QUOTE_ANALYSIS_LOCKED_ZH =
+  "完成電郵驗證後，方會按清單檢視這份報價是否列明清楚。驗證前不會顯示分析內容。";
+export const QUOTE_ANALYSIS_VERIFY_CTA_ZH = "驗證電郵以查看報價分析";
+export const QUOTE_VERIFY_REOPEN_ZH = "驗證並查看結果";
+export const QUOTE_VERIFY_ABANDON_ZH = "放棄分析";
+/** Inline verify-first fallback, before analysis has run. The site login button stays 登入. */
+export const QUOTE_VERIFY_EMAIL_ZH = "驗證電郵";
+export const QUOTE_VERIFY_EXPIRED_ZH = "此結果已過期，請重新上載。";
+export const QUOTE_ANON_LIMIT_ZH =
+  "此網絡今日的免費分析次數已用完，請於明天（香港時間）再試。";
+
+export const ACCOUNT_UPLOAD_BODY_ZH =
+  "如有報價單，可上載 PDF 檔案，我們會檢視承辦公司及報價內容是否列明清楚。";
+export const ACCOUNT_UPLOAD_ACTION_ZH = "上載報價單";
+
+export const QUOTE_PICK_FIRST_ZH =
+  "請先選擇 PDF 檔案。如尚未驗證電郵，系統只會先讀取公司名稱，不會進行報價清單分析。驗證前，檔案只會留在此頁面，不會儲存。";
+export const QUOTE_LOGIN_AFTER_FILE_ZH =
+  "已選擇檔案。完成驗證後將即時開始分析，無須重新選擇。";
+export const QUOTE_FILE_RESELECT_ZH =
+  "頁面重新載入後，先前選擇的 PDF 檔案未有保留，請重新選擇。";
+
+export const QUOTE_COMPANY_FOUND_PREFIX_ZH = "我們在報價單上找到「";
+export const QUOTE_COMPANY_FOUND_SUFFIX_ZH = "」。請確認是否為此公司。";
+export const QUOTE_COMPANY_MISSING_ZH =
+  "報價單上未能找到公司名稱。請輸入公司名稱，確認後方會進行查冊。";
+export const QUOTE_COMPANY_LABEL_ZH = "公司名稱";
+export const QUOTE_COMPANY_CONFIRM_ZH = "確認並查冊";
+export const QUOTE_COMPANY_HOLD_ZH =
+  "按下確認前不會進行查冊。確認後，公司名稱將與此結果一併保存。";
+export const QUOTE_COMPANY_NEED_NAME_ZH = "請輸入公司名稱。";
+export const QUOTE_COMPANY_RESULT_HEADING_ZH = "公司查冊結果";
+
+export function quoteCompanyFoundZh(name: string): string {
+  return `${QUOTE_COMPANY_FOUND_PREFIX_ZH}${name}${QUOTE_COMPANY_FOUND_SUFFIX_ZH}`;
+}
 
 export const QUOTE_QUOTA_ZH =
   "今日免費分析次數已用完。聽日（香港時間）先可以再分析。";
@@ -61,7 +103,7 @@ export const QUOTE_UNAVAILABLE_API_ZH = "報價分析暫時未開放。";
 
 export const QUOTE_RESULT_TITLE_ZH = "報價分析結果";
 export const QUOTE_RESULT_LEAD_ZH =
-  "呢個結果由 AI 對住清單整理，只講有冇寫清楚，唔會評價價錢或者公司。請自己對返原本報價單。";
+  "以下清單由 AI 按報價項目整理，只檢視內容是否列明清楚，不評估價格高低。請自行核對原本報價單。";
 export const QUOTE_RESULT_MISSING_ZH =
   "搵唔到呢份分析。可能已經刪除，或者唔係你個帳戶嘅。";
 export const QUOTE_RESULT_ROBOTS = { index: false, follow: false } as const;
@@ -109,7 +151,6 @@ export const ACCOUNT_SIGN_IN_LINK_ZH = "去登入";
 export function quoteAnalysisUserFacingCopy(): readonly string[] {
   return [
     QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH,
-    QUOTE_ANALYSIS_ENTRY_ZH,
     QUOTE_UPLOAD_TITLE_ZH,
     QUOTE_UPLOAD_LEAD_ZH,
     QUOTE_UPLOAD_NOTICE_ZH,
@@ -122,8 +163,33 @@ export function quoteAnalysisUserFacingCopy(): readonly string[] {
     QUOTE_SIGN_IN_PROMPT_ZH,
     QUOTE_SIGN_IN_LINK_ZH,
     QUOTE_ACCOUNT_LINK_ZH,
-    QUOTE_BACK_TO_CHECKLIST_ZH,
+    QUOTE_GUIDE_LINK_ZH,
     QUOTE_UNAVAILABLE_ZH,
+    HOME_QUOTE_UPLOAD_LINK_ZH,
+    HEADER_UPLOAD_ZH,
+    QUOTE_VERIFY_MODAL_TITLE_ZH,
+    QUOTE_VERIFY_MODAL_BODY_ZH,
+    QUOTE_ANALYSIS_SECTION_ZH,
+    QUOTE_ANALYSIS_LOCKED_ZH,
+    QUOTE_ANALYSIS_VERIFY_CTA_ZH,
+    QUOTE_VERIFY_REOPEN_ZH,
+    QUOTE_VERIFY_ABANDON_ZH,
+    QUOTE_VERIFY_EMAIL_ZH,
+    QUOTE_VERIFY_EXPIRED_ZH,
+    QUOTE_ANON_LIMIT_ZH,
+    ACCOUNT_UPLOAD_BODY_ZH,
+    ACCOUNT_UPLOAD_ACTION_ZH,
+    QUOTE_PICK_FIRST_ZH,
+    QUOTE_LOGIN_AFTER_FILE_ZH,
+    QUOTE_FILE_RESELECT_ZH,
+    QUOTE_COMPANY_FOUND_PREFIX_ZH,
+    QUOTE_COMPANY_FOUND_SUFFIX_ZH,
+    QUOTE_COMPANY_MISSING_ZH,
+    QUOTE_COMPANY_LABEL_ZH,
+    QUOTE_COMPANY_CONFIRM_ZH,
+    QUOTE_COMPANY_HOLD_ZH,
+    QUOTE_COMPANY_NEED_NAME_ZH,
+    QUOTE_COMPANY_RESULT_HEADING_ZH,
     QUOTE_QUOTA_ZH,
     QUOTE_BUDGET_ZH,
     QUOTE_NOT_QUOTATION_ZH,

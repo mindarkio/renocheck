@@ -54,6 +54,10 @@ describe("quote analysis copy and flag", () => {
     expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
       "（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）",
     );
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).toContain(
+      "報價單所載的承辦公司或商號名稱會被抽出，並與結構化分析結果一併保存",
+    );
+    expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).not.toContain("本服務不會保留該名稱");
     expect(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH).not.toContain("日本");
   });
 

@@ -15,25 +15,87 @@ import {
   focusRingClass,
   focusRingOnPrimaryClass,
 } from "@/lib/focus-ring";
-import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
+import { ACCOUNT_DELETE_HEADING_ZH, HEADER_UPLOAD_ZH } from "@/lib/quote-analysis/copy";
+import {
+  QUOTE_PAGE_NAV_LABEL_ZH,
+  QUOTE_SELF_CHECK_STORAGE_KEY,
+} from "@/lib/quote-selfcheck";
 
 const HOME_NAV = [
   { href: "/guides", label: "裝修指南" },
+  { href: "/quote", label: QUOTE_PAGE_NAV_LABEL_ZH },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/faq", label: "常見問題" },
-  { href: "/quote", label: QUOTE_PAGE_TITLE_ZH },
   { href: "/about", label: "關於" },
   { href: "/legal/disclaimer", label: "免責聲明" },
 ] as const;
+
+type NavItem = { href: string; label: string; desktopClass?: string };
+
+function buildNav(upload: boolean, signedIn: boolean): NavItem[] {
+  const items: NavItem[] = HOME_NAV.map((item) => ({ href: item.href, label: item.label }));
+  if (upload) {
+    const quoteAt = items.findIndex((item) => item.href === "/quote");
+    items.splice(quoteAt + 1, 0, {
+      href: "/quote/upload",
+      label: HEADER_UPLOAD_ZH,
+      // Hidden below lg so the existing row does not overflow. The phone sheet still lists it.
+      desktopClass: "hidden lg:inline-flex",
+    });
+  }
+  if (signedIn) {
+    items.push({ href: "/account/delete", label: ACCOUNT_DELETE_HEADING_ZH });
+  }
+  return items;
+}
+
+function currentHref(pathname: string, hrefs: readonly string[]): string | null {
+  const matches = hrefs.filter(
+    (href) => pathname === href || pathname.startsWith(`${href}/`),
+  );
+  matches.sort((a, b) => b.length - a.length);
+  return matches[0] ?? null;
+}
+
+function useHeaderFlags(): { upload: boolean; signedIn: boolean } {
+  const [upload, setUpload] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    try {
+      localStorage.removeItem(QUOTE_SELF_CHECK_STORAGE_KEY);
+    } catch {
+      // Private mode can block storage. The old self-check is no longer shown.
+    }
+    try {
+      sessionStorage.removeItem("renocheck:quote-seal-pending");
+    } catch {
+      // The sealed-result path is gone. Drop a leftover flag if storage allows it.
+    }
+    if (typeof fetch !== "function") return;
+    let cancelled = false;
+    fetch("/api/quote/availability")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { enabled?: boolean } | null) => {
+        if (!cancelled && data?.enabled === true) setUpload(true);
+      })
+      .catch(() => {});
+    fetch("/api/auth/session")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { signedIn?: boolean } | null) => {
+        if (!cancelled && data?.signedIn === true) setSignedIn(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return { upload, signedIn };
+}
 
 /** Solid navy on the page. See `focusRingClass`. */
 const headerFocusRingClass = focusRingClass;
 
 const navLinkClass = `rounded-md hover:underline hover:text-foreground ${headerFocusRingClass}`;
-
-function isCurrentNav(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 /** Solid white on the navy sheet. A navy ring on `bg-primary/85` is about 1.4:1. */
 const menuFocusRingClass = focusRingOnPrimaryClass;
@@ -156,14 +218,17 @@ function useMobileNavMenu(
 function MobileNavMenuPortal({
   open,
   menuId,
+  items,
   onNavigate,
 }: {
   open: boolean;
   menuId: string;
+  items: readonly NavItem[];
   onNavigate: () => void;
 }) {
   const pathname = usePathname();
   if (!open) return null;
+  const current = currentHref(pathname, items.map((item) => item.href));
 
   return createPortal(
     <div
@@ -175,11 +240,11 @@ function MobileNavMenuPortal({
       <nav
         className="renocheck-menu-panel-in flex flex-1 flex-col items-center justify-center gap-1 px-6 pb-16"
       >
-        {HOME_NAV.map(({ href, label }, index) => (
+        {items.map(({ href, label }, index) => (
           <Link
             key={href}
             href={href}
-            aria-current={isCurrentNav(pathname, href) ? "page" : undefined}
+            aria-current={current === href ? "page" : undefined}
             className={`renocheck-menu-link-in min-h-12 whitespace-nowrap py-3 text-lg font-medium ${homeMenuLinkClass}`}
             style={{ animationDelay: `${60 + index * 40}ms` }}
             onClick={onNavigate}
@@ -193,16 +258,17 @@ function MobileNavMenuPortal({
   );
 }
 
-function DesktopNavLinks() {
+function DesktopNavLinks({ items }: { items: readonly NavItem[] }) {
   const pathname = usePathname();
+  const current = currentHref(pathname, items.map((item) => item.href));
   return (
     <div className="hidden flex-nowrap items-center gap-5 text-sm text-foreground/85 sm:flex">
-      {HOME_NAV.map(({ href, label }) => (
+      {items.map(({ href, label, desktopClass }) => (
         <Link
           key={href}
           href={href}
-          aria-current={isCurrentNav(pathname, href) ? "page" : undefined}
-          className={`inline-flex min-h-11 shrink-0 items-center whitespace-nowrap ${navLinkClass}`}
+          aria-current={current === href ? "page" : undefined}
+          className={`${desktopClass ?? "inline-flex"} min-h-11 shrink-0 items-center whitespace-nowrap ${navLinkClass}`}
         >
           {label}
         </Link>
@@ -215,6 +281,8 @@ export function SiteHeader() {
   const pathname = usePathname();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu(menuButtonRef, pathname);
+  const flags = useHeaderFlags();
+  const navItems = buildNav(flags.upload, flags.signedIn);
 
   // Segment match only: /administrator or /admin-foo are public (404) paths and keep the header.
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return null;
@@ -255,7 +323,7 @@ export function SiteHeader() {
             </span>
           </Link>
           <div className="flex items-center gap-2">
-            <DesktopNavLinks />
+            <DesktopNavLinks items={navItems} />
             <button
               ref={menuButtonRef}
               type="button"
@@ -278,6 +346,7 @@ export function SiteHeader() {
       <MobileNavMenuPortal
         open={menuOpen}
         menuId={MENU_ID}
+        items={navItems}
         onNavigate={closeMenu}
       />
     </>

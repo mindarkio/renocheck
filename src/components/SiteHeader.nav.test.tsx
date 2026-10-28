@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
+import { ACCOUNT_DELETE_HEADING_ZH, HEADER_UPLOAD_ZH } from "@/lib/quote-analysis/copy";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { QUOTE_PAGE_NAV_LABEL_ZH } from "@/lib/quote-selfcheck";
 import { SiteHeader } from "./SiteHeader";
 
 let mockPath = "/";
@@ -25,10 +26,23 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   mockPath = "/";
+  vi.unstubAllGlobals();
+});
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      new Response(JSON.stringify({ enabled: false }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    ),
+  );
 });
 
 function quoteLinks() {
-  return screen.getAllByRole("link", { name: QUOTE_PAGE_TITLE_ZH });
+  return screen.getAllByRole("link", { name: QUOTE_PAGE_NAV_LABEL_ZH });
 }
 
 function openMenu() {
@@ -55,12 +69,18 @@ const STRONG_HEADER_RING = [
 ];
 
 describe("SiteHeader quote link", () => {
+  it("clears a leftover sealed-result flag once", () => {
+    sessionStorage.setItem("renocheck:quote-seal-pending", "1");
+    render(<SiteHeader />);
+    expect(sessionStorage.getItem("renocheck:quote-seal-pending")).toBeNull();
+  });
+
   it("uses the quote page title and keeps the mobile menu button", () => {
     mockPath = "/faq";
     render(<SiteHeader />);
     const link = quoteLinks()[0];
     expect(link.getAttribute("href")).toBe("/quote");
-    expect(link.textContent).toBe(QUOTE_PAGE_TITLE_ZH);
+    expect(link.textContent).toBe(QUOTE_PAGE_NAV_LABEL_ZH);
     expect(link.className).toContain("min-h-11");
     for (const token of STRONG_HEADER_RING) expect(link.className).toContain(token);
     expect(link.className).not.toContain("ring-primary/30");
@@ -86,7 +106,7 @@ describe("SiteHeader quote link", () => {
     const mobile = [...dialog.querySelectorAll("a")].find(
       (anchor) => anchor.getAttribute("href") === "/quote",
     );
-    expect(mobile?.textContent).toBe(QUOTE_PAGE_TITLE_ZH);
+    expect(mobile?.textContent).toBe(QUOTE_PAGE_NAV_LABEL_ZH);
     expect(mobile?.getAttribute("aria-current")).toBe("page");
     expect(mobile?.className).toContain("min-h-12");
     expect(mobile?.className).toContain("focus-visible:ring-white");
@@ -111,7 +131,7 @@ describe("SiteHeader mobile menu focus", () => {
 
     const links = dialogLinks();
     expect(links).toHaveLength(6);
-    expect(links.some((anchor) => anchor.textContent === QUOTE_PAGE_TITLE_ZH)).toBe(true);
+    expect(links.some((anchor) => anchor.textContent === QUOTE_PAGE_NAV_LABEL_ZH)).toBe(true);
 
     tab();
     expect(document.activeElement).toBe(links[0]);
@@ -143,7 +163,7 @@ describe("SiteHeader mobile menu focus", () => {
     render(<SiteHeader />);
     openMenu();
     const quote = dialogLinks().find((anchor) => anchor.getAttribute("href") === "/quote");
-    expect(quote?.textContent).toBe(QUOTE_PAGE_TITLE_ZH);
+    expect(quote?.textContent).toBe(QUOTE_PAGE_NAV_LABEL_ZH);
     quote?.focus();
     // jsdom logs "navigation to another Document" if the anchor's default action runs.
     quote?.addEventListener("click", (event) => event.preventDefault());
@@ -233,5 +253,52 @@ describe("SiteHeader mobile menu lifecycle (PR #43 review)", () => {
     } finally {
       window.matchMedia = original;
     }
+  });
+});
+
+describe("SiteHeader upload link", () => {
+  it("adds an upload link when analysis is available", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ enabled: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+    render(<SiteHeader />);
+    const link = await screen.findByRole("link", { name: HEADER_UPLOAD_ZH });
+    expect(link.getAttribute("href")).toBe("/quote/upload");
+    expect(link.className).toContain("hidden");
+    expect(link.className).toContain("lg:inline-flex");
+    openMenu();
+    const mobile = dialogLinks().find((anchor) => anchor.getAttribute("href") === "/quote/upload");
+    expect(mobile?.textContent).toBe(HEADER_UPLOAD_ZH);
+    expect(dialogLinks()).toHaveLength(7);
+    expect(screen.queryByRole("link", { name: ACCOUNT_DELETE_HEADING_ZH })).toBeNull();
+  });
+
+  it("shows delete-account in the menu only when signed in", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        new Response(
+          JSON.stringify(
+            String(url).includes("/api/auth/session")
+              ? { signedIn: true }
+              : { enabled: false },
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
+    render(<SiteHeader />);
+    const link = await screen.findByRole("link", { name: ACCOUNT_DELETE_HEADING_ZH });
+    expect(link.getAttribute("href")).toBe("/account/delete");
+    openMenu();
+    expect(
+      dialogLinks().some((anchor) => anchor.getAttribute("href") === "/account/delete"),
+    ).toBe(true);
   });
 });

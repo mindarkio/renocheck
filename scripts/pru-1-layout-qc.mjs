@@ -868,7 +868,7 @@ async function measureReportPage(page, fp, vp, baseUrl) {
   };
 }
 
-const QUOTE_NAV_LABEL = "報價自查清單";
+const QUOTE_NAV_LABEL = "報價內容指南";
 
 async function quoteShellMetrics(page) {
   return page.evaluate((label) => {

@@ -92,11 +92,16 @@ RenoCheck cannot delete Microsoft's copy after send. The DRAFT consent says that
 | Data | Period | How it ends |
 |------|--------|-------------|
 | Original quote bytes | Not stored | Dropped when the function returns |
+| Company name on the quote (extracted and confirmed) | Retained with the `quote_analyses` row | 180 days or account deletion, whichever is earlier. Personal data (people's names, phones, addresses, signatures, bank accounts) is not stored. A company search the user confirms is written to `search_cache` and `search_events` like any other search. |
+| Logged-out company-name extraction | Not stored | Before email verification the server sends the PDF only to read the company name. No checklist is produced and no `quote_analyses` row is written. Personal data is not stored. |
+| Company search after the user confirms the name | `search_cache` and `search_events` | The same path as any other company search. The search result is shown before verification and is not gated on an account. |
 | `report_feedback` | **12 months** (locked for feedback) | Daily purge. F1 adds `/api/cron/purge-feedback`. Aaron applies M1 himself |
 | `quote_usage` | Plan default 30 days — not separately locked in the F0 brief | Later purge |
 | `quote_analyses` (anonymised result, no evidence text) | Plan default 180 days | Later purge |
 | `quote_consent_daily` (counts only, no device hash) | Plan default 2 years (D30) | Later |
 | Payment rows | No card data. Expiry of a credit is an open product decision (D13, proposal 30 days) | Airwallex holds payer data under its policy |
+
+A quote that is uploaded while signed out and then verified goes to Azure twice. The first request only reads the company name and is not stored. After email verification the same PDF is sent again for the full checklist, which is the stored `quote_analyses` row.
 
 ## 8. US$1 cap and quota hashing
 

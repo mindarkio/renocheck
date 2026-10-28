@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { QUOTE_RESULT_MISSING_ZH, QUOTE_UNAVAILABLE_ZH } from "@/lib/quote-analysis/copy";
+import {
+  QUOTE_COMPANY_CONFIRM_ZH,
+  QUOTE_RESULT_MISSING_ZH,
+  QUOTE_RESULT_TITLE_ZH,
+  QUOTE_UNAVAILABLE_ZH,
+} from "@/lib/quote-analysis/copy";
 
 const auth = vi.hoisted(() => ({
-  getAuthUser: vi.fn(async () => null),
-  createSupabaseServerClient: vi.fn(async () => null),
+  getAuthUser: vi.fn(async (): Promise<{ id: string; email: string | null } | null> => null),
+  createSupabaseServerClient: vi.fn(async (): Promise<unknown> => null),
 }));
 
 vi.mock("next/server", () => ({
@@ -44,5 +49,33 @@ describe("quote result page flag", () => {
     expect(screen.getByText(QUOTE_RESULT_MISSING_ZH)).toBeTruthy();
     expect(document.body.textContent).not.toContain(QUOTE_UNAVAILABLE_ZH);
     expect(auth.getAuthUser).toHaveBeenCalledOnce();
+  });
+
+  it("shows the company confirm step and does not search before confirmation", async () => {
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    auth.getAuthUser.mockResolvedValue({
+      id: "11111111-1111-4111-8111-111111111111",
+      email: "person@example.com",
+    });
+    auth.createSupabaseServerClient.mockResolvedValue({
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({
+              data: { items: [{ id: "demolition", status: "clear" }] },
+            }),
+          }),
+        }),
+      }),
+    });
+    render(await QuoteAnalysisResultPage({ params: Promise.resolve({ id: ID }) }));
+    const heading = screen.getByRole("heading", { name: QUOTE_RESULT_TITLE_ZH, level: 1 });
+    expect(heading.tabIndex).toBe(-1);
+    expect(document.activeElement).toBe(heading);
+    expect(screen.getByRole("button", { name: QUOTE_COMPANY_CONFIRM_ZH })).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });

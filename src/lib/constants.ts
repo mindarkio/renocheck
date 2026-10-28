@@ -24,7 +24,7 @@ export const FOOTER_DISCLAIMER =
 export const SITE_DISAMBIGUATION_LINE =
   "Renocheck 裝修點評係香港獨立網站，同英國 renocheck.co.uk 無關。";
 
-export const DISCLAIMER_VERSION = "1.2.6";
+export const DISCLAIMER_VERSION = "1.2.7";
 
 /** Bump when RiskReport shape changes; stale cache entries are ignored. */
 export const REPORT_VERSION = "2.7.0";

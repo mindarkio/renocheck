@@ -35,6 +35,7 @@ describe("quote analysis hardening", () => {
     for (const source of [
       "/quote/analyses/:path*",
       "/account",
+      "/account/:path*",
       "/login",
       "/quote/upload",
       "/api/auth/:path*",

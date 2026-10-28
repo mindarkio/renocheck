@@ -103,6 +103,19 @@ export function quoteFreeDailyBudgetMicroUsd(
   return usdToMicro(env.QUOTE_FREE_DAILY_BUDGET_USD, QUOTE_DEFAULT_FREE_DAILY_BUDGET_USD);
 }
 
+/** Anonymous analyses per IP per Hong Kong day. Zero blocks. The RPC refuses limits above 100. */
+export const QUOTE_DEFAULT_ANON_DAILY_LIMIT = 2;
+
+export function quoteAnonDailyLimit(
+  env: Record<string, string | undefined> = process.env,
+): number {
+  const raw = env.QUOTE_ANON_DAILY_LIMIT?.trim();
+  if (!raw) return QUOTE_DEFAULT_ANON_DAILY_LIMIT;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) return QUOTE_DEFAULT_ANON_DAILY_LIMIT;
+  return Math.min(value, 100);
+}
+
 /** `QUOTE_DAILY_CALL_CAP`. Missing, non-integer, or negative falls back to 300. Zero blocks. */
 export function quoteDailyCallCap(
   env: Record<string, string | undefined> = process.env,
@@ -121,10 +134,22 @@ export function microUsdFromTokens(inputTokens: number, outputTokens: number): n
   return Math.ceil(usd * USD_TO_MICRO);
 }
 
-/** Conservative reserve before the call. Output is the 4,000 token cap. */
+/** Conservative reserve before the full checklist call. Output is the 4,000 token cap. */
 export function reserveMicroUsd(pageCount: number): number {
   const inputTokens = 2_500 + pageCount * 3_800;
   return microUsdFromTokens(inputTokens, 4_000);
+}
+
+/**
+ * Logged-out extraction returns a name only. The PDF is still the input; output is capped.
+ * The deployment runs on the reasoning path (`forceReasoning`), and reasoning tokens count
+ * toward this cap, so the cap must leave room for reasoning plus the small JSON object.
+ */
+export const QUOTE_EXTRACT_MAX_OUTPUT_TOKENS = 1_200;
+
+export function reserveExtractionMicroUsd(pageCount: number): number {
+  const inputTokens = 400 + pageCount * 3_800;
+  return microUsdFromTokens(inputTokens, QUOTE_EXTRACT_MAX_OUTPUT_TOKENS);
 }
 
 /**

@@ -48,6 +48,8 @@ export type QuoteAnalysisBody = {
   error?: string;
   message?: string;
   id?: string;
+  /** Current response only. Not stored on the checklist row. */
+  companyName?: string | null;
   items?: Array<{ id: string; label: string; status: string; finding: string }>;
 };
 
@@ -200,6 +202,7 @@ export async function runQuoteAnalysis(input: {
 
   return json(200, {
     id: stored.analysisId,
+    companyName: parsed.companyName,
     items: parsed.items.map(presentItem),
   });
 }

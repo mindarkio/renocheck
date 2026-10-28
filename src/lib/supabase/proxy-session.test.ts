@@ -44,9 +44,10 @@ describe("Supabase session refresh in the proxy", () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it("covers the signed-in pages and keeps the old matchers", () => {
-    for (const p of ["/account", "/login", "/quote/upload", "/quote/analyses/abc"]) {
+    for (const p of ["/account", "/account/delete", "/login", "/quote/upload", "/quote/analyses/abc"]) {
       expect(isAuthSessionPath(p)).toBe(true);
     }
+    expect(shouldRefreshAuthSession("/account/delete")).toBe(true);
     expect(isAuthSessionPath("/quote")).toBe(false);
     expect(proxyConfig.matcher).toEqual(
       expect.arrayContaining(["/report/:path*", "/admin", "/account", "/quote/analyses/:path*"]),

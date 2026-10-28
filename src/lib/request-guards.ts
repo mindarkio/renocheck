@@ -14,7 +14,8 @@ export function sameOrigin(req: Request): boolean {
   }
 }
 
-const NEXT_FALLBACK = "/account";
+/** Default after OTP when `next` is missing or unsafe. Honour a safe `next` first. */
+const NEXT_FALLBACK = "/quote/upload";
 const NEXT_BASE = "https://next-path.invalid";
 
 function hasControlOrBackslash(raw: string): boolean {
@@ -41,5 +42,7 @@ export function safeNextPath(raw: string | null | undefined): string {
     return NEXT_FALLBACK;
   }
   if (url.origin !== NEXT_BASE) return NEXT_FALLBACK;
+  // "/..//host" normalises to "//host". Re-check so the output is safe on its own.
+  if (url.pathname.startsWith("//")) return NEXT_FALLBACK;
   return `${url.pathname}${url.search}${url.hash}`;
 }

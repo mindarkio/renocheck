@@ -19,6 +19,7 @@ Current Microsoft docs do not state an abuse-monitoring retention period. Older 
 > - 報價單上面嘅個人資料，包括其他人（例如師傅、公司職員）嘅姓名、電話、地址同簽名，都會一齊傳送。
 > - 一經傳送，無法撤回，RenoCheck 亦無法要求 Microsoft 刪除佢嗰邊嘅內容。
 > - RenoCheck 自己唔會儲存原檔。
+> - 報價單上的公司或商號名稱將被擷取，並與分析結果一併保存。個人資料不會保存。公司查冊於你確認後方會進行，處理方式與其他查冊相同。
 > - 你每次上載都要重新同意；唔同意就唔好上載，公司查冊照常可以用。
 
 ## Checkbox label
@@ -29,4 +30,16 @@ Under it, a link 「Azure OpenAI 資料私隱說明（英文）」 to https://le
 
 Error when submitted unticked: 「請先剔選同意，先可以開始分析。」
 
+## Proposed privacy sentence (formal 書面語, disclaimer 1.2.7)
+
+Not approved. The live disclaimer paragraph uses this sentence. Owner sign-off is still required:
+
+> 報價單所載的承辦公司或商號名稱會被抽出，並與結構化分析結果一併保存，保存期相同（直至 180 日屆滿或閣下刪除帳戶，以較早者為準）。該名稱用於公司查冊，以及本服務的分析與改進。個人資料（個人姓名、電話、地址、簽名及銀行戶口）不會保留。閣下確認後進行的公司查冊，與其他公司查冊一樣處理。
+
 The checkbox is unticked by default, once per upload, with no "remember me". Withdrawing means not uploading.
+
+## Proposed privacy-notice point (formal 書面語)
+
+Not approved. Not inserted into the live disclaimer. §七 stays the retention proposal already in this draft.
+
+> 未驗證電郵而上載時，報價單只會交由伺服器及 Azure 讀取公司名稱，不會進行清單分析，亦不會保存該次讀取。完成電郵驗證後，同一份報價單會再次傳送，以進行完整分析，公司名稱與分析結果方會連同帳戶一併保存。

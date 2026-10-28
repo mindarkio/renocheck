@@ -65,11 +65,11 @@ const THIRD_PARTY_REDACTION_DISCLAIMER_ZH =
   "本網站於顯示報告前，會以自動規則遮蔽報告文字中第三者的個人資料，惟或有遺漏或誤遮之處。";
 
 describe("disclaimer page feedback notice", () => {
-  it("publishes the approved §七 notice at 1.2.6 without changing the report version", async () => {
-    expect(DISCLAIMER_VERSION).toBe("1.2.6");
+  it("publishes the approved §七 notice at 1.2.7 without changing the report version", async () => {
+    expect(DISCLAIMER_VERSION).toBe("1.2.7");
     expect(REPORT_VERSION).toBe("2.7.0");
     await renderDisclaimer();
-    expect(screen.getByText("版本 1.2.6")).toBeTruthy();
+    expect(screen.getByText("版本 1.2.7")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "七、個人資料（私隱）" })).toBeTruthy();
     const notice = document.getElementById("feedback-privacy");
     expect(notice?.textContent).toBe(FEEDBACK_PRIVACY_NOTICE_ZH);
@@ -118,11 +118,11 @@ describe("disclaimer page feedback notice", () => {
     assertClean(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH);
   });
 
-  it("hides the quote-analysis paragraph when the flag is off and keeps version 1.2.6", async () => {
+  it("hides the quote-analysis paragraph when the flag is off and keeps version 1.2.7", async () => {
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "0");
     await renderDisclaimer();
-    expect(screen.getByText("版本 1.2.6")).toBeTruthy();
-    expect(DISCLAIMER_VERSION).toBe("1.2.6");
+    expect(screen.getByText("版本 1.2.7")).toBeTruthy();
+    expect(DISCLAIMER_VERSION).toBe("1.2.7");
     expect(document.getElementById("quote-analysis-privacy")).toBeNull();
     expect(document.body.textContent ?? "").not.toContain("Microsoft Azure");
     const closed = document.getElementById("quote-analysis-closed");
@@ -137,10 +137,10 @@ describe("disclaimer page feedback notice", () => {
   });
 
   it("appends the approved third-party redaction sentence at the end of §七", async () => {
-    expect(DISCLAIMER_VERSION).toBe("1.2.6");
+    expect(DISCLAIMER_VERSION).toBe("1.2.7");
     expect(REPORT_VERSION).toBe("2.7.0");
     await renderDisclaimer();
-    expect(screen.getByText("版本 1.2.6")).toBeTruthy();
+    expect(screen.getByText("版本 1.2.7")).toBeTruthy();
     expect(screen.getByText(THIRD_PARTY_REDACTION_DISCLAIMER_ZH)).toBeTruthy();
     const heading = screen.getByRole("heading", { name: "七、個人資料（私隱）" });
     const section = heading.closest("section");
