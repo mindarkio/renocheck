@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { SignInForm } from "@/components/SignInForm";
 import {
   QUOTE_SEAL_CLOSE_ZH,
@@ -17,6 +17,10 @@ export function QuoteSealDialog({
   onClose,
   onAbandon,
   onVerified,
+  verified = false,
+  pending = false,
+  error = null,
+  pendingLabel,
 }: {
   open: boolean;
   /** Escape. Keeps the sealed result and the blurred placeholder. */
@@ -24,10 +28,23 @@ export function QuoteSealDialog({
   /** Discards the sealed result and returns to an empty upload form. */
   onAbandon: () => void;
   onVerified: () => void | Promise<void>;
+  /** Email already verified (for example the claim then failed): retry the claim without a new code. */
+  verified?: boolean;
+  pending?: boolean;
+  /** Claim error. Shown inside the dialog because the upload form is hidden while sealed. */
+  error?: string | null;
+  pendingLabel?: string;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
+  // Keep the latest handler without re-running the focus effect on every parent render.
+  const onCloseRef = useRef(onClose);
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
-  useEffect(() => {
+  // Layout effect: the trap and Escape handler are live in the same commit that shows the dialog.
+  useLayoutEffect(() => {
     if (!open) return;
     const root = dialogRef.current;
     const focusables = () =>
@@ -36,7 +53,7 @@ export function QuoteSealDialog({
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -55,7 +72,12 @@ export function QuoteSealDialog({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
+
+  // The sign-in form unmounts once the email is verified; keep focus inside the dialog.
+  useEffect(() => {
+    if (open && verified && !pending) retryRef.current?.focus();
+  }, [open, verified, pending]);
 
   if (!open) return null;
 
@@ -74,12 +96,45 @@ export function QuoteSealDialog({
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           {QUOTE_SEAL_MODAL_BODY_ZH}
         </p>
-        <SignInForm
-          onVerified={onVerified}
-          submitLabel={QUOTE_SEAL_REOPEN_ZH}
-          onAbandon={onAbandon}
-          abandonLabel={QUOTE_SEAL_CLOSE_ZH}
-        />
+        {pending && pendingLabel ? (
+          <p className="mt-4 text-sm text-muted-foreground" role="status">
+            {pendingLabel}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="mt-4 text-sm leading-relaxed text-[var(--brand-coral-emphasis)]" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {verified ? (
+          <div className="mt-6 space-y-3">
+            <button
+              ref={retryRef}
+              type="button"
+              onClick={() => void onVerified()}
+              disabled={pending}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
+            >
+              {QUOTE_SEAL_REOPEN_ZH}
+            </button>
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={onAbandon}
+                className="inline-flex min-h-11 items-center justify-center px-3 text-sm text-muted-foreground underline-offset-2 hover:underline"
+              >
+                {QUOTE_SEAL_CLOSE_ZH}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <SignInForm
+            onVerified={onVerified}
+            submitLabel={QUOTE_SEAL_REOPEN_ZH}
+            onAbandon={onAbandon}
+            abandonLabel={QUOTE_SEAL_CLOSE_ZH}
+          />
+        )}
       </div>
     </div>
   );

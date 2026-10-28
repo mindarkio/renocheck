@@ -1,3 +1,4 @@
+import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { openQuoteResult, QUOTE_SEAL_TTL_MS, sealQuoteResult } from "./seal";
 
@@ -46,6 +47,21 @@ describe("quote result seal", () => {
     const { sealed } = sealQuoteResult(payload, env, now);
     for (const bad of ["", "%%%", "A".repeat(10), sealed.slice(0, 40), sealed.slice(0, -1)]) {
       expect(() => openQuoteResult(bad, env, now)).toThrow(/^seal_invalid$/);
+    }
+  });
+});
+
+describe("quote result seal nonce", () => {
+  it("rejects a correctly encrypted payload whose nonce is not 32 hex characters", () => {
+    const now = 1_700_000_000_000;
+    const key = createHash("sha256").update(env.QUOTE_RESULT_SEAL_SECRET, "utf8").digest();
+    for (const nonce of ["", "x".repeat(32), "0123456789ABCDEF0123456789ABCDEF", "a".repeat(33)]) {
+      const iv = randomBytes(12);
+      const cipher = createCipheriv("aes-256-gcm", key, iv);
+      const body = JSON.stringify({ v: 1, exp: now + 60_000, nonce, ...payload });
+      const enc = Buffer.concat([cipher.update(body, "utf8"), cipher.final()]);
+      const sealed = Buffer.concat([iv, cipher.getAuthTag(), enc]).toString("base64url");
+      expect(() => openQuoteResult(sealed, env, now)).toThrow(/seal_invalid/);
     }
   });
 });

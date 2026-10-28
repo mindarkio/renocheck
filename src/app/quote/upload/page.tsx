@@ -11,7 +11,7 @@ import { QuoteAnalysisForm } from "@/components/QuoteAnalysisForm";
 import { isQuoteAnalysisAvailable } from "@/lib/quote-analysis/config";
 import {
   QUOTE_ACCOUNT_LINK_ZH,
-  QUOTE_BACK_TO_CHECKLIST_ZH,
+  QUOTE_GUIDE_LINK_ZH,
   QUOTE_UNAVAILABLE_ZH,
   QUOTE_UPLOAD_LEAD_ZH,
   QUOTE_UPLOAD_TITLE_ZH,
@@ -55,7 +55,7 @@ export default async function QuoteUploadPage() {
         )}
         <p className="mt-6 text-sm">
           <Link href="/quote" className={`inline-flex min-h-11 items-center ${contentLinkClass}`}>
-            {QUOTE_BACK_TO_CHECKLIST_ZH}
+            {QUOTE_GUIDE_LINK_ZH}
           </Link>
         </p>
       </ContentCard>

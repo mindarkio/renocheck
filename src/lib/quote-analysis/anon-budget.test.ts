@@ -5,6 +5,8 @@ const state = vi.hoisted(() => ({
   admin: true,
   calls: [] as Array<[string, Record<string, unknown>]>,
   result: { data: "2026-10-28" as unknown, error: null as unknown },
+  inserts: [] as Array<Record<string, unknown>>,
+  insertResult: { data: { id: "22222222-2222-4222-8222-222222222222" } as unknown, error: null as unknown },
 }));
 
 vi.mock("@/lib/db-guard", () => ({ assertNotProdDbOutsideProd: () => {} }));
@@ -21,11 +23,18 @@ vi.mock("@/lib/supabase/admin", () => ({
             state.calls.push([name, args]);
             return state.result;
           },
+          from: () => ({
+            insert: (row: Record<string, unknown>) => {
+              state.inserts.push(row);
+              return { select: () => ({ single: async () => state.insertResult }) };
+            },
+          }),
         }
       : null,
 }));
 
 import {
+  insertQuoteChecklist,
   reserveAnonymousQuoteSpend,
   secondsUntilNextHktMidnight,
   settleAnonymousQuoteSpend,
@@ -90,5 +99,33 @@ describe("anonymous spend hold", () => {
   it("never writes quote_spend_daily directly", () => {
     const source = readFileSync("src/lib/quote-analysis/anon-budget.ts", "utf8");
     expect(source).not.toMatch(/from\("quote_spend_daily"\)/);
+  });
+});
+
+describe("checklist insert keyed by seal nonce", () => {
+  const input = {
+    userId: "11111111-1111-4111-8111-111111111111",
+    pageCount: 1,
+    items: [],
+    inputTokens: null,
+    outputTokens: null,
+    actualMicroUsd: null,
+    sealNonce: "0123456789abcdef0123456789abcdef",
+  };
+  beforeEach(() => {
+    state.admin = true;
+    state.inserts = [];
+    state.insertResult = { data: { id: "22222222-2222-4222-8222-222222222222" }, error: null };
+  });
+
+  it("stores the nonce and maps a unique violation to duplicate", async () => {
+    expect(await insertQuoteChecklist(input)).toEqual({ ok: true, id: "22222222-2222-4222-8222-222222222222" });
+    expect(state.inserts[0]?.seal_nonce).toBe(input.sealNonce);
+    state.insertResult = { data: null, error: { code: "23505" } };
+    expect(await insertQuoteChecklist(input)).toEqual({ ok: false, reason: "duplicate" });
+    state.insertResult = { data: null, error: { code: "42703" } };
+    expect(await insertQuoteChecklist(input)).toEqual({ ok: false, reason: "unavailable" });
+    state.admin = false;
+    expect(await insertQuoteChecklist(input)).toEqual({ ok: false, reason: "unavailable" });
   });
 });

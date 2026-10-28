@@ -63,6 +63,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   const claimAbort = useRef<AbortController | null>(null);
   /** Bumped by 放棄分析 so a verify that is already in flight does not claim. */
   const flowEpoch = useRef(0);
+  const reopenRef = useRef<HTMLButtonElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [authed, setAuthed] = useState(signedIn);
@@ -239,6 +240,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
     setModalOpen(false);
     setError(null);
     setPending(false);
+    requestAnimationFrame(() => document.getElementById("quote-pdf")?.focus());
   }
 
   const epochAtRender = flowEpoch.current;
@@ -367,6 +369,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
           {modalOpen ? null : (
             <div className="fixed inset-x-0 bottom-6 z-[75] flex justify-center px-4">
               <button
+                ref={reopenRef}
                 type="button"
                 onClick={() => setModalOpen(true)}
                 className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
@@ -377,9 +380,16 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
           )}
           <QuoteSealDialog
             open={modalOpen}
-            onClose={() => setModalOpen(false)}
+            onClose={() => {
+              setModalOpen(false);
+              requestAnimationFrame(() => reopenRef.current?.focus());
+            }}
             onAbandon={abandonSealed}
             onVerified={afterLogin}
+            verified={authed}
+            pending={pending}
+            error={error}
+            pendingLabel={QUOTE_ANALYSING_ZH}
           />
         </>
       ) : null}

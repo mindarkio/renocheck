@@ -118,6 +118,16 @@ export async function countUserQuoteUsesToday(userId: string): Promise<number | 
   return (analyses.count ?? 0) + (claims.count ?? 0);
 }
 
+export type QuoteChecklistInsert =
+  | { ok: true; id: string }
+  | { ok: false; reason: "duplicate" | "unavailable" };
+
+/**
+ * Store one claimed checklist. `sealNonce` is unique on `quote_analyses`
+ * (migration 20261028160000), so a second insert for the same sealed result
+ * fails with 23505 and is reported as `duplicate`: insert and consume are one
+ * atomic step, and nothing is consumed when the insert fails.
+ */
 export async function insertQuoteChecklist(input: {
   userId: string;
   pageCount: number;
@@ -125,14 +135,15 @@ export async function insertQuoteChecklist(input: {
   inputTokens: number | null;
   outputTokens: number | null;
   actualMicroUsd: number | null;
-}): Promise<string | null> {
+  sealNonce: string;
+}): Promise<QuoteChecklistInsert> {
   try {
     assertNotProdDbOutsideProd();
   } catch {
-    return null;
+    return { ok: false, reason: "unavailable" };
   }
   const admin = getSupabaseAdmin();
-  if (!admin) return null;
+  if (!admin) return { ok: false, reason: "unavailable" };
   const { data, error } = await admin
     .from("quote_analyses")
     .insert({
@@ -144,9 +155,11 @@ export async function insertQuoteChecklist(input: {
       output_tokens: input.outputTokens,
       est_cost_micro_usd: input.actualMicroUsd,
       model_id: QUOTE_MODEL_ID,
+      seal_nonce: input.sealNonce,
     })
     .select("id")
     .single();
-  if (error || !data || typeof data.id !== "string") return null;
-  return data.id;
+  if (error?.code === "23505") return { ok: false, reason: "duplicate" };
+  if (error || !data || typeof data.id !== "string") return { ok: false, reason: "unavailable" };
+  return { ok: true, id: data.id };
 }

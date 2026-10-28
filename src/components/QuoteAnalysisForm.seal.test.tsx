@@ -156,6 +156,131 @@ describe("sealed quote upload", () => {
     expect(screen.queryByRole("button", { name: QUOTE_SEAL_REOPEN_ZH })).toBeNull();
   });
 
+  it("shows a failed claim inside the dialog and retries without a new code", async () => {
+    let claims = 0;
+    let verifies = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const href = String(url);
+        if (href.includes("/api/quote/availability")) {
+          return new Response(JSON.stringify({ enabled: true, anonymous: true }), { status: 200 });
+        }
+        if (href.includes("/api/quote/analyze")) {
+          return new Response(JSON.stringify({ sealed: "opaque-blob" }), { status: 200 });
+        }
+        if (href.includes("/api/auth/verify")) {
+          verifies += 1;
+          return new Response(JSON.stringify({ ok: true }), { status: 200 });
+        }
+        if (href.includes("/api/quote/claim")) {
+          claims += 1;
+          return claims === 1
+            ? new Response(JSON.stringify({ error: "quota", message: "SYNTH_QUOTA_MESSAGE" }), { status: 429 })
+            : new Response(JSON.stringify({ id: "33333333-3333-4333-8333-333333333333", items: [] }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }),
+    );
+    render(<QuoteAnalysisForm signedIn={false} />);
+    await waitFor(() => {
+      expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();
+    });
+    fireEvent.change(screen.getByLabelText(QUOTE_FILE_LABEL_ZH), { target: { files: [pdfFile()] } });
+    fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
+    const dialog = await screen.findByRole("dialog", { name: QUOTE_SEAL_MODAL_TITLE_ZH });
+    fireEvent.change(screen.getByLabelText(LOGIN_EMAIL_LABEL_ZH), { target: { value: "person@example.com" } });
+    fireEvent.change(screen.getByLabelText(LOGIN_CODE_LABEL_ZH), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_REOPEN_ZH }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("SYNTH_QUOTA_MESSAGE");
+    expect(dialog.contains(alert)).toBe(true);
+    expect(screen.queryByLabelText(LOGIN_CODE_LABEL_ZH)).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: QUOTE_SEAL_REOPEN_ZH }));
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_REOPEN_ZH }));
+    await waitFor(() => {
+      expect(claims).toBe(2);
+    });
+    expect(verifies).toBe(1);
+  });
+
+  it("abandon during an in-flight claim aborts it and ignores a late reply", async () => {
+    let release: (() => void) | null = null;
+    let claimSignal: AbortSignal | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        const href = String(url);
+        if (href.includes("/api/quote/availability")) {
+          return new Response(JSON.stringify({ enabled: true, anonymous: true }), { status: 200 });
+        }
+        if (href.includes("/api/quote/analyze")) {
+          return new Response(JSON.stringify({ sealed: "opaque-blob" }), { status: 200 });
+        }
+        if (href.includes("/api/quote/claim")) {
+          claimSignal = init?.signal ?? undefined;
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          return new Response(
+            JSON.stringify({ id: "33333333-3333-4333-8333-333333333333", companyName: NAME, items: [] }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }),
+    );
+    render(<QuoteAnalysisForm signedIn={false} />);
+    await waitFor(() => {
+      expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();
+    });
+    fireEvent.change(screen.getByLabelText(QUOTE_FILE_LABEL_ZH), { target: { files: [pdfFile()] } });
+    fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
+    await screen.findByRole("dialog", { name: QUOTE_SEAL_MODAL_TITLE_ZH });
+    fireEvent.change(screen.getByLabelText(LOGIN_EMAIL_LABEL_ZH), { target: { value: "person@example.com" } });
+    fireEvent.change(screen.getByLabelText(LOGIN_CODE_LABEL_ZH), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_REOPEN_ZH }));
+    await waitFor(() => {
+      expect(release).not.toBeNull();
+    });
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_CLOSE_ZH }));
+    expect(claimSignal?.aborted).toBe(true);
+    (release as unknown as () => void)();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(sessionStorage.getItem("renocheck:quote-seal-pending")).toBeNull();
+    expect(document.body.textContent).not.toContain(NAME);
+    expect(screen.getByLabelText(QUOTE_FILE_LABEL_ZH)).toBeTruthy();
+  });
+
+  it("returns focus to the reopen button after Escape and keeps the result", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const href = String(url);
+        if (href.includes("/api/quote/availability")) {
+          return new Response(JSON.stringify({ enabled: true, anonymous: true }), { status: 200 });
+        }
+        if (href.includes("/api/quote/analyze")) {
+          return new Response(JSON.stringify({ sealed: "opaque-blob" }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }),
+    );
+    render(<QuoteAnalysisForm signedIn={false} />);
+    await waitFor(() => {
+      expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();
+    });
+    fireEvent.change(screen.getByLabelText(QUOTE_FILE_LABEL_ZH), { target: { files: [pdfFile()] } });
+    fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
+    await screen.findByRole("dialog", { name: QUOTE_SEAL_MODAL_TITLE_ZH });
+    fireEvent.keyDown(document, { key: "Escape" });
+    const reopen = await screen.findByRole("button", { name: QUOTE_SEAL_REOPEN_ZH });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(reopen);
+    });
+    expect(sessionStorage.getItem("renocheck:quote-seal-pending")).toBe("1");
+  });
+
   it("does not send a second analysis while the first is in flight", async () => {
     let analyzeCalls = 0;
     vi.stubGlobal(

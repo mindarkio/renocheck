@@ -16,7 +16,10 @@ import {
   focusRingOnPrimaryClass,
 } from "@/lib/focus-ring";
 import { ACCOUNT_DELETE_HEADING_ZH, HEADER_UPLOAD_ZH } from "@/lib/quote-analysis/copy";
-import { QUOTE_PAGE_NAV_LABEL_ZH } from "@/lib/quote-selfcheck";
+import {
+  QUOTE_PAGE_NAV_LABEL_ZH,
+  QUOTE_SELF_CHECK_STORAGE_KEY,
+} from "@/lib/quote-selfcheck";
 
 const HOME_NAV = [
   { href: "/guides", label: "裝修指南" },
@@ -58,6 +61,11 @@ function useHeaderFlags(): { upload: boolean; signedIn: boolean } {
   const [upload, setUpload] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
+    try {
+      localStorage.removeItem(QUOTE_SELF_CHECK_STORAGE_KEY);
+    } catch {
+      // Private mode can block storage. The old self-check is no longer shown.
+    }
     if (typeof fetch !== "function") return;
     let cancelled = false;
     fetch("/api/quote/availability")

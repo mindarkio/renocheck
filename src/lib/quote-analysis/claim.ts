@@ -1,6 +1,5 @@
 import "server-only";
 
-import { takeAuthRateLimit } from "@/lib/auth/rate-limit";
 import { QUOTE_FREE_ANALYSES_PER_DAY } from "@/lib/quote-analysis/config";
 import {
   QUOTE_BUDGET_ZH,
@@ -22,8 +21,6 @@ import {
   quoteItemLabel,
   type StoredQuoteItem,
 } from "@/lib/quote-analysis/schema";
-
-const SEAL_SLOT_WINDOW_MS = 35 * 60 * 1000;
 
 export type ClaimBody = {
   error?: string;
@@ -97,30 +94,24 @@ export async function claimSealedQuote(input: {
     return { status: 429, body: { error: "quota", message: QUOTE_QUOTA_ZH } };
   }
 
-  const analysisId = await insertQuoteChecklist({
+  const inserted = await insertQuoteChecklist({
     userId: input.userId,
     pageCount: opened.pageCount,
     items,
     inputTokens: opened.inputTokens,
     outputTokens: opened.outputTokens,
     actualMicroUsd: opened.actualMicroUsd,
+    sealNonce: opened.nonce,
   });
-  if (!analysisId) {
-    return { status: 503, body: { error: "quote_unavailable", message: QUOTE_BUDGET_ZH } };
-  }
-
-  // After the quota and insert succeed, so a 429 or 503 does not burn the seal.
-  const slot = await takeAuthRateLimit({
-    key: `quote-seal:${opened.nonce}`,
-    limit: 1,
-    windowMs: SEAL_SLOT_WINDOW_MS,
-  });
-  if (slot === "limited") {
+  // The unique seal_nonce makes insert-and-consume one step: a parallel or
+  // replayed claim of the same blob gets 23505 and stores nothing.
+  if (!inserted.ok && inserted.reason === "duplicate") {
     return { status: 409, body: { error: "seal_used", message: QUOTE_SEAL_USED_ZH } };
   }
-  if (slot !== "ok") {
-    return { status: 503, body: { error: "quote_unavailable", message: QUOTE_FAILED_ZH } };
+  if (!inserted.ok) {
+    return { status: 503, body: { error: "quote_unavailable", message: QUOTE_BUDGET_ZH } };
   }
+  const analysisId = inserted.id;
 
   await saveQuoteCompanyNames({
     analysisId,

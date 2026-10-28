@@ -83,7 +83,12 @@ export function openQuoteResult(
   } catch {
     throw new Error("seal_invalid");
   }
-  if (parsed.v !== 1 || typeof parsed.nonce !== "string" || typeof parsed.exp !== "number") {
+  if (
+    parsed.v !== 1 ||
+    typeof parsed.nonce !== "string" ||
+    !/^[0-9a-f]{32}$/.test(parsed.nonce) ||
+    typeof parsed.exp !== "number"
+  ) {
     throw new Error("seal_invalid");
   }
   if (!Array.isArray(parsed.items)) throw new Error("seal_invalid");

@@ -35,8 +35,8 @@ export const QUOTE_ANALYSING_ZH = "分析進行中，請稍候。";
 export const QUOTE_SIGN_IN_PROMPT_ZH = "上載分析需先驗證電郵。公司查冊無需驗證電郵。";
 export const QUOTE_SIGN_IN_LINK_ZH = "驗證電郵";
 export const QUOTE_ACCOUNT_LINK_ZH = "帳戶";
-/** Same label as the /quote guide in the footer. */
-export const QUOTE_BACK_TO_CHECKLIST_ZH = "報價內容指南";
+/** Link back to the static /quote guide. Same label as the footer. */
+export const QUOTE_GUIDE_LINK_ZH = "報價內容指南";
 export const QUOTE_UNAVAILABLE_ZH = "報價單上載分析暫時未開放。";
 
 /** Owner-written and approved. */
@@ -160,7 +160,7 @@ export function quoteAnalysisUserFacingCopy(): readonly string[] {
     QUOTE_SIGN_IN_PROMPT_ZH,
     QUOTE_SIGN_IN_LINK_ZH,
     QUOTE_ACCOUNT_LINK_ZH,
-    QUOTE_BACK_TO_CHECKLIST_ZH,
+    QUOTE_GUIDE_LINK_ZH,
     QUOTE_UNAVAILABLE_ZH,
     HOME_QUOTE_UPLOAD_LINK_ZH,
     HEADER_UPLOAD_ZH,

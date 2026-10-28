@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { sealQuoteResult } from "./seal";
+import { openQuoteResult, sealQuoteResult } from "./seal";
 
-const takeAuthRateLimit = vi.hoisted(() => vi.fn());
 const countUserQuoteUsesToday = vi.hoisted(() => vi.fn());
 const insertQuoteChecklist = vi.hoisted(() => vi.fn());
 const saveQuoteCompanyNames = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/auth/rate-limit", () => ({ takeAuthRateLimit }));
 vi.mock("@/lib/quote-analysis/anon-budget", () => ({
   countUserQuoteUsesToday,
   insertQuoteChecklist,
@@ -37,13 +35,11 @@ function sealed() {
 
 describe("claimSealedQuote", () => {
   beforeEach(() => {
-    takeAuthRateLimit.mockReset();
     countUserQuoteUsesToday.mockReset();
     insertQuoteChecklist.mockReset();
     saveQuoteCompanyNames.mockReset();
-    takeAuthRateLimit.mockResolvedValue("ok");
     countUserQuoteUsesToday.mockResolvedValue(0);
-    insertQuoteChecklist.mockResolvedValue("22222222-2222-4222-8222-222222222222");
+    insertQuoteChecklist.mockResolvedValue({ ok: true, id: "22222222-2222-4222-8222-222222222222" });
     saveQuoteCompanyNames.mockResolvedValue("saved");
   });
 
@@ -69,27 +65,31 @@ describe("claimSealedQuote", () => {
     expect(result.body.error).toBe("quota");
     expect(insertQuoteChecklist).not.toHaveBeenCalled();
     expect(saveQuoteCompanyNames).not.toHaveBeenCalled();
-    expect(takeAuthRateLimit).not.toHaveBeenCalled();
     expect(result.body.companyName).toBeUndefined();
   });
 
   it("does not burn the seal when the checklist insert fails", async () => {
-    insertQuoteChecklist.mockResolvedValue(null);
-    const result = await claimSealedQuote({ userId: USER, sealed: sealed(), env, now: now + 1000 });
+    const blob = sealed();
+    insertQuoteChecklist.mockResolvedValueOnce({ ok: false, reason: "unavailable" });
+    const result = await claimSealedQuote({ userId: USER, sealed: blob, env, now: now + 1000 });
     expect(result.status).toBe(503);
-    expect(takeAuthRateLimit).not.toHaveBeenCalled();
     expect(saveQuoteCompanyNames).not.toHaveBeenCalled();
+    const retry = await claimSealedQuote({ userId: USER, sealed: blob, env, now: now + 2000 });
+    expect(retry.status).toBe(200);
   });
 
-  it("rejects a replayed blob", async () => {
+  it("rejects a replayed blob through the unique seal nonce", async () => {
     const blob = sealed();
-    takeAuthRateLimit.mockResolvedValueOnce("ok").mockResolvedValueOnce("limited");
-    expect((await claimSealedQuote({ userId: USER, sealed: blob, env, now })).status).toBe(200);
+    insertQuoteChecklist
+      .mockResolvedValueOnce({ ok: true, id: "22222222-2222-4222-8222-222222222222" })
+      .mockResolvedValueOnce({ ok: false, reason: "duplicate" });
+    await claimSealedQuote({ userId: USER, sealed: blob, env, now });
     const again = await claimSealedQuote({ userId: USER, sealed: blob, env, now });
     expect(again.status).toBe(409);
     expect(again.body.companyName).toBeUndefined();
-    // The seal slot is taken only after the row exists, so a failed insert can be retried.
-    expect(insertQuoteChecklist).toHaveBeenCalledTimes(2);
+    const nonces = insertQuoteChecklist.mock.calls.map((call) => (call[0] as { sealNonce: string }).sealNonce);
+    expect(nonces[0]).toBe(openQuoteResult(blob, env, now).nonce);
+    expect(nonces[1]).toBe(nonces[0]);
     expect(saveQuoteCompanyNames).toHaveBeenCalledTimes(1);
   });
 
@@ -103,7 +103,6 @@ describe("claimSealedQuote", () => {
     });
     expect(result.status).toBe(410);
     expect(result.body.companyName).toBeUndefined();
-    expect(takeAuthRateLimit).not.toHaveBeenCalled();
     expect(insertQuoteChecklist).not.toHaveBeenCalled();
   });
 });
