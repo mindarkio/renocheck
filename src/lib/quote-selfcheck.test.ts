@@ -64,9 +64,9 @@ describe("quote self-check checklist", () => {
     ).toEqual(["gas", "licence_registration"]);
   });
 
-  it("states the tool does not judge price and is not professional advice", () => {
-    expect(QUOTE_PAGE_LEAD_ZH).toContain("唔會評價格係咪合理");
-    expect(QUOTE_PAGE_LEAD_ZH).toContain("唔係專業意見");
+  it("states the guide does not judge price and is not professional advice", () => {
+    expect(QUOTE_PAGE_LEAD_ZH).toContain("不評估價格高低");
+    expect(QUOTE_PAGE_LEAD_ZH).toContain("亦非專業意見");
   });
 
   it("keeps new copy free of review claims, UK disambiguation, and consultation", () => {
@@ -168,16 +168,17 @@ describe("buildQuoteReplyMessage", () => {
 });
 
 describe("quote page JSON-LD", () => {
-  it("is a WebPage with a HowTo and does not claim automated quote review", () => {
+  it("is an Article plus FAQPage and does not claim automated quote review", () => {
     const data = buildQuotePageJsonLd("https://renocheck.homes");
-    expect(data["@type"]).toBe("WebPage");
-    expect(data.url).toBe("https://renocheck.homes/quote");
-    expect(data.name).toBe(QUOTE_PAGE_TITLE_ZH);
-    expect(data.description).toContain("報價單");
-    expect(data.description).toContain("報價陷阱");
-    const mainEntity = data.mainEntity as { "@type": string; step: unknown[] };
-    expect(mainEntity["@type"]).toBe("HowTo");
-    expect(mainEntity.step).toHaveLength(3);
+    const graph = data["@graph"] as Array<Record<string, unknown>>;
+    const article = graph.find((node) => node["@type"] === "Article");
+    const faq = graph.find((node) => node["@type"] === "FAQPage");
+    expect(article?.headline).toBe(QUOTE_PAGE_TITLE_ZH);
+    expect(article?.url).toBe("https://renocheck.homes/quote");
+    expect(article?.description).toContain("報價單");
+    expect(String(article?.description)).not.toContain("報價陷阱");
+    expect(faq?.["@type"]).toBe("FAQPage");
+    expect(faq?.mainEntity).toHaveLength(3);
     const serialised = JSON.stringify(data);
     expect(serialised).not.toMatch(/人工智能|報價審核|renocheck\.co\.uk|專家諮詢|\bAI\b/);
   });
@@ -271,8 +272,8 @@ describe("quote self-check storage", () => {
 describe("quote page JSON-LD graph", () => {
   it("points isPartOf at the site WebSite node", () => {
     const data = buildQuotePageJsonLd("https://renocheck.homes");
-    expect((data.isPartOf as { "@id": string })["@id"]).toBe(
-      "https://renocheck.homes/#website",
-    );
+    const graph = data["@graph"] as Array<{ isPartOf?: { "@id": string } }>;
+    const article = graph.find((node) => node.isPartOf);
+    expect(article?.isPartOf?.["@id"]).toBe("https://renocheck.homes/#website");
   });
 });

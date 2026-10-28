@@ -3,7 +3,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   QUOTE_ACK_LABEL_ZH,
+  QUOTE_ANALYSING_ZH,
   QUOTE_FILE_LABEL_ZH,
+  QUOTE_PICK_FIRST_ZH,
+  QUOTE_SEAL_CLOSE_ZH,
   QUOTE_SEAL_MODAL_TITLE_ZH,
   QUOTE_SEAL_REOPEN_ZH,
 } from "@/lib/quote-analysis/copy";
@@ -40,7 +43,7 @@ describe("sealed quote upload", () => {
     );
     render(<QuoteAnalysisForm signedIn={false} />);
     await waitFor(() => {
-      expect(screen.queryByText(/先揀 PDF/)).toBeNull();
+      expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();
     });
     fireEvent.change(screen.getByLabelText(QUOTE_FILE_LABEL_ZH), {
       target: { files: [pdfFile()] },
@@ -48,12 +51,49 @@ describe("sealed quote upload", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
     const dialog = await screen.findByRole("dialog", { name: QUOTE_SEAL_MODAL_TITLE_ZH });
     expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(screen.queryByLabelText(QUOTE_FILE_LABEL_ZH)).toBeNull();
+    expect(document.querySelector("[data-quote-report-skeleton]")).toBeTruthy();
     expect(document.body.textContent).not.toContain(NAME);
+    const abandon = screen.getByRole("button", { name: QUOTE_SEAL_CLOSE_ZH });
+    const submit = screen.getByRole("button", { name: QUOTE_SEAL_REOPEN_ZH });
+    expect(submit.className).toContain("w-full");
+    expect(abandon.parentElement?.className).toContain("justify-center");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
     expect(screen.getByRole("button", { name: QUOTE_SEAL_REOPEN_ZH })).toBeTruthy();
+    expect(document.querySelector("[data-quote-report-skeleton]")).toBeTruthy();
+    expect(screen.queryByLabelText(QUOTE_FILE_LABEL_ZH)).toBeNull();
+    expect(document.body.textContent).not.toContain(NAME);
+  });
+
+  it("discards the sealed result when the user abandons verification", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).includes("/api/quote/availability")) {
+          return new Response(JSON.stringify({ enabled: true, anonymous: true }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ sealed: "opaque-blob" }), { status: 200 });
+      }),
+    );
+    render(<QuoteAnalysisForm signedIn={false} />);
+    await waitFor(() => {
+      expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();
+    });
+    fireEvent.change(screen.getByLabelText(QUOTE_FILE_LABEL_ZH), {
+      target: { files: [pdfFile()] },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
+    await screen.findByRole("dialog", { name: QUOTE_SEAL_MODAL_TITLE_ZH });
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_SEAL_CLOSE_ZH }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(screen.queryByRole("button", { name: QUOTE_SEAL_REOPEN_ZH })).toBeNull();
+    expect(document.querySelector("[data-quote-report-skeleton]")).toBeNull();
+    expect(screen.getByLabelText(QUOTE_FILE_LABEL_ZH)).toBeTruthy();
     expect(document.body.textContent).not.toContain(NAME);
   });
 
@@ -71,14 +111,14 @@ describe("sealed quote upload", () => {
     );
     render(<QuoteAnalysisForm signedIn={false} />);
     await waitFor(() => {
-      expect(screen.queryByText(/先揀 PDF/)).toBeNull();
+      expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();
     });
     fireEvent.change(screen.getByLabelText(QUOTE_FILE_LABEL_ZH), {
       target: { files: [pdfFile()] },
     });
     fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
     fireEvent.submit(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }).closest("form")!);
-    await screen.findByText("分析緊，請稍等。");
+    await screen.findByText(QUOTE_ANALYSING_ZH);
     expect(analyzeCalls).toBe(1);
   });
 });

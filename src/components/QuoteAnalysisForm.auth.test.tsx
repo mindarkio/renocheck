@@ -6,7 +6,7 @@ import {
   LOGIN_EMAIL_LABEL_ZH,
   LOGIN_SEND_ZH,
   LOGIN_SENT_ZH,
-  LOGIN_SUBMIT_ZH,
+  QUOTE_VERIFY_EMAIL_ZH,
   QUOTE_ACK_LABEL_ZH,
   QUOTE_FILE_LABEL_ZH,
   QUOTE_FILE_RESELECT_ZH,
@@ -72,7 +72,7 @@ describe("quote upload before login", () => {
     fireEvent.change(screen.getByLabelText(LOGIN_CODE_LABEL_ZH), {
       target: { value: "123456" },
     });
-    fireEvent.submit(screen.getByRole("button", { name: LOGIN_SUBMIT_ZH }).closest("form")!);
+    fireEvent.submit(screen.getByRole("button", { name: QUOTE_VERIFY_EMAIL_ZH }).closest("form")!);
     await waitFor(() => {
       expect(calls.filter((url) => url.includes("/api/quote/analyze"))).toHaveLength(1);
     });

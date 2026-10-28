@@ -7,9 +7,9 @@ import {
   ContentPageTitle,
 } from "@/components/ContentPage";
 import { JsonLd } from "@/components/JsonLd";
-import { QuoteAnalysisEntry } from "@/components/QuoteAnalysisEntry";
-import { QuoteSelfCheck } from "@/components/QuoteSelfCheck";
+import { QuoteGuideArticle } from "@/components/QuoteGuideArticle";
 import {
+  QUOTE_GUIDE_DATE,
   QUOTE_PAGE_DESCRIPTION_ZH,
   QUOTE_PAGE_LEAD_ZH,
   QUOTE_PAGE_META_TITLE_ZH,
@@ -35,9 +35,11 @@ export default function QuotePage() {
       <JsonLd data={buildQuotePageJsonLd(getSiteUrl())} />
       <ContentCard>
         <ContentPageTitle>{QUOTE_PAGE_TITLE_ZH}</ContentPageTitle>
+        <p className="mt-2 text-xs text-muted-foreground">
+          更新日期：<time dateTime={QUOTE_GUIDE_DATE}>{QUOTE_GUIDE_DATE}</time>
+        </p>
         <ContentPageLead>{QUOTE_PAGE_LEAD_ZH}</ContentPageLead>
-        <QuoteSelfCheck />
-        <QuoteAnalysisEntry />
+        <QuoteGuideArticle />
         <ContentPageNav
           links={QUOTE_PAGE_NAV}
           linkClassName="inline-flex min-h-11 items-center"

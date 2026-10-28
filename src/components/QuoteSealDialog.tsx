@@ -6,6 +6,7 @@ import {
   QUOTE_SEAL_CLOSE_ZH,
   QUOTE_SEAL_MODAL_BODY_ZH,
   QUOTE_SEAL_MODAL_TITLE_ZH,
+  QUOTE_SEAL_REOPEN_ZH,
 } from "@/lib/quote-analysis/copy";
 
 const FOCUSABLE =
@@ -14,10 +15,14 @@ const FOCUSABLE =
 export function QuoteSealDialog({
   open,
   onClose,
+  onAbandon,
   onVerified,
 }: {
   open: boolean;
+  /** Escape. Keeps the sealed result and the blurred placeholder. */
   onClose: () => void;
+  /** Discards the sealed result and returns to an empty upload form. */
+  onAbandon: () => void;
   onVerified: () => void | Promise<void>;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -55,42 +60,50 @@ export function QuoteSealDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-foreground/40 p-4 sm:items-center">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-foreground/25 p-4 sm:items-center">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="quote-seal-title"
-        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-background p-5 shadow-lg motion-reduce:transition-none"
+        className="max-h-[min(92vh,40rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-background px-5 py-6 shadow-lg motion-reduce:transition-none sm:px-6"
       >
-        <h2 id="quote-seal-title" className="text-lg font-semibold text-primary">
+        <h2 id="quote-seal-title" className="text-xl font-semibold leading-snug text-primary">
           {QUOTE_SEAL_MODAL_TITLE_ZH}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           {QUOTE_SEAL_MODAL_BODY_ZH}
         </p>
-        <SignInForm onVerified={onVerified} />
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-4 inline-flex min-h-11 items-center text-sm text-muted-foreground underline-offset-2 hover:underline"
-        >
-          {QUOTE_SEAL_CLOSE_ZH}
-        </button>
+        <SignInForm
+          onVerified={onVerified}
+          submitLabel={QUOTE_SEAL_REOPEN_ZH}
+          onAbandon={onAbandon}
+          abandonLabel={QUOTE_SEAL_CLOSE_ZH}
+        />
       </div>
     </div>
   );
 }
 
+/** Generic report shape. No quotation text, name, or checklist result. */
 export function QuoteReportSkeleton() {
   return (
-    <div aria-hidden="true" className="pointer-events-none mt-6 select-none blur-md motion-reduce:blur">
-      <div className="h-5 w-2/3 rounded bg-muted" />
-      <div className="mt-3 h-11 w-full rounded-lg bg-muted" />
-      <div className="mt-4 space-y-3">
-        <div className="h-4 w-full rounded bg-muted" />
-        <div className="h-4 w-5/6 rounded bg-muted" />
-        <div className="h-4 w-4/6 rounded bg-muted" />
+    <div data-quote-report-skeleton="" className="space-y-5">
+      <div className="h-8 w-1/2 rounded-md bg-foreground/15" />
+      <div className="h-4 w-full rounded bg-foreground/10" />
+      <div className="h-4 w-4/5 rounded bg-foreground/10" />
+      <div className="rounded-xl border border-border bg-background p-4 shadow-sm">
+        <div className="h-5 w-1/3 rounded bg-foreground/15" />
+        <div className="mt-4 h-11 w-full rounded-lg bg-foreground/10" />
+      </div>
+      <div className="space-y-4 rounded-xl border border-border bg-background p-4 shadow-sm">
+        {["a", "b", "c", "d", "e", "f"].map((row) => (
+          <div key={row} className="space-y-2 border-b border-border/70 pb-3 last:border-b-0">
+            <div className="h-4 w-2/5 rounded bg-foreground/15" />
+            <div className="h-3 w-full rounded bg-foreground/10" />
+            <div className="h-3 w-3/4 rounded bg-foreground/10" />
+          </div>
+        ))}
       </div>
     </div>
   );

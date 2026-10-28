@@ -20,6 +20,7 @@ import {
   QUOTE_SEAL_REOPEN_ZH,
   QUOTE_SUBMIT_ZH,
   QUOTE_UPLOAD_NOTICE_ZH,
+  QUOTE_VERIFY_EMAIL_ZH,
 } from "@/lib/quote-analysis/copy";
 
 /** Flag only. The PDF and the sealed blob stay in component state. */
@@ -208,6 +209,20 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
     await submitAnalysis();
   }
 
+  function abandonSealed() {
+    sealedRef.current = null;
+    clearFlag(SEAL_PENDING_KEY);
+    clearFlag(QUOTE_FILE_PENDING_KEY);
+    fileRef.current = null;
+    ackRef.current = false;
+    setFile(null);
+    setAcknowledged(false);
+    setSealed(false);
+    setModalOpen(false);
+    setError(null);
+    setPending(false);
+  }
+
   async function afterLogin() {
     authedRef.current = true;
     setAuthed(true);
@@ -233,6 +248,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
           {QUOTE_FILE_RESELECT_ZH}
         </p>
       ) : null}
+      {sealed ? null : (
       <form onSubmit={onSubmit} className="space-y-4">
         <p className="text-sm leading-relaxed text-muted-foreground">{QUOTE_UPLOAD_NOTICE_ZH}</p>
         {!signedIn && !anonymous && !file ? (
@@ -296,13 +312,14 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
           </button>
         ) : null}
       </form>
-      {!authed && !anonymous && file ? (
+      )}
+      {!sealed && !authed && !anonymous && file ? (
         <div>
           <p className="text-sm leading-relaxed text-muted-foreground">{QUOTE_LOGIN_AFTER_FILE_ZH}</p>
-          <SignInForm onVerified={afterLogin} />
+          <SignInForm onVerified={afterLogin} submitLabel={QUOTE_VERIFY_EMAIL_ZH} />
         </div>
       ) : null}
-      {claimed ? (
+      {!sealed && claimed ? (
         <div>
           <QuoteCompanyConfirm analysisId={claimed.id} />
           <ol className="mt-8 space-y-4">
@@ -317,19 +334,29 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
       ) : null}
       {sealed ? (
         <>
-          <QuoteReportSkeleton />
+          <div
+            aria-hidden="true"
+            className="fixed inset-x-0 bottom-0 top-14 z-[55] overflow-y-auto bg-background px-4 pb-28 pt-6"
+          >
+            <div className="mx-auto w-full max-w-[584px] select-none blur-sm motion-reduce:blur-none">
+              <QuoteReportSkeleton />
+            </div>
+          </div>
           {modalOpen ? null : (
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
-            >
-              {QUOTE_SEAL_REOPEN_ZH}
-            </button>
+            <div className="fixed inset-x-0 bottom-6 z-[75] flex justify-center px-4">
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+              >
+                {QUOTE_SEAL_REOPEN_ZH}
+              </button>
+            </div>
           )}
           <QuoteSealDialog
             open={modalOpen}
             onClose={() => setModalOpen(false)}
+            onAbandon={abandonSealed}
             onVerified={afterLogin}
           />
         </>
