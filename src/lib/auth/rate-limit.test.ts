@@ -84,12 +84,23 @@ describe("rateLimitIp", () => {
 });
 
 describe("takeAuthRateLimit", () => {
+  let warn: ReturnType<typeof vi.spyOn>;
+  let errorLog: ReturnType<typeof vi.spyOn>;
+
+  function lines(spy: ReturnType<typeof vi.spyOn>): string {
+    return spy.mock.calls.map((call) => String(call[0])).join("\n");
+  }
+
   beforeEach(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubEnv("AUTH_RATE_LIMIT_SECRET", SECRET);
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://local.example.invalid");
   });
 
   afterEach(() => {
+    warn.mockRestore();
+    errorLog.mockRestore();
     rpc.mockReset();
     maybeSingle.mockReset();
     deleteEq.mockReset();
@@ -140,6 +151,10 @@ describe("takeAuthRateLimit", () => {
     const rotated = rpc.mock.calls[1]?.[1] as { p_bucket: string };
     expect(rotated.p_bucket).not.toBe(args.p_bucket);
     expect(rotated.p_bucket).not.toContain(email);
+    expect(lines(warn)).toBe("");
+    expect(lines(errorLog)).toBe("");
+    expect(lines(warn) + lines(errorLog)).not.toContain(email);
+    expect(lines(warn) + lines(errorLog)).not.toContain(args.p_bucket);
   });
 
   it("fails closed when the secret is missing or too short", async () => {
@@ -148,11 +163,22 @@ describe("takeAuthRateLimit", () => {
     expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
       "unavailable",
     );
+    expect(warn).toHaveBeenCalledWith(
+      'auth_rl_unavailable reason=no_secret {"secret_present":false}',
+    );
     vi.stubEnv("AUTH_RATE_LIMIT_SECRET", "a".repeat(AUTH_RATE_LIMIT_SECRET_MIN_LENGTH - 1));
     expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
       "unavailable",
     );
+    expect(warn).toHaveBeenCalledWith(
+      'auth_rl_unavailable reason=no_secret {"secret_present":true}',
+    );
     expect(rpc).not.toHaveBeenCalled();
+    expect(lines(errorLog)).toBe("");
+    const logged = lines(warn);
+    expect(logged).not.toContain("203.0.113.9");
+    expect(logged).not.toContain("a".repeat(AUTH_RATE_LIMIT_SECRET_MIN_LENGTH - 1));
+    expect(logged).not.toMatch(/secret_present":\d/);
   });
 
   it("fails closed when the database refuses or is the production project", async () => {
@@ -165,16 +191,27 @@ describe("takeAuthRateLimit", () => {
     expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
       "unavailable",
     );
+    expect(errorLog).toHaveBeenCalledWith(
+      'auth_rl_unavailable reason=rpc_error {"code":"","message":"down","hint":"","url_present":true,"service_key_present":false,"service_key_legacy_jwt":false,"service_key_sb_secret":false}',
+    );
     getSupabaseAdmin.mockReturnValueOnce(null);
     expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
       "unavailable",
+    );
+    expect(warn).toHaveBeenCalledWith(
+      'auth_rl_unavailable reason=no_admin {"url_present":true,"service_key_present":false,"service_key_legacy_jwt":false,"service_key_sb_secret":false}',
     );
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://lvrasvtilgzwtfsfjbzd.supabase.co");
     vi.stubEnv("VERCEL_ENV", "preview");
     expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
       "unavailable",
     );
+    expect(warn).toHaveBeenCalledWith("auth_rl_unavailable reason=guard");
     expect(rpc).toHaveBeenCalledTimes(2);
+    const logged = `${lines(warn)}\n${lines(errorLog)}`;
+    expect(logged).not.toContain("203.0.113.9");
+    expect(logged).not.toContain("lvrasvtilgzwtfsfjbzd");
+    expect(logged).not.toContain("local.example.invalid");
   });
 
   it("fails closed when the table is full and never evicts or re-reads rows", async () => {
@@ -185,6 +222,8 @@ describe("takeAuthRateLimit", () => {
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(maybeSingle).not.toHaveBeenCalled();
     expect(deleteEq).not.toHaveBeenCalled();
+    expect(lines(warn)).toBe("");
+    expect(lines(errorLog)).toBe("");
   });
 
   it("accepts a secret of exactly the minimum length", async () => {
@@ -214,8 +253,82 @@ describe("takeAuthRateLimit", () => {
       expect(await takeAuthRateLimit(bad)).toBe("unavailable");
     }
     expect(rpc).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(3);
+    expect(warn).toHaveBeenCalledWith("auth_rl_unavailable reason=bad_input");
+    const leakedEmail = "person@example.com";
     rpc.mockResolvedValueOnce({ data: "true", error: null });
+    expect(await takeAuthRateLimit({ key: `otp-email:${leakedEmail}`, limit: 5, windowMs: 1_000 })).toBe(
+      "unavailable",
+    );
+    expect(warn).toHaveBeenCalledWith(
+      'auth_rl_unavailable reason=non_boolean {"type":"string"}',
+    );
+    rpc.mockResolvedValueOnce({ data: null, error: null });
     expect(await takeAuthRateLimit({ key: "k", limit: 5, windowMs: 1_000 })).toBe("unavailable");
+    expect(warn).toHaveBeenCalledWith(
+      'auth_rl_unavailable reason=non_boolean {"type":"null"}',
+    );
+    rpc.mockResolvedValueOnce({
+      data: ["true", leakedEmail],
+      error: null,
+    });
+    expect(await takeAuthRateLimit({ key: "k", limit: 5, windowMs: 1_000 })).toBe("unavailable");
+    expect(warn).toHaveBeenCalledWith(
+      'auth_rl_unavailable reason=non_boolean {"type":"array"}',
+    );
+    expect(lines(warn)).not.toContain(leakedEmail);
+    expect(lines(warn)).not.toContain('"true"');
+    expect(lines(errorLog)).toBe("");
+  });
+
+  it("logs rpc failures with code, message, and hint, and redacts secrets", async () => {
+    const email = "person@example.com";
+    const key = `otp-email:${email}`;
+    const bucket = authRateLimitBucket(key, SECRET);
+    const serviceKey = "sb_secret_syntheticexamplekeyvalue";
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.sig";
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", serviceKey);
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: "PGRST202",
+        message: `Could not find the function for ${email} bucket ${bucket} key ${serviceKey} token ${jwt}`,
+        hint: `See ${email}`,
+        details: `Key (bucket)=(${bucket})`,
+      },
+    });
+    expect(await takeAuthRateLimit({ key, limit: 3, windowMs: 900_000 })).toBe("unavailable");
+    const logged = lines(errorLog);
+    expect(errorLog).toHaveBeenCalledTimes(1);
+    expect(logged).toContain("auth_rl_unavailable reason=rpc_error");
+    expect(logged).toContain('"code":"PGRST202"');
+    expect(logged).toContain('"hint":"See [redacted]"');
+    expect(logged).toContain('"service_key_present":true');
+    expect(logged).toContain('"service_key_legacy_jwt":false');
+    expect(logged).toContain('"service_key_sb_secret":true');
+    expect(logged).not.toContain(email);
+    expect(logged).not.toContain(bucket);
+    expect(logged).not.toContain(serviceKey);
+    expect(logged).not.toContain(jwt);
+    expect(logged).not.toContain("details");
+    expect(logged).not.toContain(SECRET);
+    expect(lines(warn)).toBe("");
+
+    errorLog.mockClear();
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", jwt);
+    rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: "PGRST301", message: "JWSError JWSInvalidSignature", hint: null },
+    });
+    expect(await takeAuthRateLimit({ key: "otp-ip:203.0.113.9", limit: 5, windowMs: 1_000 })).toBe(
+      "unavailable",
+    );
+    const jwtLogged = lines(errorLog);
+    expect(jwtLogged).toContain('"service_key_legacy_jwt":true');
+    expect(jwtLogged).toContain('"service_key_sb_secret":false');
+    expect(jwtLogged).toContain('"message":"JWSError JWSInvalidSignature"');
+    expect(jwtLogged).not.toContain(jwt);
+    expect(jwtLogged).not.toContain("203.0.113.9");
   });
 });
 
