@@ -140,8 +140,12 @@ export function reserveMicroUsd(pageCount: number): number {
   return microUsdFromTokens(inputTokens, 4_000);
 }
 
-/** Logged-out extraction returns a name only. The PDF is still the input; output is capped. */
-export const QUOTE_EXTRACT_MAX_OUTPUT_TOKENS = 64;
+/**
+ * Logged-out extraction returns a name only. The PDF is still the input; output is capped.
+ * The deployment runs on the reasoning path (`forceReasoning`), and reasoning tokens count
+ * toward this cap, so the cap must leave room for reasoning plus the small JSON object.
+ */
+export const QUOTE_EXTRACT_MAX_OUTPUT_TOKENS = 1_200;
 
 export function reserveExtractionMicroUsd(pageCount: number): number {
   const inputTokens = 400 + pageCount * 3_800;

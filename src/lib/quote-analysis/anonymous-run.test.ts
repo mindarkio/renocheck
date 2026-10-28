@@ -165,3 +165,26 @@ describe("runAnonymousQuoteAnalysis", () => {
     expect(settleAnonymousQuoteSpend).not.toHaveBeenCalled();
   });
 });
+
+describe("runAnonymousQuoteAnalysis response shape (r3)", () => {
+  it("drops any extra model fields", async () => {
+    resetMemoryRateLimitForTests();
+    vi.mocked(takeAnonymousQuoteSlot).mockResolvedValue("ok");
+    vi.mocked(reserveAnonymousQuoteSpend).mockResolvedValue({ day: "2026-10-28", reserve: 5_000 });
+    const result = await runAnonymousQuoteAnalysis({
+      acknowledged: true,
+      mediaType: "application/pdf",
+      bytes: PDF,
+      ip: "203.0.113.90",
+      env,
+      now: 9_000,
+      model: async () => ({
+        object: { companyName: NAME, isQuotation: true, items: [{ id: "waterproofing", status: "vague" }], note: "x" },
+        inputTokens: 10,
+        outputTokens: 2,
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(Object.keys(result.body)).toEqual(["companyName"]);
+  });
+});

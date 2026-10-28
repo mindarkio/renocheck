@@ -23,15 +23,15 @@ export function QuoteSealDialog({
   pendingLabel,
 }: {
   open: boolean;
-  /** Escape. Keeps the sealed result and the blurred placeholder. */
+  /** Escape. Keeps the company search result and the blurred placeholder. */
   onClose: () => void;
-  /** Discards the sealed result and returns to an empty upload form. */
+  /** Discards the file and the confirmed name and returns to an empty upload form. */
   onAbandon: () => void;
   onVerified: () => void | Promise<void>;
-  /** Email already verified (for example the claim then failed): retry the claim without a new code. */
+  /** Email already verified (for example the analysis then failed): retry the analysis without a new code. */
   verified?: boolean;
   pending?: boolean;
-  /** Claim error. Shown inside the dialog because the upload form is hidden while sealed. */
+  /** Analysis error. Shown inside the dialog because the upload form is hidden after the name step. */
   error?: string | null;
   pendingLabel?: string;
 }) {

@@ -58,7 +58,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   const authedRef = useRef(signedIn);
   const inFlight = useRef(false);
   const flowEpoch = useRef(0);
-  const extractedRef = useRef<string | null>(null);
+  const requestAbort = useRef<AbortController | null>(null);
   const confirmedRef = useRef<string | null>(null);
   const reopenRef = useRef<HTMLButtonElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -95,6 +95,8 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
     const chosen = fileRef.current;
     if (!chosen || inFlight.current) return null;
     const epoch = flowEpoch.current;
+    const abort = new AbortController();
+    requestAbort.current = abort;
     inFlight.current = true;
     setPending(true);
     setError(null);
@@ -102,11 +104,14 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
     data.set("file", chosen);
     data.set("acknowledged", "1");
     if (mode === "full") {
-      if (extractedRef.current) data.set("extractedCompanyName", extractedRef.current);
       if (confirmedRef.current) data.set("confirmedCompanyName", confirmedRef.current);
     }
     try {
-      const res = await fetch("/api/quote/analyze", { method: "POST", body: data });
+      const res = await fetch("/api/quote/analyze", {
+        method: "POST",
+        body: data,
+        signal: abort.signal,
+      });
       if (epoch !== flowEpoch.current) return null;
       const body = (await res.json().catch(() => null)) as {
         id?: string;
@@ -123,6 +128,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
       if (epoch === flowEpoch.current) setError(QUOTE_FAILED_ZH);
       return null;
     } finally {
+      if (requestAbort.current === abort) requestAbort.current = null;
       if (epoch === flowEpoch.current) {
         inFlight.current = false;
         setPending(false);
@@ -132,16 +138,41 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
 
   async function submitExtraction() {
     const body = await postPdf("extract");
-    if (!body || body.id) return;
+    if (!body) return;
+    if (body.id) {
+      // The server saw a session (for example a sign-in in another tab) and ran the full analysis.
+      authedRef.current = true;
+      setAuthed(true);
+      showFull(body, true);
+      return;
+    }
     clearFlag(QUOTE_FILE_PENDING_KEY);
     const name = typeof body.companyName === "string" ? body.companyName : null;
-    extractedRef.current = name;
     setExtracted(name);
   }
 
   async function submitFull(navigate: boolean) {
     const body = await postPdf("full");
-    if (!body?.id) return;
+    if (!body) return;
+    if (!body.id) {
+      if (!("items" in body) && "companyName" in body && !body.message) {
+        // Name-only reply: the session is gone, so the server treated this as logged out.
+        authedRef.current = false;
+        setAuthed(false);
+        setModalOpen(true);
+      }
+      // A 200 without a row (for example not_quotation) still carries a message.
+      setError(body.message ?? QUOTE_FAILED_ZH);
+      return;
+    }
+    showFull(body, navigate);
+  }
+
+  function showFull(
+    body: { id?: string; companyName?: string | null; items?: ChecklistItem[] },
+    navigate: boolean,
+  ) {
+    if (!body.id) return;
     clearFlag(QUOTE_FILE_PENDING_KEY);
     holdQuoteCompanyName(body.id, typeof body.companyName === "string" ? body.companyName : null);
     if (navigate) {
@@ -166,10 +197,11 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
 
   function abandonAnalysis() {
     flowEpoch.current += 1;
+    requestAbort.current?.abort();
+    requestAbort.current = null;
     inFlight.current = false;
     fileRef.current = null;
     ackRef.current = false;
-    extractedRef.current = null;
     confirmedRef.current = null;
     clearFlag(QUOTE_FILE_PENDING_KEY);
     setFile(null);

@@ -86,15 +86,14 @@ export async function POST(req: Request) {
     store: supabaseQuoteStore,
   });
   if (result.status === 200 && result.body.id) {
-    const extractedField = form.get("extractedCompanyName");
+    // The extracted name is always the server's reading of the PDF analysed in
+    // this request. A client value is never stored as "extracted", so a name
+    // confirmed for an earlier upload cannot overwrite what this PDF says.
     const confirmedField = form.get("confirmedCompanyName");
     await saveQuoteCompanyNames({
       analysisId: result.body.id,
       userId: user.id,
-      extracted:
-        typeof extractedField === "string"
-          ? extractedField
-          : (result.body.companyName ?? null),
+      extracted: result.body.companyName ?? null,
       ...(typeof confirmedField === "string"
         ? { confirmed: normalizeQuoteCompanyName(confirmedField) }
         : {}),
