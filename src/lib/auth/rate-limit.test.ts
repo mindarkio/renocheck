@@ -1,5 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.hoisted(() => vi.fn());
@@ -359,5 +359,27 @@ describe("auth rate limit migration", () => {
       "drop function if exists public.take_auth_rate_limit(text, integer, integer, integer)",
     );
     expect(rollback).toContain("drop table if exists public.auth_otp_rate_limits");
+  });
+
+  it("redefines the functions without schema-qualified LEAST or GREATEST", () => {
+    // LEAST/GREATEST/COALESCE/NULLIF are SQL syntax, not pg_catalog functions:
+    // `pg_catalog.least(...)` raises 42883 on every call (the 2026-10-28 OTP 503).
+    const dir = "supabase/migrations";
+    const fixName = "20261028120000_fix_schema_qualified_least_greatest.sql";
+    const stripComments = (sql: string) => sql.replace(/--[^\n]*/g, "");
+    const fix = stripComments(readFileSync(`${dir}/${fixName}`, "utf8"));
+    for (const name of [
+      "take_auth_rate_limit",
+      "begin_quote_analysis",
+      "finish_quote_analysis",
+    ]) {
+      expect(fix).toContain(`create or replace function public.${name}(`);
+    }
+    expect(fix).toContain("v_cap := least(p_max_rows, 5000);");
+    for (const name of readdirSync(dir).filter((file) => file >= fixName)) {
+      expect(stripComments(readFileSync(`${dir}/${name}`, "utf8"))).not.toMatch(
+        /pg_catalog\.(least|greatest|coalesce|nullif)\s*\(/i,
+      );
+    }
   });
 });

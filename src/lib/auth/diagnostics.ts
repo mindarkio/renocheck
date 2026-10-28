@@ -7,9 +7,16 @@ import "server-only";
 
 const MAX_LOG_TEXT = 240;
 
+const URL_TEXT = /\b[a-z][a-z0-9+.-]*:\/\/\S+/gi;
 const SB_KEY = /\bsb_[A-Za-z0-9_-]+/g;
 const JWT = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
-const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+/**
+ * Any token with an @. normalizeLoginEmail accepts any non-space local part and
+ * non-ASCII domains, and GoTrue can echo the address back in its message.
+ */
+const EMAIL = /\S*@\S*/g;
+const IPV4 = /\b\d{1,3}(?:\.\d{1,3}){3}\b/g;
+const IPV6 = /\b[0-9a-f]{1,4}(?::[0-9a-f]{0,4}){2,7}\b/gi;
 const HEX_BUCKET = /\b[0-9a-f]{32,}\b/gi;
 const BEARER = /bearer\s+\S+/gi;
 
@@ -33,10 +40,13 @@ export type AuthLogFields = Record<string, string | boolean>;
 /** Strip values that must never reach production logs. Idempotent. */
 export function redactAuthLogText(value: string): string {
   const cleaned = value
+    .replace(URL_TEXT, "[url]")
     .replace(SB_KEY, "[redacted]")
     .replace(JWT, "[redacted]")
     .replace(EMAIL, "[redacted]")
     .replace(HEX_BUCKET, "[redacted]")
+    .replace(IPV4, "[ip]")
+    .replace(IPV6, "[ip]")
     .replace(BEARER, "Bearer [redacted]")
     .replace(/[\r\n\t]+/g, " ")
     .trim();

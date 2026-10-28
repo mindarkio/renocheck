@@ -48,6 +48,47 @@ describe("auth diagnostics", () => {
     expect(line).not.toContain("token");
   });
 
+  it("redacts any address GoTrue echoes, plus IPs and URLs", () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    const echoed = [
+      "用戶@例子.香港",
+      "o'neil.synthetic@example.com",
+      "a!b#c@example.test",
+      "person@example.com",
+    ];
+    for (const email of echoed) {
+      logAuthOtpSendFailed({
+        code: "email_address_invalid",
+        message: `Email address "${email}" is invalid`,
+      });
+    }
+    logAuthOtpSendFailed({
+      code: "",
+      message:
+        "TypeError: Failed to parse URL from https://synthetic-ref.supabase.co/auth/v1/otp from 203.0.113.9 and 2001:db8:85a3::8a2e:370:7334",
+    });
+    const logged = errorLog.mock.calls.map((call) => String(call[0])).join("\n");
+    for (const email of echoed) {
+      expect(logged).not.toContain(email);
+      expect(logged).not.toContain(email.split("@")[0]);
+    }
+    expect(logged).toContain('"message":"Email address [redacted] is invalid"');
+    expect(logged).not.toContain("synthetic-ref");
+    expect(logged).not.toContain("203.0.113.9");
+    expect(logged).not.toContain("2001:db8");
+    expect(logged).toContain("[url]");
+    expect(logged).toContain("[ip]");
+    expect(redactAuthLogText("Authorization: Bearer opaque-synthetic-token")).toBe(
+      "Authorization: Bearer [redacted]",
+    );
+    const long = redactAuthLogText("x".repeat(1_000));
+    expect(long).toHaveLength(243);
+    expect(long.endsWith("...")).toBe(true);
+    expect(redactAuthLogText("function pg_catalog.least(integer, integer) does not exist")).toBe(
+      "function pg_catalog.least(integer, integer) does not exist",
+    );
+  });
+
   it("reports service-role key shape as booleans", () => {
     const secret = "sb_secret_syntheticexamplekeyvalue";
     const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.sig";
