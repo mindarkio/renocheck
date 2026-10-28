@@ -44,7 +44,7 @@ describe("account page when signed out", () => {
     expect(document.querySelector("a[href='/login?next=/account']")).toBeTruthy();
   });
 
-  it("puts the upload action above a de-emphasised delete zone when signed in", async () => {
+  it("shows the upload action and not the delete form when signed in", async () => {
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
     vi.stubEnv("AZURE_OPENAI_ENDPOINT", "https://quote.example.invalid");
     vi.stubEnv("AZURE_OPENAI_API_KEY", "test-not-a-key");
@@ -56,12 +56,8 @@ describe("account page when signed out", () => {
     render(await AccountPage());
     const upload = screen.getByRole("link", { name: ACCOUNT_UPLOAD_ACTION_ZH });
     expect(upload.getAttribute("href")).toBe("/quote/upload");
-    const danger = screen.getByRole("heading", { name: ACCOUNT_DELETE_HEADING_ZH });
-    expect(danger.className).toContain("text-muted-foreground");
-    expect(upload.compareDocumentPosition(danger) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-    expect(screen.queryByRole("link", { name: ACCOUNT_UPLOAD_ACTION_ZH })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: ACCOUNT_DELETE_HEADING_ZH })).toBeNull();
+    expect(screen.queryByLabelText("請輸入「刪除」確認。")).toBeNull();
   });
 
   it("hides the upload action when analysis is not configured", async () => {
@@ -72,6 +68,6 @@ describe("account page when signed out", () => {
     });
     render(await AccountPage());
     expect(screen.queryByRole("link", { name: ACCOUNT_UPLOAD_ACTION_ZH })).toBeNull();
-    expect(screen.getByRole("heading", { name: ACCOUNT_DELETE_HEADING_ZH })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: ACCOUNT_DELETE_HEADING_ZH })).toBeNull();
   });
 });

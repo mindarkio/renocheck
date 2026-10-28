@@ -89,11 +89,14 @@ describe("quote upload before login", () => {
 
   it("asks for the PDF again after a reload and does not keep the file", async () => {
     sessionStorage.setItem(QUOTE_FILE_PENDING_KEY, "1");
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    const urls: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      urls.push(url);
+      return new Response("{}", { status: 200 });
+    });
     render(<QuoteAnalysisForm signedIn={false} />);
     expect(await screen.findByText(QUOTE_FILE_RESELECT_ZH)).toBeTruthy();
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(urls.some((url) => url.includes("/api/quote/analyze"))).toBe(false);
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.getItem(QUOTE_FILE_PENDING_KEY)).toBe("1");
   });

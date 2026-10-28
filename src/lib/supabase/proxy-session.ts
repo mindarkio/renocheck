@@ -8,6 +8,7 @@ import { supabaseAuthCookieOptions } from "@/lib/supabase/auth-cookie";
 export function isAuthSessionPath(path: string): boolean {
   return (
     path === "/account" ||
+    path.startsWith("/account/") ||
     path === "/login" ||
     path === "/quote/upload" ||
     path.startsWith("/quote/analyses/")
@@ -20,7 +21,7 @@ export function isAuthSessionPath(path: string): boolean {
  * /account and /login still refresh: account deletion stays available.
  */
 export function shouldRefreshAuthSession(path: string): boolean {
-  if (path === "/account" || path === "/login") return true;
+  if (path === "/account" || path.startsWith("/account/") || path === "/login") return true;
   if (path === "/quote/upload" || path.startsWith("/quote/analyses/")) {
     return isQuoteAnalysisFlagOn();
   }

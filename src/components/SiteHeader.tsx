@@ -15,7 +15,7 @@ import {
   focusRingClass,
   focusRingOnPrimaryClass,
 } from "@/lib/focus-ring";
-import { HEADER_UPLOAD_ZH } from "@/lib/quote-analysis/copy";
+import { ACCOUNT_DELETE_HEADING_ZH, HEADER_UPLOAD_ZH } from "@/lib/quote-analysis/copy";
 import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
 
 const HOME_NAV = [
@@ -29,16 +29,20 @@ const HOME_NAV = [
 
 type NavItem = { href: string; label: string; desktopClass?: string };
 
-function buildNav(upload: boolean): NavItem[] {
+function buildNav(upload: boolean, signedIn: boolean): NavItem[] {
   const items: NavItem[] = HOME_NAV.map((item) => ({ href: item.href, label: item.label }));
-  if (!upload) return items;
-  const quoteAt = items.findIndex((item) => item.href === "/quote");
-  items.splice(quoteAt + 1, 0, {
-    href: "/quote/upload",
-    label: HEADER_UPLOAD_ZH,
-    // Hidden below lg so the existing row does not overflow. The phone sheet still lists it.
-    desktopClass: "hidden lg:inline-flex",
-  });
+  if (upload) {
+    const quoteAt = items.findIndex((item) => item.href === "/quote");
+    items.splice(quoteAt + 1, 0, {
+      href: "/quote/upload",
+      label: HEADER_UPLOAD_ZH,
+      // Hidden below lg so the existing row does not overflow. The phone sheet still lists it.
+      desktopClass: "hidden lg:inline-flex",
+    });
+  }
+  if (signedIn) {
+    items.push({ href: "/account/delete", label: ACCOUNT_DELETE_HEADING_ZH });
+  }
   return items;
 }
 
@@ -50,22 +54,29 @@ function currentHref(pathname: string, hrefs: readonly string[]): string | null 
   return matches[0] ?? null;
 }
 
-function useQuoteUploadNav(): boolean {
-  const [enabled, setEnabled] = useState(false);
+function useHeaderFlags(): { upload: boolean; signedIn: boolean } {
+  const [upload, setUpload] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
     if (typeof fetch !== "function") return;
     let cancelled = false;
     fetch("/api/quote/availability")
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { enabled?: boolean } | null) => {
-        if (!cancelled && data?.enabled === true) setEnabled(true);
+        if (!cancelled && data?.enabled === true) setUpload(true);
+      })
+      .catch(() => {});
+    fetch("/api/auth/session")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { signedIn?: boolean } | null) => {
+        if (!cancelled && data?.signedIn === true) setSignedIn(true);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, []);
-  return enabled;
+  return { upload, signedIn };
 }
 
 /** Solid navy on the page. See `focusRingClass`. */
@@ -257,7 +268,8 @@ export function SiteHeader() {
   const pathname = usePathname();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const { menuOpen, setMenuOpen, closeMenu } = useMobileNavMenu(menuButtonRef, pathname);
-  const navItems = buildNav(useQuoteUploadNav());
+  const flags = useHeaderFlags();
+  const navItems = buildNav(flags.upload, flags.signedIn);
 
   // Segment match only: /administrator or /admin-foo are public (404) paths and keep the header.
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return null;

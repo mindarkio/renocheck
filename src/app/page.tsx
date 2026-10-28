@@ -1,20 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
-import { LandingChoices, FocusCompanySearchOnHash } from "@/components/LandingChoices";
 import { LandingStats } from "@/components/LandingStats";
-import { marketingPageShellClass } from "@/components/ContentPage";
+import {
+  marketingPageInnerClass,
+  marketingPageShellClass,
+} from "@/components/ContentPage";
 import { SearchForm } from "@/components/SearchForm";
 import { ServiceBanner } from "@/components/ServiceBanner";
 import { getLandingPublicStats } from "@/lib/landing-public-stats";
 import { JsonLd } from "@/components/JsonLd";
 import { getSiteUrl } from "@/lib/site-url";
 import { BRAND_TAGLINE_LINES } from "@/lib/constants";
+import { HOME_QUOTE_UPLOAD_LINK_ZH } from "@/lib/quote-analysis/copy";
+import { isQuoteUploadOpen } from "@/lib/quote-analysis/availability";
 import { contentLinkClass } from "@/lib/ui-surfaces";
 import type { Metadata } from "next";
 import { HOME_DESCRIPTION, pageMetadata } from "@/lib/site-metadata";
 import { buildSiteJsonLd } from "@/lib/site-jsonld";
-import { isQuoteUploadOpen } from "@/lib/quote-analysis/availability";
 import { getServiceStatus } from "@/lib/service-status";
 
 export const metadata: Metadata = pageMetadata({
@@ -37,12 +40,9 @@ export default async function Home() {
       className={`relative items-center justify-start ${marketingPageShellClass}`}
     >
       <JsonLd data={jsonLd} />
-      <div className="flex w-full max-w-3xl flex-col items-center">
+      <div className={`flex flex-col items-center ${marketingPageInnerClass}`}>
         <h1 className="sr-only">香港裝修公司風險參考搜尋</h1>
-        <Link
-          href="/"
-          className="mb-6 rounded-lg sm:mb-8"
-        >
+        <Link href="/" className="mb-6 rounded-lg sm:mb-8">
           <Image
             src="/logo/lockup-stacked.svg"
             alt="Renocheck 裝修點評"
@@ -53,34 +53,28 @@ export default async function Home() {
           />
         </Link>
         <div className="mb-8 max-w-md text-center sm:mb-10">
-          <p
-            className="text-sm font-normal leading-snug tracking-wide text-muted-foreground sm:text-[0.9375rem]"
-          >
+          <p className="text-sm font-normal leading-snug tracking-wide text-muted-foreground sm:text-[0.9375rem]">
             {BRAND_TAGLINE_LINES[0]}
           </p>
-          <p
-            className="mt-2.5 text-lg font-semibold leading-snug text-primary sm:mt-3 sm:text-xl sm:leading-tight"
-          >
+          <p className="mt-2.5 text-lg font-semibold leading-snug text-primary sm:mt-3 sm:text-xl sm:leading-tight">
             {BRAND_TAGLINE_LINES[1]}
           </p>
         </div>
-        <LandingChoices quoteOpen={quoteOpen} />
-        <FocusCompanySearchOnHash />
         {paused ? <ServiceBanner /> : null}
-        <div id="company-search" className="w-full max-w-[584px] scroll-mt-24">
-          <SearchForm variant="landing" paused={paused} />
-        </div>
-        <p className="mt-5 text-center text-sm">
-          <Link
-            href="/quote"
-            className={`${contentLinkClass} inline-flex min-h-11 items-center px-2`}
-          >
-            報價自查清單
-          </Link>
-        </p>
+        <SearchForm variant="landing" paused={paused} />
+        {quoteOpen ? (
+          <p className="mt-4 text-center text-sm">
+            <Link
+              href="/quote/upload"
+              className={`${contentLinkClass} inline-flex min-h-11 items-center px-2`}
+            >
+              {HOME_QUOTE_UPLOAD_LINK_ZH}
+            </Link>
+          </p>
+        ) : null}
       </div>
       {landingStats ? (
-        <div className="mt-10 w-full max-w-[584px]">
+        <div className="absolute inset-x-4 bottom-2 mx-auto min-w-0 max-w-[584px] sm:bottom-3">
           <LandingStats stats={landingStats} />
         </div>
       ) : null}

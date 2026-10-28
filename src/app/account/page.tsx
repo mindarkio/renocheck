@@ -11,9 +11,7 @@ import {
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import { isQuoteUploadOpen } from "@/lib/quote-analysis/availability";
 import {
-  ACCOUNT_DELETE_BODY_ZH,
   ACCOUNT_DELETE_CLOSED_ZH,
-  ACCOUNT_DELETE_HEADING_ZH,
   ACCOUNT_EMAIL_LABEL_ZH,
   ACCOUNT_SIGNED_OUT_PROMPT_ZH,
   ACCOUNT_SIGN_IN_LINK_ZH,
@@ -59,15 +57,6 @@ export default async function AccountPage() {
               </div>
             ) : null}
             <AccountActions part="session" />
-            <section className="mt-16 border-t border-border pt-6" aria-label={ACCOUNT_DELETE_HEADING_ZH}>
-              <h2 className="text-sm font-medium text-muted-foreground">
-                {ACCOUNT_DELETE_HEADING_ZH}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {ACCOUNT_DELETE_BODY_ZH}
-              </p>
-              <AccountActions part="danger" />
-            </section>
           </>
         ) : (
           <>

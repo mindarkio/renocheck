@@ -23,7 +23,9 @@ describe("quote acknowledgement", () => {
     const form = screen.getByRole("button", { name: "開始分析" }).closest("form");
     expect(form).toBeTruthy();
     fireEvent.submit(form!);
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(
+      fetchSpy.mock.calls.some((call) => String(call[0]).includes("/api/quote/analyze")),
+    ).toBe(false);
     expect(screen.getByRole("alert").textContent).toContain("請先剔選");
   });
 });

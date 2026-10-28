@@ -14,6 +14,7 @@ import {
   QUOTE_COMPANY_MISSING_ZH,
   QUOTE_COMPANY_NEED_NAME_ZH,
   QUOTE_COMPANY_RESULT_HEADING_ZH,
+  QUOTE_SEAL_EXPIRED_ZH,
   quoteCompanyFoundZh,
 } from "@/lib/quote-analysis/copy";
 import { COMPANY_NAME_MAX_LENGTH, type RiskReport } from "@/lib/report-schema";
@@ -69,18 +70,31 @@ function isRiskReport(value: unknown): value is RiskReport {
 const fieldClass =
   "mt-1 w-full min-h-11 rounded-lg border border-border bg-background px-3 text-base text-foreground";
 
-export function QuoteCompanyConfirm({ analysisId }: { analysisId: string }) {
+const UNKNOWN_NAME = "\u0001";
+const PENDING_NAME = "\u0000";
+
+export function QuoteCompanyConfirm({
+  analysisId,
+  extractedFromServer,
+}: {
+  analysisId: string;
+  /** Undefined when this view does not know whether a name was extracted. */
+  extractedFromServer?: string | null;
+}) {
   const storedName = useSyncExternalStore(
     () => () => {},
     () => {
       const held = readQuoteCompanyName(analysisId);
-      return held.present && held.name ? held.name : "";
+      if (held.present) return held.name ?? "";
+      if (extractedFromServer === undefined) return UNKNOWN_NAME;
+      return extractedFromServer ?? "";
     },
-    () => "\u0000",
+    () => PENDING_NAME,
   );
   const [draft, setDraft] = useState<string | null>(null);
-  const name = draft ?? (storedName === "\u0000" ? "" : storedName);
-  const extracted = storedName === "\u0000" ? null : storedName || null;
+  const known = storedName !== PENDING_NAME && storedName !== UNKNOWN_NAME;
+  const name = draft ?? (known ? storedName : "");
+  const extracted = known && storedName ? storedName : null;
   const [message, setMessage] = useState<string | null>(null);
   const [notice, setNotice] = useState<NameNotice | null>(null);
   const [panel, setPanel] = useState<MatchPanel | null>(null);
@@ -95,8 +109,21 @@ export function QuoteCompanyConfirm({ analysisId }: { analysisId: string }) {
     setMessage(null);
   }
 
+  async function rememberConfirmed(companyName: string) {
+    try {
+      await fetch("/api/quote/company-name", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ analysisId, companyName }),
+      });
+    } catch {
+      // The search still runs. A missing column is not a search failure.
+    }
+  }
+
   async function runReport(body: SearchBody) {
     if (reportInFlight.current) return;
+    await rememberConfirmed(body.companyName);
     reportInFlight.current = true;
     setProgressStartedAt(Date.now());
     setMessage(null);
@@ -137,6 +164,7 @@ export function QuoteCompanyConfirm({ analysisId }: { analysisId: string }) {
   }
 
   async function previewRegister(companyName: string) {
+    await rememberConfirmed(companyName);
     setRegisterLoading(true);
     setNotice(null);
     setPanel(null);
@@ -226,6 +254,9 @@ export function QuoteCompanyConfirm({ analysisId }: { analysisId: string }) {
         }}
         className="space-y-3"
       >
+        {storedName === UNKNOWN_NAME ? (
+          <p className="text-sm leading-relaxed text-foreground">{QUOTE_SEAL_EXPIRED_ZH}</p>
+        ) : null}
         {extracted ? (
           <p className="text-sm leading-relaxed text-foreground">{quoteCompanyFoundZh(extracted)}</p>
         ) : storedName === "" ? (

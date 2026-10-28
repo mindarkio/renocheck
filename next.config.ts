@@ -46,6 +46,7 @@ const nextConfig: NextConfig = {
       ...[
         "/quote/analyses/:path*",
         "/account",
+        "/account/:path*",
         "/login",
         "/quote/upload",
         "/api/auth/:path*",

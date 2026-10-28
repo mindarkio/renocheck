@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { clientIp, sameOrigin } from "@/lib/request-guards";
 import { isQuoteAnalysisAvailable } from "@/lib/quote-analysis/config";
+import { saveQuoteCompanyNames } from "@/lib/quote-analysis/company-names";
 import {
   QUOTE_AUTH_REQUIRED_ZH,
   QUOTE_PDF_SIZE_ZH,
   QUOTE_PDF_TYPE_ZH,
   QUOTE_UNAVAILABLE_API_ZH,
 } from "@/lib/quote-analysis/copy";
+import { runAnonymousQuoteAnalysis } from "@/lib/quote-analysis/anonymous-run";
 import { completeQuotePdf } from "@/lib/quote-analysis/provider";
 import { runQuoteAnalysis } from "@/lib/quote-analysis/run";
+import { quoteSealKey } from "@/lib/quote-analysis/seal";
 import { supabaseQuoteStore } from "@/lib/quote-analysis/store";
 import { getAuthUser } from "@/lib/supabase/server";
 
@@ -30,7 +33,7 @@ export async function POST(req: Request) {
     );
   }
   const user = await getAuthUser();
-  if (!user) {
+  if (!user && !quoteSealKey()) {
     return NextResponse.json(
       { error: "auth_required", message: QUOTE_AUTH_REQUIRED_ZH },
       { status: 401 },
@@ -68,14 +71,33 @@ export async function POST(req: Request) {
   const bytes =
     file instanceof File ? new Uint8Array(await file.arrayBuffer()) : null;
   const mediaType = file instanceof File ? file.type : "";
+  const acknowledged = form.get("acknowledged") === "1";
+  const ip = clientIp(req);
+  if (!user) {
+    const anonymous = await runAnonymousQuoteAnalysis({
+      acknowledged,
+      mediaType,
+      bytes,
+      ip,
+      model: (pdf) => completeQuotePdf(pdf),
+    });
+    return NextResponse.json(anonymous.body, { status: anonymous.status });
+  }
   const result = await runQuoteAnalysis({
     userId: user.id,
-    acknowledged: form.get("acknowledged") === "1",
+    acknowledged,
     mediaType,
     bytes,
-    ip: clientIp(req),
+    ip,
     model: (pdf) => completeQuotePdf(pdf),
     store: supabaseQuoteStore,
   });
+  if (result.status === 200 && result.body.id) {
+    await saveQuoteCompanyNames({
+      analysisId: result.body.id,
+      userId: user.id,
+      extracted: result.body.companyName ?? null,
+    });
+  }
   return NextResponse.json(result.body, { status: result.status });
 }

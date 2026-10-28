@@ -103,6 +103,19 @@ export function quoteFreeDailyBudgetMicroUsd(
   return usdToMicro(env.QUOTE_FREE_DAILY_BUDGET_USD, QUOTE_DEFAULT_FREE_DAILY_BUDGET_USD);
 }
 
+/** Anonymous analyses per IP per Hong Kong day. Zero blocks. The RPC refuses limits above 100. */
+export const QUOTE_DEFAULT_ANON_DAILY_LIMIT = 2;
+
+export function quoteAnonDailyLimit(
+  env: Record<string, string | undefined> = process.env,
+): number {
+  const raw = env.QUOTE_ANON_DAILY_LIMIT?.trim();
+  if (!raw) return QUOTE_DEFAULT_ANON_DAILY_LIMIT;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) return QUOTE_DEFAULT_ANON_DAILY_LIMIT;
+  return Math.min(value, 100);
+}
+
 /** `QUOTE_DAILY_CALL_CAP`. Missing, non-integer, or negative falls back to 300. Zero blocks. */
 export function quoteDailyCallCap(
   env: Record<string, string | undefined> = process.env,

@@ -25,6 +25,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       : null,
 }));
 
+import { resetQuoteAvailabilityCacheForTests } from "@/lib/quote-analysis/availability";
 import { GET } from "./route";
 
 function enableAzure() {
@@ -38,26 +39,27 @@ describe("GET /api/quote/availability", () => {
   afterEach(() => {
     state.admin = true;
     state.row = null;
+    resetQuoteAvailabilityCacheForTests();
     vi.unstubAllEnvs();
   });
 
   it("is closed when the flag is off", async () => {
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "0");
     const res = await GET();
-    expect(await res.json()).toEqual({ enabled: false });
+    expect(await res.json()).toEqual({ enabled: false, anonymous: false });
   });
 
   it("is open when configured and the daily budget still has room", async () => {
     enableAzure();
     state.row = { spent_micro_usd: 0, reserved_micro_usd: 0, calls: 0 };
     const res = await GET();
-    expect(await res.json()).toEqual({ enabled: true });
+    expect(await res.json()).toEqual({ enabled: true, anonymous: false });
   });
 
   it("is closed when the shared daily budget is full", async () => {
     enableAzure();
     state.row = { spent_micro_usd: 800_000, reserved_micro_usd: 0, calls: 0 };
     const res = await GET();
-    expect(await res.json()).toEqual({ enabled: false });
+    expect(await res.json()).toEqual({ enabled: false, anonymous: false });
   });
 });

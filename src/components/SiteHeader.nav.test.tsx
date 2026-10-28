@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { HEADER_UPLOAD_ZH } from "@/lib/quote-analysis/copy";
+import { ACCOUNT_DELETE_HEADING_ZH, HEADER_UPLOAD_ZH } from "@/lib/quote-analysis/copy";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
 import { SiteHeader } from "./SiteHeader";
@@ -270,5 +270,29 @@ describe("SiteHeader upload link", () => {
     const mobile = dialogLinks().find((anchor) => anchor.getAttribute("href") === "/quote/upload");
     expect(mobile?.textContent).toBe(HEADER_UPLOAD_ZH);
     expect(dialogLinks()).toHaveLength(7);
+    expect(screen.queryByRole("link", { name: ACCOUNT_DELETE_HEADING_ZH })).toBeNull();
+  });
+
+  it("shows delete-account in the menu only when signed in", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        new Response(
+          JSON.stringify(
+            String(url).includes("/api/auth/session")
+              ? { signedIn: true }
+              : { enabled: false },
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
+    render(<SiteHeader />);
+    const link = await screen.findByRole("link", { name: ACCOUNT_DELETE_HEADING_ZH });
+    expect(link.getAttribute("href")).toBe("/account/delete");
+    openMenu();
+    expect(
+      dialogLinks().some((anchor) => anchor.getAttribute("href") === "/account/delete"),
+    ).toBe(true);
   });
 });

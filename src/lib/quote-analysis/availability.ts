@@ -44,15 +44,17 @@ export function quoteBudgetIsFull(
   );
 }
 
-/**
- * Flag, Azure config, and the shared daily budget.
- * If the spend row cannot be read, stay open when the feature is configured.
- * The analyse route still enforces the cap.
- */
-export async function isQuoteUploadOpen(
-  env: Record<string, string | undefined> = process.env,
+const BUDGET_CACHE_MS = 45_000;
+
+let budgetCache: { at: number; open: boolean } | null = null;
+
+export function resetQuoteAvailabilityCacheForTests(): void {
+  budgetCache = null;
+}
+
+async function readBudgetOpen(
+  env: Record<string, string | undefined>,
 ): Promise<boolean> {
-  if (!isQuoteAnalysisAvailable(env)) return false;
   const admin = getSupabaseAdmin();
   if (!admin) return true;
   try {
@@ -70,4 +72,21 @@ export async function isQuoteUploadOpen(
   } catch {
     return true;
   }
+}
+
+/**
+ * Flag, Azure config, and the shared daily budget.
+ * The spend read is cached for 45s because the header calls this on every page.
+ * If the spend row cannot be read, stay open when the feature is configured.
+ * The analyse route still enforces the cap on a fresh read.
+ */
+export async function isQuoteUploadOpen(
+  env: Record<string, string | undefined> = process.env,
+  now = Date.now(),
+): Promise<boolean> {
+  if (!isQuoteAnalysisAvailable(env)) return false;
+  if (budgetCache && now - budgetCache.at < BUDGET_CACHE_MS) return budgetCache.open;
+  const open = await readBudgetOpen(env);
+  budgetCache = { at: now, open };
+  return open;
 }

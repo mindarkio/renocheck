@@ -67,6 +67,20 @@ describe("quote analysis parser", () => {
     expect(parsed).toEqual({ kind: "not_quotation" });
   });
 
+  it("strips bidi overrides, isolates, and zero-width characters from the company name", () => {
+    const parsed = parseQuoteModelObject(
+      {
+        isQuotation: true,
+        companyName: "合成\u202e測試\u200b工程\u2066有限公司\n",
+        items: [],
+      },
+      ids,
+    );
+    expect(parsed.kind).toBe("quotation");
+    if (parsed.kind !== "quotation") return;
+    expect(parsed.companyName).toBe("合成測試工程有限公司");
+  });
+
   it("returns the company name without putting it on a checklist row", () => {
     const parsed = parseQuoteModelObject(
       {

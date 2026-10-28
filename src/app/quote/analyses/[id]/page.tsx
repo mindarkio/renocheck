@@ -82,14 +82,33 @@ export default async function QuoteAnalysisResultPage({ params }: PageProps) {
   const id = rawId.toLowerCase();
   const user = UUID_RE.test(id) ? await getAuthUser() : null;
   const supabase = user ? await createSupabaseServerClient() : null;
-  const loaded = supabase
-    ? await supabase
+  let items: StoredQuoteItem[] | null = null;
+  let extractedFromServer: string | null | undefined;
+  if (supabase) {
+    const withName = await supabase
+      .from("quote_analyses")
+      .select("items, extracted_company_name")
+      .eq("id", id)
+      .maybeSingle();
+    if (!withName.error && withName.data) {
+      items = readItems(withName.data.items);
+      const record = withName.data as { extracted_company_name?: unknown };
+      extractedFromServer =
+        "extracted_company_name" in record
+          ? typeof record.extracted_company_name === "string"
+            ? record.extracted_company_name
+            : null
+          : undefined;
+    } else {
+      const itemsOnly = await supabase
         .from("quote_analyses")
         .select("items")
         .eq("id", id)
-        .maybeSingle()
-    : { data: null };
-  const items = loaded.data ? readItems(loaded.data.items) : null;
+        .maybeSingle();
+      items = itemsOnly.data ? readItems(itemsOnly.data.items) : null;
+      extractedFromServer = undefined;
+    }
+  }
   const mark = new Map(QUOTE_STATUS_OPTIONS.map((option) => [option.id, option.mark]));
 
   return (
@@ -98,7 +117,7 @@ export default async function QuoteAnalysisResultPage({ params }: PageProps) {
         <ContentPageTitle>{QUOTE_RESULT_TITLE_ZH}</ContentPageTitle>
         {items ? (
           <>
-            <QuoteCompanyConfirm analysisId={id} />
+            <QuoteCompanyConfirm analysisId={id} extractedFromServer={extractedFromServer} />
             <div className="mt-10">
               <ContentPageLead>{QUOTE_RESULT_LEAD_ZH}</ContentPageLead>
             </div>

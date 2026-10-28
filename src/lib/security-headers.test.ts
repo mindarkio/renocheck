@@ -29,6 +29,7 @@ const PRODUCTION_DIRECTIVES = [
 const PRIVATE_HEADER_RULES = [
   "/quote/analyses/:path*",
   "/account",
+  "/account/:path*",
   "/login",
   "/quote/upload",
   "/api/auth/:path*",

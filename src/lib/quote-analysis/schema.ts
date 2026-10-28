@@ -35,16 +35,14 @@ export type ParsedQuoteModel =
   | { kind: "quotation"; items: StoredQuoteItem[]; companyName: string | null }
   | { kind: "invalid" };
 
+/** Control chars, bidi overrides/isolates, and zero-width characters. */
+const COMPANY_NAME_STRIP =
+  /[\u0000-\u001f\u007f\u200b-\u200d\u202a-\u202e\u2060\u2066-\u2069\ufeff]/gu;
+
 /** Company name for the current response only. Not written onto stored checklist rows. */
 export function normalizeQuoteCompanyName(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  let text = "";
-  for (const char of value) {
-    const code = char.codePointAt(0) ?? 0;
-    if (code <= 0x1f || code === 0x7f) continue;
-    text += char;
-  }
-  text = text.replace(/\s+/g, " ").trim();
+  const text = value.replace(COMPANY_NAME_STRIP, "").replace(/\s+/gu, " ").trim();
   if (!text) return null;
   const chars = Array.from(text);
   if (chars.length <= COMPANY_NAME_MAX_LENGTH) return text;

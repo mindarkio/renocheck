@@ -65,9 +65,13 @@ describe("quote company confirm", () => {
     expect(bodies).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: QUOTE_COMPANY_CONFIRM_ZH }));
     expect(await screen.findByRole("heading", { name: QUOTE_COMPANY_RESULT_HEADING_ZH })).toBeTruthy();
-    expect(bodies[0]).toEqual({ preview: "register", companyName: COMPANY });
-    expect(bodies[1]?.companyName).toBe(COMPANY);
-    expect(bodies[1]?.preview).toBeUndefined();
+    expect(bodies[0]).toEqual({ analysisId: ID, companyName: COMPANY });
+    expect(bodies.find((body) => body.preview === "register")).toEqual({
+      preview: "register",
+      companyName: COMPANY,
+    });
+    const report = bodies.find((body) => body.preview == null && body.companyName === COMPANY && !body.analysisId);
+    expect(report?.companyName).toBe(COMPANY);
     const stored = Object.values(localStorage);
     expect(stored.some((value) => String(value).includes(COMPANY))).toBe(false);
     expect(sessionStorage.length).toBe(0);
@@ -104,7 +108,10 @@ describe("quote company confirm", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: QUOTE_COMPANY_CONFIRM_ZH }));
     expect(await screen.findByRole("heading", { name: "請輸入公司全名" })).toBeTruthy();
-    expect(bodies).toEqual([{ preview: "register", companyName: "合成號" }]);
+    expect(bodies).toEqual([
+      { analysisId: ID, companyName: "合成號" },
+      { preview: "register", companyName: "合成號" },
+    ]);
   });
 
   it("does not search an empty name", () => {
