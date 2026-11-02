@@ -65,7 +65,7 @@ describe("quote analysis copy and flag", () => {
 
   it("keeps the trimmed upload-page copy plus full-analysis disclosure verbatim (approved 2026-11-02)", () => {
     expect(QUOTE_UPLOAD_NOTICE_ZH).toBe(
-      "驗證電郵前，PDF 檔案只會交由 Microsoft Azure OpenAI 讀取公司名稱，RenoCheck 不會儲存原檔。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。公司名稱將與分析結果一併保存，個人資料則不會保存。已登入或完成電郵驗證後，PDF 會交由 Microsoft Azure OpenAI（資源位於南韓中部）進行完整報價分析。",
+      "驗證電郵前，PDF 檔案只會交由 Microsoft Azure OpenAI 讀取公司名稱，RenoCheck 不會儲存原檔。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。公司名稱將與分析結果一併保存，個人資料則不會保存。已登入或完成電郵驗證後，PDF 會交由 Microsoft Azure OpenAI（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）進行完整報價分析。",
     );
     expect(QUOTE_PICK_FIRST_ZH).toBe("請先選擇 PDF 檔案。");
   });
