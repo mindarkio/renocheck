@@ -96,8 +96,9 @@ RenoCheck cannot delete Microsoft's copy after send. The DRAFT consent says that
 | Logged-out company-name extraction | Not stored | Before email verification the server sends the PDF only to read the company name. No checklist is produced and no `quote_analyses` row is written. Personal data is not stored. |
 | Company search after the user confirms the name | `search_cache` and `search_events` | The same path as any other company search. The search result is shown before verification and is not gated on an account. |
 | `report_feedback` | **12 months** (locked for feedback) | Daily purge. F1 adds `/api/cron/purge-feedback`. Aaron applies M1 himself |
-| `quote_usage` | Plan default 30 days — not separately locked in the F0 brief | Later purge |
-| `quote_analyses` (anonymised result, no evidence text) | Plan default 180 days | Later purge |
+| `quote_spend_daily` (global daily spend and call counts, no per-user columns; the planned per-attempt `quote_usage` table was not built) | 30 Hong Kong days | Daily purge: `public.purge_quote_analysis_retention()`, called by Vercel Cron at 18:25 UTC via `GET /api/cron/purge-quote-analysis` (`src/lib/quote-analysis/retention-store.ts`) |
+| `quote_analyses` and `quote_analysis_claims` (anonymised result, no evidence text, plus the stored company names) | 180 days, or account deletion if earlier (`on delete cascade`) | The same daily purge deletes analyses and claims older than 180 days |
+| Signed-out name-reading daily counter (`auth_otp_rate_limits`) | Until the next Hong Kong midnight | One row per network per HKT day: an IPv4 address, or an IPv6 /64. The row holds only `HMAC_SHA256(AUTH_RATE_LIMIT_SECRET, "quote-anon:" + day_hkt + ":" + network)`, a hit count, and `reset_at`. Used only to rate-limit the signed-out step. Expired rows are deleted on the next limiter call and by the same daily purge |
 | `quote_consent_daily` (counts only, no device hash) | Plan default 2 years (D30) | Later |
 | Payment rows | No card data. Expiry of a credit is an open product decision (D13, proposal 30 days) | Airwallex holds payer data under its policy |
 

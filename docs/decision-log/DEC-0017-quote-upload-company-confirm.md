@@ -14,8 +14,10 @@ The extracted company name and the name the user confirms are retained with the 
 | Option | Pros | Cons |
 |--------|------|------|
 | Keep login before the file picker | Session exists before any bytes are chosen | The owner asked for the file first |
-| Upload first, inline OTP, name only in the browser | The file is not sent before auth. The name is not a new database column | A reload drops the file and the extracted name |
-| Store the company name on `quote_analyses` | The result page could reload with the name filled in | The owner said not to retain it. That would need a migration |
+| Upload first, inline OTP, name only in the browser | The full checklist still needs a session | A reload drops the file and the extracted name. *Superseded in part, see the note below.* |
+| Store the company name on `quote_analyses` | The result page could reload with the name filled in | Needs a migration. *Chosen on 2026-10-28, see the note below.* |
+
+**Superseded history.** The first draft of this record said the file was not sent before auth, that the name was not a new database column, and that the owner had said not to retain it. All three no longer hold. On 2026-10-28 Aaron decided that both the extracted and the user-confirmed company names are stored with the analysis, in `quote_analyses.extracted_company_name` and `quote_analyses.confirmed_company_name` (migration `20261028140000`), for 180 days or until account deletion, whichever is earlier. Before email verification the PDF goes to the server and to Azure for name extraction only. That step writes no `quote_analyses` row; its spend is held on the shared daily budget row (migration `20261028150000`).
 
 ## Decision
 
@@ -40,4 +42,5 @@ Remove the confirm step and the `companyName` field, point the default redirect 
 ## Triggers to reconsider
 
 - The owner rejects the proposed privacy sentence.
-- The name needs to survive a reload. That needs an explicit decision to store it, and a migration.
+- The retention of the stored company names (180 days or account deletion) needs to change. That needs a new decision, and a migration if the columns change.
+- *Superseded:* this record first listed "the name needs to survive a reload" as a trigger that would need an explicit decision and a migration. That decision was taken on 2026-10-28 and migration `20261028140000` adds the columns.
