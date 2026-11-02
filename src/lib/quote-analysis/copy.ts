@@ -24,7 +24,7 @@ export const QUOTE_UPLOAD_TITLE_ZH = "上載報價單分析";
 export const QUOTE_UPLOAD_LEAD_ZH =
   "請上載一份 PDF 報價單。驗證電郵前，我們只讀取公司名稱。確認公司名稱後，方會進行公司查冊。完成電郵驗證後，方會按清單檢視報價內容是否列明清楚。本服務不評估價格高低。";
 export const QUOTE_UPLOAD_NOTICE_ZH =
-  "驗證電郵前，PDF 檔案只會交由 Microsoft Azure OpenAI 讀取公司名稱，不會進行報價清單分析，RenoCheck 亦不會儲存原檔。完成電郵驗證後，方會進行完整報價分析。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。公司名稱將與分析結果一併保存，個人資料則不會保存。";
+  "驗證電郵前，PDF 檔案只會交由 Microsoft Azure OpenAI 讀取公司名稱，RenoCheck 不會儲存原檔。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。公司名稱將與分析結果一併保存，個人資料則不會保存。";
 export const QUOTE_ACK_LABEL_ZH =
   "我確認已經遮好報價單上面嘅個人資料，包括我自己同其他人嘅姓名、電話、地址、簽名同銀行戶口。";
 export const QUOTE_ACK_ERROR_ZH = "請先剔選確認你已經遮好個人資料。";
@@ -62,7 +62,7 @@ export const ACCOUNT_UPLOAD_BODY_ZH =
 export const ACCOUNT_UPLOAD_ACTION_ZH = "上載報價單";
 
 export const QUOTE_PICK_FIRST_ZH =
-  "請先選擇 PDF 檔案。如尚未驗證電郵，檔案只會傳送以讀取公司名稱，不會進行報價清單分析，亦不會儲存。完整分析須待電郵驗證完成後方會進行。";
+  "請先選擇 PDF 檔案。";
 export const QUOTE_LOGIN_AFTER_FILE_ZH =
   "已選擇檔案。完成驗證後將即時開始分析，無須重新選擇。";
 export const QUOTE_FILE_RESELECT_ZH =
