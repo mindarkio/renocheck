@@ -108,7 +108,8 @@ A quote that is uploaded while signed out and then verified goes to Azure twice.
 
 - App-side cap **US$1 per HKT day** for quote analysis (D36). Free use stops at US$0.80; US$0.20 remains for paid credits (D36b). Pause copy and resume are in [`quote-provider-paused.md`](../runbooks/quote-provider-paused.md).
 - The cap limits how many quote files are sent to Azure. It does not limit company-report Gemini spend.
-- Device id `rc_did` is a random 128-bit cookie (`HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=1 year`). The database stores only `HMAC_SHA256(QUOTE_HASH_SECRET, rc_did)`. For quota, the IP hash is `HMAC(QUOTE_HASH_SECRET, ip + day_hkt)` so it changes daily (plan §5.1). The secret is absent → the route fails closed. Agents check presence only, never the value.
+- Device id `rc_did` is a random 128-bit cookie (`HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=1 year`). The database stores only `HMAC_SHA256(QUOTE_HASH_SECRET, rc_did)`, for one feedback vote per device. If `QUOTE_HASH_SECRET` is absent, `/api/feedback` fails closed (503).
+- Quote quota does not use `QUOTE_HASH_SECRET`. Signed-in use is counted per account in `quote_analysis_claims`. The signed-out name-reading step is counted per network per HKT day in `auth_otp_rate_limits`, keyed by `HMAC_SHA256(AUTH_RATE_LIMIT_SECRET, "quote-anon:" + day_hkt + ":" + network)` (IPv4 address or IPv6 /64), so the bucket changes daily (see the retention table in §7). If `AUTH_RATE_LIMIT_SECRET` is absent or shorter than 32 characters, that step fails closed (503). Agents check presence only, never the value.
 - Hashes are for the quota and for one vote per device. They are not used to build a public profile.
 
 ## 9. Feedback (Art 6(1)(f))
