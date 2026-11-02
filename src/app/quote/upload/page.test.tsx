@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getAuthUser } from "@/lib/supabase/server";
 import {
+  QUOTE_FILE_HINT_ZH,
   QUOTE_FILE_LABEL_ZH,
   QUOTE_PICK_FIRST_ZH,
   QUOTE_SIGN_IN_LINK_ZH,
@@ -54,7 +55,10 @@ describe("quote upload page", () => {
     expect(note.tagName).toBe("P");
     expect(screen.getAllByText(QUOTE_PICK_FIRST_ZH)).toHaveLength(1);
     const input = screen.getByLabelText(QUOTE_FILE_LABEL_ZH);
-    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(note.id);
+    const describedBy = input.getAttribute("aria-describedby")?.split(" ") ?? [];
+    expect(describedBy).toEqual(["quote-pdf-hint", note.id]);
+    for (const id of describedBy) expect(document.querySelectorAll(`[id="${id}"]`)).toHaveLength(1);
+    expect(document.getElementById("quote-pdf-hint")?.textContent?.trim()).toBe(QUOTE_FILE_HINT_ZH);
     expect(input.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
