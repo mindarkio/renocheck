@@ -9,6 +9,7 @@ import {
   reserveMicroUsd,
   spendDecision,
 } from "@/lib/quote-analysis/config";
+import { assertNotProdDbOutsideProd } from "@/lib/db-guard";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export function hktDayKey(now = new Date()): string {
@@ -55,6 +56,11 @@ export function resetQuoteAvailabilityCacheForTests(): void {
 async function readBudgetOpen(
   env: Record<string, string | undefined>,
 ): Promise<boolean> {
+  try {
+    assertNotProdDbOutsideProd(env);
+  } catch {
+    return true;
+  }
   const admin = getSupabaseAdmin();
   if (!admin) return true;
   try {
