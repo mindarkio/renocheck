@@ -24,7 +24,7 @@ export const QUOTE_UPLOAD_TITLE_ZH = "上載報價單分析";
 export const QUOTE_UPLOAD_LEAD_ZH =
   "請上載一份 PDF 報價單。驗證電郵前，我們只讀取公司名稱。確認公司名稱後，方會進行公司查冊。完成電郵驗證後，方會按清單檢視報價內容是否列明清楚。本服務不評估價格高低。";
 export const QUOTE_UPLOAD_NOTICE_ZH =
-  "驗證電郵前，PDF 檔案只會交由 Microsoft Azure OpenAI 讀取公司名稱，RenoCheck 不會儲存原檔。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。公司名稱將與分析結果一併保存，個人資料則不會保存。";
+  "驗證電郵前，PDF 檔案只會交由 Microsoft Azure OpenAI 讀取公司名稱，RenoCheck 不會儲存原檔。上載前，請遮蓋你本人及他人的姓名、電話、地址、簽名及銀行戶口資料。公司名稱將與分析結果一併保存，個人資料則不會保存。已登入或完成電郵驗證後，PDF 會交由 Microsoft Azure OpenAI（資源位於南韓中部）進行完整報價分析。";
 export const QUOTE_ACK_LABEL_ZH =
   "我確認已經遮好報價單上面嘅個人資料，包括我自己同其他人嘅姓名、電話、地址、簽名同銀行戶口。";
 export const QUOTE_ACK_ERROR_ZH = "請先剔選確認你已經遮好個人資料。";

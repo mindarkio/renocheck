@@ -28,7 +28,7 @@ The extracted company name and the name the user confirms are retained with the 
 - Confirming runs the existing company-name search, including the register picker, the too-many prompt, the three-character personal-name gate, the 記/號 trade-suffix rule, rate limits, and the 100-character cap.
 - `DISCLAIMER_VERSION` goes 1.2.6 → 1.2.7. `REPORT_VERSION` stays 2.7.0. The report shape did not change.
 - Company-name columns and the anonymous spend hold are migrations the owner applies manually. There is no sealed result and no seal-nonce column.
-- Upload-page copy trimmed, approved 2026-11-02. `QUOTE_UPLOAD_NOTICE_ZH` no longer repeats that the checklist runs only after verification, and `QUOTE_PICK_FIRST_ZH` under the file picker is now only 「請先選擇 PDF 檔案。」. The page lead (`QUOTE_UPLOAD_LEAD_ZH`) is unchanged.
+- Upload-page copy trimmed, approved 2026-11-02. `QUOTE_UPLOAD_NOTICE_ZH` no longer repeats that the checklist runs only after verification, and `QUOTE_PICK_FIRST_ZH` under the file picker is now only 「請先選擇 PDF 檔案。」. The page lead (`QUOTE_UPLOAD_LEAD_ZH`) is unchanged. Same day the owner approved appending a full-analysis disclosure to `QUOTE_UPLOAD_NOTICE_ZH` (signed-in users run the full analysis as soon as a file is picked): 「已登入或完成電郵驗證後，PDF 會交由 Microsoft Azure OpenAI（資源位於南韓中部）進行完整報價分析。」
 
 ## Consequences
 
