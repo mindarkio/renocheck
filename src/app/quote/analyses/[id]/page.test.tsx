@@ -74,6 +74,7 @@ describe("quote result page flag", () => {
     const heading = screen.getByRole("heading", { name: QUOTE_RESULT_TITLE_ZH, level: 1 });
     expect(heading.tabIndex).toBe(-1);
     expect(document.activeElement).toBe(heading);
+    expect(heading.className).toContain("focus-visible:outline-hidden");
     expect(screen.getByRole("button", { name: QUOTE_COMPANY_CONFIRM_ZH })).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();

@@ -69,7 +69,7 @@ describe("quote result heading focus", () => {
       }),
     );
 
-    render(<QuoteAnalysisForm signedIn={false} />);
+    const view = render(<QuoteAnalysisForm signedIn={false} />);
     fireEvent.change(screen.getByLabelText(QUOTE_FILE_LABEL_ZH), { target: { files: [pdfFile()] } });
     fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
     fireEvent.click(await screen.findByRole("button", { name: QUOTE_COMPANY_CONFIRM_ZH }));
@@ -81,5 +81,15 @@ describe("quote result heading focus", () => {
     expect(heading.getAttribute("tabindex")).toBe("-1");
     await waitFor(() => expect(document.activeElement).toBe(heading));
     expect(nav.push).not.toHaveBeenCalled();
+    // The heading is not an interactive control, so it draws no ring.
+    expect(heading.className).toContain("focus-visible:outline-hidden");
+    // A later render must not pull focus back once the user has moved on.
+    const elsewhere = document.createElement("button");
+    document.body.append(elsewhere);
+    elsewhere.focus();
+    view.rerender(<QuoteAnalysisForm signedIn={false} />);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.activeElement).toBe(elsewhere);
+    elsewhere.remove();
   });
 });

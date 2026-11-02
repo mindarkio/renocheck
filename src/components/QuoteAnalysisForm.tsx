@@ -340,7 +340,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
           <h2
             ref={resultHeadingRef}
             tabIndex={-1}
-            className="text-sm font-semibold text-primary"
+            className="text-sm font-semibold text-primary focus-visible:outline-hidden"
           >
             {QUOTE_ANALYSIS_SECTION_ZH}
           </h2>

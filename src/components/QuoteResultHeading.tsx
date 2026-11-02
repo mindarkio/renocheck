@@ -10,7 +10,7 @@ export function QuoteResultHeading({ children }: { children: ReactNode }) {
     ref.current?.focus();
   }, []);
   return (
-    <h1 ref={ref} tabIndex={-1} className={brandPageTitleClass}>
+    <h1 ref={ref} tabIndex={-1} className={`${brandPageTitleClass} focus-visible:outline-hidden`}>
       {children}
     </h1>
   );
