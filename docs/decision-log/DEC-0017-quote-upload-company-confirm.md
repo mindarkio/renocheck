@@ -1,13 +1,13 @@
 # DEC-0017: Quote upload first, then confirm the company name
 
-- **Status:** proposed — pending owner approval. Not accepted.
+- **Status:** accepted — owner decision 2026-10-28; copy approved 2026-11-02.
 - **Date:** 2026-10-28
 
 ## Context
 
 Quote analysis existed behind login. The owner wants upload to be the main path, with company search kept on the homepage. The company or business name on the quote is needed to start that search. Personal names, phones, addresses, signatures, and bank accounts stay out of the model output.
 
-The extracted company name and the name the user confirms are retained with the `quote_analyses` row for 180 days or until account deletion, whichever is earlier. Personal data is not stored. The disclaimer sentence that describes that retention is **proposed wording**. It is not owner-approved.
+The extracted company name and the name the user confirms are retained with the `quote_analyses` row for 180 days or until account deletion, whichever is earlier. Personal data is not stored. The disclaimer sentence that describes that retention was approved by the owner on 2026-11-02 (disclaimer 1.2.7).
 
 ## Options
 
@@ -41,6 +41,6 @@ Remove the confirm step and the `companyName` field, point the default redirect 
 
 ## Triggers to reconsider
 
-- The owner rejects the proposed privacy sentence.
+- The owner withdraws or changes the approved privacy sentence (approved 2026-11-02).
 - The retention of the stored company names (180 days or account deletion) needs to change. That needs a new decision, and a migration if the columns change.
 - *Superseded:* this record first listed "the name needs to survive a reload" as a trigger that would need an explicit decision and a migration. That decision was taken on 2026-10-28 and migration `20261028140000` adds the columns.

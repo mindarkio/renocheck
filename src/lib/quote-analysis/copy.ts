@@ -1,12 +1,12 @@
 /**
  * User-facing quote-analysis copy.
- * Quote-upload strings added in this draft are formal 書面語 and still need owner approval.
+ * Quote-upload strings added in this draft are formal 書面語, approved by the owner on 2026-11-02.
  * The homepage line HOME_QUOTE_UPLOAD_LINK_ZH is owner-written. Login and account-delete
  * strings outside this flow are unchanged. The disclaimer paragraph is formal 書面語.
  */
 
 const QUOTE_ANALYSIS_DISCLAIMER_OPENING_ZH =
-  "如閣下設立帳戶以使用報價單上載分析，本服務會收集閣下的電郵地址，用途限於發送一次性登入驗證碼、識別帳戶，以及處理刪除帳戶的要求。閣下上載的報價單（只限 PDF）僅在分析期間於伺服器記憶體中處理，並會傳送至 Microsoft Azure OpenAI（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）作自動分析。本服務不會保留報價單原檔。報價單所載的承辦公司或商號名稱會被抽出，並與結構化分析結果一併保存，保存期相同（直至 180 日屆滿或閣下刪除帳戶，以較早者為準）。該名稱用於公司查冊，以及本服務的分析與改進。個人資料（個人姓名、電話、地址、簽名及銀行戶口）不會保留。閣下確認後進行的公司查冊，與其他公司查冊一樣處理。分析完成後，本服務保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。閣下可於帳戶頁面要求刪除帳戶；帳戶刪除後，該電郵帳戶及其報價分析結果會一併移除。登入驗證碼經 Supabase 認證服務以電郵發送，電郵傳遞由 Resend 負責。設立帳戶屬自願；不設立帳戶仍可使用公司查冊及報價自查清單。";
+  "如閣下設立帳戶以使用報價單上載分析，本服務會收集閣下的電郵地址，用途限於發送一次性登入驗證碼、識別帳戶，以及處理刪除帳戶的要求。未驗證電郵而上載時，報價單（只限 PDF）僅在伺服器記憶體中處理，並會傳送至 Microsoft Azure OpenAI（資源位於南韓中部；個別請求可能在該模型可供使用的任何 Azure 地區處理）以讀取公司名稱；該次不會進行清單分析，亦不會保存該次讀取或報價單原檔。本服務會按閣下所用網絡記錄當日的讀取次數；該紀錄只保存經雜湊處理的網絡識別碼，僅用於限制使用頻率，並於香港時間翌日零時失效，其後刪除。完成電郵驗證後，同一份報價單方會再次傳送，以進行完整分析。本服務不會保留報價單原檔。完整分析所抽出的承辦公司或商號名稱，以及閣下所確認的公司名稱，均會與結構化分析結果一併保存，保存期相同（直至 180 日屆滿或閣下刪除帳戶，以較早者為準）。該等名稱用於公司查冊，以及本服務的分析與改進。個人資料（個人姓名、電話、地址、簽名及銀行戶口）不會保留。閣下確認後進行的公司查冊，與其他公司查冊一樣處理。分析完成後，本服務保留與該帳戶相連的結構化分析結果（各檢查項目的狀態），直至 180 日屆滿或閣下刪除帳戶（以較早者為準）。閣下可於帳戶頁面要求刪除帳戶；帳戶刪除後，該電郵帳戶及其報價分析結果會一併移除。登入驗證碼經 Supabase 認證服務以電郵發送，電郵傳遞由 Resend 負責。設立帳戶屬自願；不設立帳戶仍可使用公司查冊。";
 
 /** Aaron's verbatim wording. Do not edit. */
 export const QUOTE_ANALYSIS_DISCLAIMER_AZURE_ZH =
@@ -53,7 +53,7 @@ export const QUOTE_VERIFY_REOPEN_ZH = "驗證並查看結果";
 export const QUOTE_VERIFY_ABANDON_ZH = "放棄分析";
 /** Inline verify-first fallback, before analysis has run. The site login button stays 登入. */
 export const QUOTE_VERIFY_EMAIL_ZH = "驗證電郵";
-export const QUOTE_VERIFY_EXPIRED_ZH = "此結果已過期，請重新上載。";
+export const QUOTE_VERIFY_EXPIRED_ZH = "未能顯示先前讀取的公司名稱，請重新上載。";
 export const QUOTE_ANON_LIMIT_ZH =
   "此網絡今日的免費分析次數已用完，請於明天（香港時間）再試。";
 
@@ -62,7 +62,7 @@ export const ACCOUNT_UPLOAD_BODY_ZH =
 export const ACCOUNT_UPLOAD_ACTION_ZH = "上載報價單";
 
 export const QUOTE_PICK_FIRST_ZH =
-  "請先選擇 PDF 檔案。如尚未驗證電郵，系統只會先讀取公司名稱，不會進行報價清單分析。驗證前，檔案只會留在此頁面，不會儲存。";
+  "請先選擇 PDF 檔案。如尚未驗證電郵，檔案只會傳送以讀取公司名稱，不會進行報價清單分析，亦不會儲存。完整分析須待電郵驗證完成後方會進行。";
 export const QUOTE_LOGIN_AFTER_FILE_ZH =
   "已選擇檔案。完成驗證後將即時開始分析，無須重新選擇。";
 export const QUOTE_FILE_RESELECT_ZH =
@@ -75,7 +75,7 @@ export const QUOTE_COMPANY_MISSING_ZH =
 export const QUOTE_COMPANY_LABEL_ZH = "公司名稱";
 export const QUOTE_COMPANY_CONFIRM_ZH = "確認並查冊";
 export const QUOTE_COMPANY_HOLD_ZH =
-  "按下確認前不會進行查冊。確認後，公司名稱將與此結果一併保存。";
+  "按下確認前不會進行查冊。完成電郵驗證後，所確認的公司名稱方會與分析結果一併保存。";
 export const QUOTE_COMPANY_NEED_NAME_ZH = "請輸入公司名稱。";
 export const QUOTE_COMPANY_RESULT_HEADING_ZH = "公司查冊結果";
 

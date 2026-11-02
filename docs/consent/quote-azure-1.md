@@ -30,16 +30,16 @@ Under it, a link 「Azure OpenAI 資料私隱說明（英文）」 to https://le
 
 Error when submitted unticked: 「請先剔選同意，先可以開始分析。」
 
-## Proposed privacy sentence (formal 書面語, disclaimer 1.2.7)
+## Privacy sentence (formal 書面語, disclaimer 1.2.7)
 
-Not approved. The live disclaimer paragraph uses this sentence. Owner sign-off is still required:
+Approved by the owner on 2026-11-02. The live disclaimer paragraph (`QUOTE_ANALYSIS_DISCLAIMER_OPENING_ZH`) uses this sentence:
 
-> 報價單所載的承辦公司或商號名稱會被抽出，並與結構化分析結果一併保存，保存期相同（直至 180 日屆滿或閣下刪除帳戶，以較早者為準）。該名稱用於公司查冊，以及本服務的分析與改進。個人資料（個人姓名、電話、地址、簽名及銀行戶口）不會保留。閣下確認後進行的公司查冊，與其他公司查冊一樣處理。
+> 完整分析所抽出的承辦公司或商號名稱，以及閣下所確認的公司名稱，均會與結構化分析結果一併保存，保存期相同（直至 180 日屆滿或閣下刪除帳戶，以較早者為準）。該等名稱用於公司查冊，以及本服務的分析與改進。個人資料（個人姓名、電話、地址、簽名及銀行戶口）不會保留。閣下確認後進行的公司查冊，與其他公司查冊一樣處理。
 
 The checkbox is unticked by default, once per upload, with no "remember me". Withdrawing means not uploading.
 
 ## Proposed privacy-notice point (formal 書面語)
 
-Not approved. Not inserted into the live disclaimer. §七 stays the retention proposal already in this draft.
+Superseded. Not inserted into the live disclaimer. The owner-approved `QUOTE_ANALYSIS_DISCLAIMER_OPENING_ZH` (2026-11-02, disclaimer 1.2.7) covers the signed-out name read instead.
 
 > 未驗證電郵而上載時，報價單只會交由伺服器及 Azure 讀取公司名稱，不會進行清單分析，亦不會保存該次讀取。完成電郵驗證後，同一份報價單會再次傳送，以進行完整分析，公司名稱與分析結果方會連同帳戶一併保存。

@@ -80,27 +80,22 @@ describe("disclaimer page feedback notice", () => {
     assertClean(notice?.textContent ?? "");
   });
 
-  it("places the approved quote-tool sentence in §七 after the privacy list", async () => {
+  it("removes the retired quote self-check sentence from §七 (owner-approved deletion, 1.2.7)", async () => {
     await renderDisclaimer();
     const heading = screen.getByRole("heading", { name: "七、個人資料（私隱）" });
     const section = heading.closest("section");
     const text = section?.textContent ?? "";
-    const sentenceAt = text.indexOf(QUOTE_SELF_CHECK_PRIVACY_ZH);
-    expect(sentenceAt).toBeGreaterThan(text.indexOf("你的權利"));
-    expect(text.indexOf("資料保護主任")).toBeGreaterThan(sentenceAt);
+    expect(document.body.textContent ?? "").not.toContain(QUOTE_SELF_CHECK_PRIVACY_ZH);
+    expect(text).not.toContain("例如報價自查");
     const anonAt = text.indexOf(ANON_ID_PRIVACY_ZH);
-    expect(anonAt).toBeGreaterThan(sentenceAt);
+    expect(anonAt).toBeGreaterThan(text.indexOf("你的權利"));
     expect(text.indexOf("資料保護主任")).toBeGreaterThan(anonAt);
     expect(text.split(ANON_ID_PRIVACY_ZH)).toHaveLength(2);
     assertClean(ANON_ID_PRIVACY_ZH);
-    expect(text.indexOf("閣下於報告頁提交的評分")).toBeGreaterThan(sentenceAt);
-    expect(document.getElementById("feedback-privacy")?.textContent ?? "").not.toContain(
-      QUOTE_SELF_CHECK_PRIVACY_ZH,
-    );
+    expect(text.indexOf("閣下於報告頁提交的評分")).toBeGreaterThan(anonAt);
     expect(document.getElementById("feedback-privacy")?.textContent ?? "").not.toContain(
       ANON_ID_PRIVACY_ZH,
     );
-    assertClean(QUOTE_SELF_CHECK_PRIVACY_ZH);
   });
 
   it("adds the quote-analysis paragraph after the approved feedback notice", async () => {
@@ -113,7 +108,7 @@ describe("disclaimer page feedback notice", () => {
     expect(text.indexOf(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH)).toBeGreaterThan(
       text.indexOf("閣下於報告頁提交的評分"),
     );
-    expect(text.split(QUOTE_SELF_CHECK_PRIVACY_ZH)).toHaveLength(2);
+    expect(text).not.toContain(QUOTE_SELF_CHECK_PRIVACY_ZH);
     expect(text.split(ANON_ID_PRIVACY_ZH)).toHaveLength(2);
     assertClean(QUOTE_ANALYSIS_DISCLAIMER_PARAGRAPH_ZH);
   });
