@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { QuoteCompanyConfirm } from "@/components/QuoteCompanyConfirm";
 import { QuoteReportSkeleton, QuoteVerifyDialog } from "@/components/QuoteVerifyDialog";
 import { holdQuoteCompanyName } from "@/lib/quote-analysis/company-name-handoff";
@@ -52,6 +52,8 @@ function clearFlag(key: string): void {
 
 export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
+  // One id is enough: the locked and the result sections never render together.
+  const sectionHeadingId = useId();
   const checkboxRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<File | null>(null);
   const ackRef = useRef(false);
@@ -319,8 +321,8 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
         />
       ) : null}
       {showConfirm && searchReady && !reportItems ? (
-        <section className="mt-8" aria-label={QUOTE_ANALYSIS_SECTION_ZH}>
-          <h2 className="text-sm font-semibold text-primary">{QUOTE_ANALYSIS_SECTION_ZH}</h2>
+        <section className="mt-8" aria-labelledby={sectionHeadingId}>
+          <h2 id={sectionHeadingId} className="text-sm font-semibold text-primary">{QUOTE_ANALYSIS_SECTION_ZH}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{QUOTE_ANALYSIS_LOCKED_ZH}</p>
           <div className="pointer-events-none mt-4 select-none blur-sm motion-reduce:blur-none" aria-hidden="true">
             <QuoteReportSkeleton />
@@ -336,8 +338,9 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
         </section>
       ) : null}
       {reportItems ? (
-        <section className="mt-8" aria-label={QUOTE_ANALYSIS_SECTION_ZH}>
+        <section className="mt-8" aria-labelledby={sectionHeadingId}>
           <h2
+            id={sectionHeadingId}
             ref={resultHeadingRef}
             tabIndex={-1}
             className="text-sm font-semibold text-primary focus-visible:outline-hidden"

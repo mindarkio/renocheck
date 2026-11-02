@@ -79,6 +79,11 @@ describe("quote result heading focus", () => {
     expect(await screen.findByText("工程範圍")).toBeTruthy();
     const heading = screen.getByRole("heading", { name: QUOTE_ANALYSIS_SECTION_ZH, level: 2 });
     expect(heading.getAttribute("tabindex")).toBe("-1");
+    // The region takes its name from the heading, so the name is not announced twice.
+    const region = screen.getByRole("region", { name: QUOTE_ANALYSIS_SECTION_ZH });
+    expect(region.getAttribute("aria-label")).toBeNull();
+    expect(region.getAttribute("aria-labelledby")).toBe(heading.id);
+    expect(heading.id).not.toBe("");
     await waitFor(() => expect(document.activeElement).toBe(heading));
     expect(nav.push).not.toHaveBeenCalled();
     // The heading is not an interactive control, so it draws no ring.

@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   QUOTE_ACK_LABEL_ZH,
+  QUOTE_ANALYSIS_SECTION_ZH,
   QUOTE_ANALYSIS_VERIFY_CTA_ZH,
   QUOTE_COMPANY_CONFIRM_ZH,
   QUOTE_FILE_LABEL_ZH,
@@ -84,6 +85,10 @@ describe("logged-out quote upload", () => {
     expect(skeleton?.closest("[aria-hidden='true']")).toBeTruthy();
     expect(screen.getByText("search-result").closest("[aria-hidden='true']")).toBeNull();
     expect(screen.getByRole("button", { name: QUOTE_ANALYSIS_VERIFY_CTA_ZH })).toBeTruthy();
+    const heading = screen.getByRole("heading", { name: QUOTE_ANALYSIS_SECTION_ZH, level: 2 });
+    const region = screen.getByRole("region", { name: QUOTE_ANALYSIS_SECTION_ZH });
+    expect(region.getAttribute("aria-label")).toBeNull();
+    expect(region.getAttribute("aria-labelledby")).toBe(heading.id);
   });
 
   it("discards the file when verification is abandoned", async () => {
