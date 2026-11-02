@@ -16,6 +16,7 @@ import {
   QUOTE_FILE_HINT_ZH,
   QUOTE_FILE_LABEL_ZH,
   QUOTE_FILE_RESELECT_ZH,
+  QUOTE_PICK_FIRST_ZH,
   QUOTE_RESULT_LEAD_ZH,
   QUOTE_SUBMIT_ZH,
   QUOTE_UPLOAD_NOTICE_ZH,
@@ -260,13 +261,20 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
               type="file"
               accept="application/pdf"
               required
+              aria-describedby="quote-pdf-hint quote-pdf-pick-first"
               onChange={(event) => {
                 rememberFile(event.target.files?.[0] ?? null);
                 maybeAutoRun();
               }}
               className="mt-1 block w-full min-h-11 text-sm file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-primary file:px-3 file:text-sm file:font-medium file:text-primary-foreground"
             />
-            <p className="mt-1 text-sm text-muted-foreground">{QUOTE_FILE_HINT_ZH}</p>
+            <p id="quote-pdf-hint" className="mt-1 text-sm text-muted-foreground">
+              {QUOTE_FILE_HINT_ZH}
+            </p>
+            {/* Owner choice 2026-11-02: show under the file picker, the upload button in both states. */}
+            <p id="quote-pdf-pick-first" className="mt-1 text-sm text-muted-foreground">
+              {QUOTE_PICK_FIRST_ZH}
+            </p>
           </div>
           <label className="flex min-h-11 items-start gap-3 text-sm text-foreground">
             <input

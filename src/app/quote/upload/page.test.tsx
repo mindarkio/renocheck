@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { getAuthUser } from "@/lib/supabase/server";
 import {
   QUOTE_FILE_LABEL_ZH,
+  QUOTE_PICK_FIRST_ZH,
   QUOTE_SIGN_IN_LINK_ZH,
+  QUOTE_SUBMIT_ZH,
   QUOTE_UNAVAILABLE_ZH,
 } from "@/lib/quote-analysis/copy";
 
@@ -37,10 +40,37 @@ describe("quote upload page", () => {
     expect(screen.queryByRole("link", { name: QUOTE_SIGN_IN_LINK_ZH })).toBeNull();
   });
 
+  function enableAnalysis() {
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    vi.stubEnv("AZURE_OPENAI_ENDPOINT", "https://quote.example.invalid");
+    vi.stubEnv("AZURE_OPENAI_API_KEY", "test-not-a-key");
+    vi.stubEnv("AZURE_OPENAI_DEPLOYMENT", "quote-dep");
+  }
+
+  it("shows the pick-first note under the file picker when logged out", async () => {
+    enableAnalysis();
+    render(await QuoteUploadPage());
+    const note = screen.getByText(QUOTE_PICK_FIRST_ZH);
+    expect(note.tagName).toBe("P");
+    expect(screen.getAllByText(QUOTE_PICK_FIRST_ZH)).toHaveLength(1);
+    const input = screen.getByLabelText(QUOTE_FILE_LABEL_ZH);
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(note.id);
+    expect(input.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows the pick-first note when signed in too", async () => {
+    enableAnalysis();
+    vi.mocked(getAuthUser).mockResolvedValueOnce({ id: "u1", email: "a@example.invalid" } as never);
+    render(await QuoteUploadPage());
+    expect(screen.getByRole("button", { name: QUOTE_SUBMIT_ZH })).toBeTruthy();
+    expect(screen.getAllByText(QUOTE_PICK_FIRST_ZH)).toHaveLength(1);
+  });
+
   it("stays closed when analysis is not configured", async () => {
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "0");
     render(await QuoteUploadPage());
     expect(screen.getByText(QUOTE_UNAVAILABLE_ZH)).toBeTruthy();
     expect(screen.queryByLabelText(QUOTE_FILE_LABEL_ZH)).toBeNull();
+    expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();
   });
 });
