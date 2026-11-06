@@ -174,7 +174,8 @@ describe("quote page JSON-LD", () => {
     expect(data.url).toBe("https://renocheck.homes/quote");
     expect(data.name).toBe(QUOTE_PAGE_TITLE_ZH);
     expect(data.description).toContain("報價單");
-    expect(data.description).toContain("報價陷阱");
+    expect(data.description).toContain("範圍、物料、工期、付款、保養");
+    expect(data.description).not.toContain("報價陷阱");
     const mainEntity = data.mainEntity as { "@type": string; step: unknown[] };
     expect(mainEntity["@type"]).toBe("HowTo");
     expect(mainEntity.step).toHaveLength(3);

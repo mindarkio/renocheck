@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
+import { QUOTE_PAGE_NAV_LABEL_ZH } from "@/lib/quote-selfcheck";
 import { SiteHeader } from "./SiteHeader";
 
 let mockPath = "/";
@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 function quoteLinks() {
-  return screen.getAllByRole("link", { name: QUOTE_PAGE_TITLE_ZH });
+  return screen.getAllByRole("link", { name: QUOTE_PAGE_NAV_LABEL_ZH });
 }
 
 function openMenu() {
@@ -60,7 +60,7 @@ describe("SiteHeader quote link", () => {
     render(<SiteHeader />);
     const link = quoteLinks()[0];
     expect(link.getAttribute("href")).toBe("/quote");
-    expect(link.textContent).toBe(QUOTE_PAGE_TITLE_ZH);
+    expect(link.textContent).toBe(QUOTE_PAGE_NAV_LABEL_ZH);
     expect(link.className).toContain("min-h-11");
     for (const token of STRONG_HEADER_RING) expect(link.className).toContain(token);
     expect(link.className).not.toContain("ring-primary/30");
@@ -86,7 +86,7 @@ describe("SiteHeader quote link", () => {
     const mobile = [...dialog.querySelectorAll("a")].find(
       (anchor) => anchor.getAttribute("href") === "/quote",
     );
-    expect(mobile?.textContent).toBe(QUOTE_PAGE_TITLE_ZH);
+    expect(mobile?.textContent).toBe(QUOTE_PAGE_NAV_LABEL_ZH);
     expect(mobile?.getAttribute("aria-current")).toBe("page");
     expect(mobile?.className).toContain("min-h-12");
     expect(mobile?.className).toContain("focus-visible:ring-white");
@@ -111,7 +111,7 @@ describe("SiteHeader mobile menu focus", () => {
 
     const links = dialogLinks();
     expect(links).toHaveLength(6);
-    expect(links.some((anchor) => anchor.textContent === QUOTE_PAGE_TITLE_ZH)).toBe(true);
+    expect(links.some((anchor) => anchor.textContent === QUOTE_PAGE_NAV_LABEL_ZH)).toBe(true);
 
     tab();
     expect(document.activeElement).toBe(links[0]);
@@ -143,7 +143,7 @@ describe("SiteHeader mobile menu focus", () => {
     render(<SiteHeader />);
     openMenu();
     const quote = dialogLinks().find((anchor) => anchor.getAttribute("href") === "/quote");
-    expect(quote?.textContent).toBe(QUOTE_PAGE_TITLE_ZH);
+    expect(quote?.textContent).toBe(QUOTE_PAGE_NAV_LABEL_ZH);
     quote?.focus();
     // jsdom logs "navigation to another Document" if the anchor's default action runs.
     quote?.addEventListener("click", (event) => event.preventDefault());

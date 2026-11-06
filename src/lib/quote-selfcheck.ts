@@ -4,15 +4,18 @@
  * `arithmetic` is intentionally absent.
  */
 
-/** Visible H1 and nav label. */
-export const QUOTE_PAGE_TITLE_ZH = "報價自查清單";
+/** Visible H1 on /quote. JSON-LD `name` uses the same string. */
+export const QUOTE_PAGE_TITLE_ZH = "裝修報價單自查清單";
+
+/** Header and footer label. Unchanged short name; not the document title. */
+export const QUOTE_PAGE_NAV_LABEL_ZH = "報價自查清單";
 
 /** Document title and social title. Suffix ` · Renocheck` is added by pageMetadata. */
 export const QUOTE_PAGE_META_TITLE_ZH =
-  "裝修報價單自查清單｜報價陷阱 20 項逐項對";
+  "裝修報價單自查清單｜20 項逐項對清楚";
 
 export const QUOTE_PAGE_DESCRIPTION_ZH =
-  "香港裝修報價單自查清單：對住報價單逐項睇有冇寫齊、寫清楚，並留意常見報價陷阱。唔會評價格係咪合理，亦唔係專業意見。";
+  "香港裝修報價單自查清單：對住報價單逐項睇有冇寫齊、寫清楚（範圍、物料、工期、付款、保養等）。唔會評價格係咪合理，亦唔係專業意見。";
 
 /** Single on-page explanation. Not a legal disclaimer. */
 export const QUOTE_PAGE_LEAD_ZH =

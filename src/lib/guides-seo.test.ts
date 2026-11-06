@@ -89,7 +89,10 @@ describe("2026-10-23 SEO guides", () => {
       expect(safeHttpUrl(source.url), source.url).toBe(source.url);
     }
     for (const guide of GUIDES) {
-      if (!NEW_GUIDES.some((item) => item.slug === guide.slug)) {
+      const expectsFaq =
+        NEW_GUIDES.some((item) => item.slug === guide.slug) ||
+        guide.slug === "how-to-read-renovation-quotation";
+      if (!expectsFaq) {
         expect(guide.faqs).toBeUndefined();
         expect(guideFaqJsonLd(guide)).toBeNull();
       }
@@ -136,10 +139,11 @@ describe("2026-10-23 SEO guides", () => {
     expect(related.map((guide) => guide.slug)).not.toContain(oldest.slug);
     expect(related).toHaveLength(3);
     const newestDate = GUIDES.map((guide) => guide.dateModified).sort().at(-1);
-    expect(related.every((guide) => guide.dateModified === newestDate)).toBe(true);
+    expect(related[0]?.dateModified).toBe(newestDate);
+    expect(related[0]?.slug).toBe("how-to-read-renovation-quotation");
     const fromNewest = relatedGuides(related[0]?.slug ?? "");
     expect(fromNewest.map((guide) => guide.slug)).not.toContain(related[0]?.slug);
-    expect(fromNewest.some((guide) => guide.dateModified === newestDate)).toBe(true);
+    expect(fromNewest[0]?.dateModified).toBe("2026-10-23");
   });
 
   it("relatedGuides orders by dateModified, not array position, with later-entry tie-break", () => {
@@ -212,6 +216,57 @@ describe("2026-10-23 SEO guides", () => {
     const quotes = relatedGuides("renovation-quote-timing-compare-three");
     expect(quotes[0]?.slug).toBe("how-to-read-renovation-quotation");
     expect(quotes).toHaveLength(3);
+  });
+
+  it("locks the 2026-11-06 quotation guide copy and FAQ JSON-LD", () => {
+    const guide = getGuide("how-to-read-renovation-quotation");
+    expect(guide).toBeDefined();
+    if (!guide) return;
+    expect(guide.slug).toBe("how-to-read-renovation-quotation");
+    expect(guide.title).toBe("裝修報價單點睇？要列明數量、單價同隱藏收費");
+    expect(guide.description).toBe(
+      "香港裝修報價單點睇指南：數量、單價、分項合計、連工包料、包生仔定實量實度、後加工程同隱藏條款；對完可用報價自查清單逐項核對。",
+    );
+    expect(guide.answer.startsWith("裝修報價單")).toBe(true);
+    expect(guide.datePublished).toBe("2026-10-16");
+    expect(guide.dateModified).toBe("2026-11-06");
+    expect(guide.sections.map((section) => section.heading)).toEqual([
+      "報價單要有",
+      "「包生仔」定「實量實度」",
+      "比較報價",
+      "報價單同估價差在邊",
+    ]);
+    const mustHave = guide.sections[0]?.bullets ?? [];
+    expect(mustHave.at(-1)).toBe("公司全名、商業登記、報價日期／有效期。");
+    const compare = guide.sections[2]?.paragraphs?.join("\n") ?? "";
+    expect(compare).toContain(
+      "](/guides/renovation-quote-timing-compare-three)",
+    );
+    expect(compare).toContain("](/quote)");
+    expect(guide.faqs?.map((item) => item.question)).toEqual([
+      "裝修報價單一定要有咩？",
+      "點樣先唔好中隱藏收費？",
+      "對完報價可以點做？",
+    ]);
+    for (const item of guide.faqs ?? []) {
+      expect(item.answer).toContain("報價自查清單");
+    }
+    expect(guideFaqJsonLd(guide)).toEqual({
+      "@type": "FAQPage",
+      inLanguage: "zh-HK",
+      mainEntity: guide.faqs?.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: { "@type": "Answer", text: item.answer },
+      })),
+    });
+    expect(LLMS_TXT).toContain(
+      `https://renocheck.homes/guides/${guide.slug} — ${guide.title}`,
+    );
+    const entry = sitemap().find(
+      (row) => row.url === `${getSiteUrl()}/guides/${guide.slug}`,
+    );
+    expect(entry?.lastModified).toBe("2026-11-06");
   });
 
   it("every guide date is ISO YYYY-MM-DD and modified on or after publish", () => {
