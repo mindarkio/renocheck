@@ -96,12 +96,35 @@ function fetchSignal(deadlineMs: number): AbortSignal {
   return deadlineAbortSignal(left);
 }
 
-function toDegraded(
-  message: string,
-): { kind: "degraded"; reason: "timeout" | "error" } {
+/** Closed log code. Unexpected text becomes "error" so logs cannot carry upstream bodies. */
+function crUpstreamReasonCode(message: string): string {
+  if (/^http_[1-5]\d\d$/.test(message)) return message;
+  switch (message) {
+    case "timeout":
+    case "circuit_open":
+    case "queue_full":
+    case "too_large":
+    case "invalid_json":
+    case "body_status_400":
+    case "unexpected_shape":
+    case "fetch_failed":
+    case "http_400_html":
+    case "exception":
+      return message;
+    default:
+      return "error";
+  }
+}
+
+function toDegraded(message: string): {
+  kind: "degraded";
+  reason: "timeout" | "error";
+  upstreamReason: string;
+} {
   return {
     kind: "degraded",
     reason: message === "timeout" ? "timeout" : "error",
+    upstreamReason: crUpstreamReasonCode(message),
   };
 }
 
@@ -141,7 +164,7 @@ async function resolveNamePrefixes(
   stats: CrLookupFetchStats,
 ): Promise<
   | { kind: "snapshot"; snapshot: CrMappedSnapshot }
-  | { kind: "degraded"; reason: "timeout" | "error" }
+  | { kind: "degraded"; reason: "timeout" | "error"; upstreamReason: string }
 > {
   const primary = buildNameSearchPrefixes(label);
   const allAttempts = allNameSearchPrefixAttempts(label);
@@ -166,6 +189,8 @@ async function resolveNamePrefixes(
   for (const prefix of primary) {
     const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs, stats);
     if (res.kind === "error") {
+      // Ambiguous HTML 400 for a non-plain prefix: unknown, never not-found.
+      if (res.message === "http_400_html") continue;
       return toDegraded(res.message);
     }
     if (res.kind === "no_result") {
@@ -178,6 +203,7 @@ async function resolveNamePrefixes(
   for (const prefix of allAttempts.slice(0, 4)) {
     const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs, stats);
     if (res.kind === "error") {
+      if (res.message === "http_400_html") continue;
       return toDegraded(res.message);
     }
     if (res.kind === "rows") {
@@ -210,7 +236,7 @@ async function runLiveLookup(
   stats: CrLookupFetchStats,
 ): Promise<
   | { kind: "snapshot"; snapshot: CrMappedSnapshot }
-  | { kind: "degraded"; reason: "timeout" | "error" }
+  | { kind: "degraded"; reason: "timeout" | "error"; upstreamReason: string }
   | { kind: "no_query" }
 > {
   const retrievedAt = new Date().toISOString();
@@ -331,6 +357,7 @@ export async function lookupCompaniesRegistryForSearch(
         JSON.stringify({
           event: "cr_lookup_failed",
           reason: live.reason,
+          upstream_reason: live.upstreamReason,
           ...crLogFields(stats, startedAt),
         }),
       );
@@ -357,6 +384,7 @@ export async function lookupCompaniesRegistryForSearch(
         event: "cr_lookup",
         matched: snap.matched,
         match_ambiguous: Boolean(snap.matchAmbiguous),
+        not_found: snap.hints.includes("not_found_in_active_list"),
         hint_count: snap.hints.length,
         cache_hit: stats.fetchCount === 0,
         ...crLogFields(stats, startedAt),
@@ -369,6 +397,7 @@ export async function lookupCompaniesRegistryForSearch(
       JSON.stringify({
         event: "cr_lookup_failed",
         reason: "exception",
+        upstream_reason: "exception",
         ...crLogFields(stats, startedAt),
       }),
     );
