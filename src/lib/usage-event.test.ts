@@ -1,5 +1,14 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { usageEventBodySchema, isMissingAnonIdColumn, isMissingUsageEventsTable } from "./usage-event";
+import {
+  USAGE_DETAIL_CODES,
+  USAGE_EVENT_TYPES,
+  usageDetailFromError,
+  usageEventBodySchema,
+  isMissingAnonIdColumn,
+  isMissingUsageDetailColumn,
+  isMissingUsageEventsTable,
+} from "./usage-event";
 
 const ANON = "12345678-1234-4234-8234-123456789abc";
 const FP = "ab".repeat(16);
@@ -44,6 +53,39 @@ describe("usage event validation", () => {
         phone: "91234567",
       }).success,
     ).toBe(false);
+    expect(
+      usageEventBodySchema.safeParse({
+        anonId: ANON,
+        eventType: "quote_analyze_fail",
+        detail: "示例裝修有限公司",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts a fail step with a reason code and maps API errors", () => {
+    const parsed = usageEventBodySchema.parse({
+      anonId: ANON,
+      eventType: "quote_analyze_fail",
+      detail: "budget",
+    });
+    expect(parsed.detail).toBe("budget");
+    expect(usageDetailFromError("quote_paused")).toBe("budget");
+    expect(usageDetailFromError("quote_unavailable")).toBe("unavailable");
+    expect(usageDetailFromError("invalid_code")).toBe("invalid_input");
+    expect(usageDetailFromError("not_a_real_code")).toBe("unknown");
+    expect(usageDetailFromError(undefined)).toBe("unknown");
+  });
+
+  it("lists every event type in the funnel migration", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20261106160000_quote_funnel_usage_events.sql",
+      "utf8",
+    );
+    for (const eventType of USAGE_EVENT_TYPES) expect(sql).toContain(`'${eventType}'`);
+    for (const detail of USAGE_DETAIL_CODES) {
+      expect(detail).toMatch(/^[a-z][a-z0-9_]{0,31}$/);
+      expect(sql).toContain(`'${detail}'`);
+    }
   });
 
   it("recognises a missing anon id column and a missing usage table", () => {
@@ -75,5 +117,17 @@ describe("usage event validation", () => {
       }),
     ).toBe(true);
     expect(isMissingUsageEventsTable(null)).toBe(false);
+    expect(
+      isMissingUsageDetailColumn({
+        code: "PGRST204",
+        message: "Could not find the 'detail' column of 'usage_events' in the schema cache",
+      }),
+    ).toBe(true);
+    expect(
+      isMissingUsageDetailColumn({
+        code: "PGRST205",
+        message: "Could not find the table 'public.usage_events' in the schema cache",
+      }),
+    ).toBe(false);
   });
 });

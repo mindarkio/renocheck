@@ -10,7 +10,7 @@ import {
   QUOTE_VERIFY_ABANDON_ZH,
   QUOTE_VERIFY_MODAL_TITLE_ZH,
 } from "@/lib/quote-analysis/copy";
-import { QuoteAnalysisForm } from "./QuoteAnalysisForm";
+import { QUOTE_FILE_PENDING_KEY, QuoteAnalysisForm } from "./QuoteAnalysisForm";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -105,5 +105,28 @@ describe("logged-out quote upload", () => {
     expect(screen.getByLabelText(QUOTE_FILE_LABEL_ZH)).toBeTruthy();
     expect(screen.queryByText(/我們在報價單上找到/)).toBeNull();
     expect(sessionStorage.getItem("renocheck:quote-seal-pending")).toBeNull();
+    expect(sessionStorage.getItem(QUOTE_FILE_PENDING_KEY)).toBeNull();
+  });
+
+  it("offers email verification when the company search fails", async () => {
+    mockFetch((href, init) => {
+      if (href.includes("/api/quote/analyze")) {
+        return new Response(JSON.stringify({ companyName: NAME }), { status: 200 });
+      }
+      if (href.includes("/api/search") && String(init?.body ?? "").includes("preview")) {
+        return new Response(JSON.stringify({ matchCount: 0, windowFull: false, candidates: [] }), {
+          status: 200,
+        });
+      }
+      if (href.includes("/api/search")) {
+        return new Response(JSON.stringify({ error: "serp_failed" }), { status: 502 });
+      }
+      return null;
+    });
+    await extract();
+    fireEvent.click(screen.getByRole("button", { name: QUOTE_COMPANY_CONFIRM_ZH }));
+    expect(await screen.findByRole("button", { name: QUOTE_ANALYSIS_VERIFY_CTA_ZH })).toBeTruthy();
+    expect(await screen.findByText("報告未能顯示：公開搜尋暫時失敗，請稍後再試。")).toBeTruthy();
+    expect(screen.queryByText("search-result")).toBeNull();
   });
 });

@@ -23,6 +23,11 @@ vi.mock("@/lib/supabase/server", () => ({
   getAuthUser: vi.fn(async () => null),
 }));
 
+vi.mock("@/lib/usage-events-client", () => ({
+  sendUsageEvent: vi.fn(),
+}));
+
+import { sendUsageEvent } from "@/lib/usage-events-client";
 import QuoteUploadPage from "./page";
 
 describe("quote upload page", () => {
@@ -36,9 +41,11 @@ describe("quote upload page", () => {
     vi.stubEnv("AZURE_OPENAI_ENDPOINT", "https://quote.example.invalid");
     vi.stubEnv("AZURE_OPENAI_API_KEY", "test-not-a-key");
     vi.stubEnv("AZURE_OPENAI_DEPLOYMENT", "quote-dep");
+    vi.mocked(sendUsageEvent).mockClear();
     render(await QuoteUploadPage());
     expect(screen.getByLabelText(QUOTE_FILE_LABEL_ZH)).toBeTruthy();
     expect(screen.queryByRole("link", { name: QUOTE_SIGN_IN_LINK_ZH })).toBeNull();
+    expect(vi.mocked(sendUsageEvent).mock.calls).toEqual([["quote_upload_open"]]);
   });
 
   function enableAnalysis() {
@@ -72,7 +79,9 @@ describe("quote upload page", () => {
 
   it("stays closed when analysis is not configured", async () => {
     vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "0");
+    vi.mocked(sendUsageEvent).mockClear();
     render(await QuoteUploadPage());
+    expect(vi.mocked(sendUsageEvent).mock.calls).toEqual([["quote_upload_unavailable"]]);
     expect(screen.getByText(QUOTE_UNAVAILABLE_ZH)).toBeTruthy();
     expect(screen.queryByLabelText(QUOTE_FILE_LABEL_ZH)).toBeNull();
     expect(screen.queryByText(QUOTE_PICK_FIRST_ZH)).toBeNull();

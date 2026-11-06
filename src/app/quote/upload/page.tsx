@@ -8,6 +8,7 @@ import {
   ContentPageTitle,
 } from "@/components/ContentPage";
 import { QuoteAnalysisForm } from "@/components/QuoteAnalysisForm";
+import { QuoteFunnelBeacon } from "@/components/QuoteFunnelBeacon";
 import { isQuoteAnalysisAvailable } from "@/lib/quote-analysis/config";
 import {
   QUOTE_ACCOUNT_LINK_ZH,
@@ -33,6 +34,9 @@ export default async function QuoteUploadPage() {
 
   return (
     <ContentPage>
+      <QuoteFunnelBeacon
+        eventType={available ? "quote_upload_open" : "quote_upload_unavailable"}
+      />
       <ContentCard>
         <ContentPageTitle>{QUOTE_UPLOAD_TITLE_ZH}</ContentPageTitle>
         {available ? (

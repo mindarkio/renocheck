@@ -6,6 +6,7 @@ vi.mock("@/app/admin/logout/actions", () => ({
   submitAdminLogout: vi.fn(),
 }));
 import { AdminDashboardView } from "@/lib/admin/dashboard-view";
+import { emptyReturnAnalytics } from "@/lib/admin/return-analytics";
 import type { SearchAnalyticsAggregate } from "@/lib/admin/search-analytics";
 
 function emptyData(): SearchAnalyticsAggregate {
@@ -61,20 +62,21 @@ describe("AdminDashboardView UI (YUI)", () => {
         days={7}
         view="all"
         returns={{
+          ...emptyReturnAnalytics(),
           weeks: [{ weekStart: "2026-06-15", newDevices: 2, returningDevices: 1 }],
           intervals: { within1Day: 3, within7Days: 1, within30Days: 0, over30Days: 4 },
           returnerActions: { sameCompany: 1, differentCompany: 2, usedQuote: 1 },
           funnel: {
+            ...emptyReturnAnalytics().funnel,
             quotePage: 5,
             quoteAllTicked: 1,
             quoteCopyReply: 2,
             reportOfficialLink: 4,
             reportShare: 1,
+            quoteAnalyzeOk: 0,
           },
-          truncated: false,
           searchAnon: "pending",
           usageEvents: "ready",
-          readError: false,
         }}
       />,
     );
@@ -92,6 +94,9 @@ describe("AdminDashboardView UI (YUI)", () => {
     expect(valueOf("超過 30 日")).toBe("4");
     expect(valueOf("20 項都揀咗")).toBe("1");
     expect(valueOf("複製回覆訊息")).toBe("2");
+    expect(valueOf("清單分析成功")).toBe("0");
+    expect(text).toContain("未有失敗紀錄");
+    expect(text).toContain("讀到公司名稱唔會寫入");
     expect(text).not.toContain("SENTINEL");
   });
 

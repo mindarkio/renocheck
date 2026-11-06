@@ -6,6 +6,7 @@ import { isSyntheticProbeTerm } from "@/lib/synthetic-probe";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   isMissingUsageEventsTable,
+  type UsageDetailCode,
   type UsageEventType,
 } from "@/lib/usage-event";
 
@@ -16,7 +17,8 @@ type CacheTermRow = { term: string | null };
 /**
  * Insert one usage event. Skips (no throw) when the table is missing, Supabase
  * is unconfigured, the prod-db guard refuses, or the fingerprint is a ZZQ probe.
- * The row is only anon_id, event_type, fingerprint, and created_at (default).
+ * The row is anon_id, event_type, optional fingerprint, optional detail, and created_at.
+ * `detail` is omitted when empty so an unmigrated table can still store quote_page.
  */
 export async function recordUsageEvent(
   supabase: SupabaseClient | null,
@@ -24,6 +26,7 @@ export async function recordUsageEvent(
     anonId: string;
     eventType: UsageEventType;
     fingerprint: string | null;
+    detail?: UsageDetailCode | null;
   },
 ): Promise<UsageWriteResult> {
   try {
@@ -43,11 +46,17 @@ export async function recordUsageEvent(
       return "skipped";
     }
 
-    const row = {
+    const row: {
+      anon_id: string;
+      event_type: UsageEventType;
+      fingerprint: string | null;
+      detail?: UsageDetailCode;
+    } = {
       anon_id: input.anonId,
       event_type: input.eventType,
       fingerprint: input.fingerprint,
     };
+    if (input.detail) row.detail = input.detail;
     const { error } = await client.from("usage_events").insert(row);
     if (!error) return "saved";
     if (isMissingUsageEventsTable(error)) return "skipped";

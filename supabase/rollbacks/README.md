@@ -21,5 +21,8 @@ Pair each file with the matching migration under `supabase/migrations/`. Run on 
 | `20261023180000_mwc_company_name_en.down.sql` | `20261023180000_mwc_company_name_en.sql` |
 | `20261023203000_returning_user_analytics.down.sql` | `20261023203000_returning_user_analytics.sql` |
 | `20261023220000_quote_analysis.down.sql` | `20261023220000_quote_analysis.sql` |
+| `20261106160000_quote_funnel_usage_events.down.sql` | `20261106160000_quote_funnel_usage_events.sql` |
 
 20261023220000 嘅 down 會刪走 `quote_analyses`、`quote_analysis_claims`、`quote_spend_daily` 同 `auth_otp_rate_limits` 全部列（EMERGENCY／資料損失），只限緊急用。同一份 up 有 `purge_quote_analysis_retention()`：分析、claims 同 metadata 180 日後刪，用量／費用列 30 日後刪；down 會一併 drop 呢個 function。
+
+20261106160000 嘅 down 會刪走新漏斗 event type 嘅 `usage_events` 列（匿名次數），再還原舊 check 同刪 `detail`。舊五種 event 唔刪。

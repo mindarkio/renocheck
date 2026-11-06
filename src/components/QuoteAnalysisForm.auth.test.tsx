@@ -17,6 +17,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh: vi.fn() }),
 }));
 
+vi.mock("@/lib/usage-events-client", () => ({
+  sendUsageEvent: vi.fn(),
+}));
+
+import { sendUsageEvent } from "@/lib/usage-events-client";
+
 function pdfFile(): File {
   return new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], "quote.pdf", {
     type: "application/pdf",
@@ -59,6 +65,46 @@ describe("quote upload before login", () => {
     expect(calls.filter((url) => url.includes("/api/quote/analyze"))).toHaveLength(1);
     expect(push).not.toHaveBeenCalled();
     expect(screen.queryByLabelText(LOGIN_CODE_LABEL_ZH)).toBeNull();
+    expect(sessionStorage.getItem(QUOTE_FILE_PENDING_KEY)).toBe("1");
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_file_pick");
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_extract_ok");
+  });
+
+  it("shows the same submit button when signed out", () => {
+    render(<QuoteAnalysisForm signedIn={false} />);
+    expect(screen.getByRole("button", { name: QUOTE_SUBMIT_ZH })).toBeTruthy();
+  });
+
+  it("retries a failed name read with the signed-out submit button", async () => {
+    vi.mocked(sendUsageEvent).mockClear();
+    let reads = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).includes("/api/quote/analyze")) {
+          reads += 1;
+          if (reads === 1) {
+            return new Response(
+              JSON.stringify({ error: "quote_llm_failed", message: "合成測試失敗訊息" }),
+              { status: 503 },
+            );
+          }
+          return new Response(JSON.stringify({ companyName: "合成測試工程有限公司" }), { status: 200 });
+        }
+        return new Response("{}", { status: 200 });
+      }),
+    );
+    render(<QuoteAnalysisForm signedIn={false} />);
+    chooseFile();
+    fireEvent.click(screen.getByRole("checkbox", { name: QUOTE_ACK_LABEL_ZH }));
+    expect(await screen.findByText("合成測試失敗訊息")).toBeTruthy();
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_extract_fail", { detail: "llm_failed" });
+    // jsdom does not keep a real FileList on the input, so submit the form directly.
+    fireEvent.submit(screen.getByRole("button", { name: QUOTE_SUBMIT_ZH }).closest("form")!);
+    expect(await screen.findByText(/我們在報價單上找到/)).toBeTruthy();
+    expect(reads).toBe(2);
+    expect(push).not.toHaveBeenCalled();
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_extract_ok");
   });
 
   it("skips the login step when the user is already signed in", () => {

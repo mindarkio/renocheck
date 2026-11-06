@@ -207,4 +207,31 @@ describe("POST /api/usage", () => {
     expect(admin.insert).not.toHaveBeenCalled();
   });
 
+  it("stores a reason code and rejects a company name in detail", async () => {
+    admin.insert.mockResolvedValue({ error: null });
+    const saved = await POST(
+      request(
+        { anonId: ANON, eventType: "quote_analyze_fail", detail: "invalid_pdf" },
+        { "x-forwarded-for": "203.0.113.45" },
+      ),
+    );
+    expect(saved.status).toBe(204);
+    expect(admin.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event_type: "quote_analyze_fail",
+        detail: "invalid_pdf",
+        fingerprint: null,
+      }),
+    );
+    admin.insert.mockClear();
+    const named = await POST(
+      request(
+        { anonId: ANON, eventType: "quote_analyze_fail", detail: "合成測試工程有限公司" },
+        { "x-forwarded-for": "203.0.113.46" },
+      ),
+    );
+    expect(named.status).toBe(400);
+    expect(admin.insert).not.toHaveBeenCalled();
+  });
+
 });

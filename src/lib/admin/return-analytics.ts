@@ -10,8 +10,11 @@ import {
 } from "@/lib/admin/search-analytics";
 import {
   isMissingAnonIdColumn,
+  isMissingUsageDetailColumn,
   isMissingUsageEventsTable,
+  isUsageDetailCode,
   USAGE_EVENT_TYPES,
+  type UsageDetailCode,
   type UsageEventType,
 } from "@/lib/usage-event";
 
@@ -38,6 +41,8 @@ export type ReturnUsageRow = {
   eventType: string;
   fingerprint: string | null;
   createdAt: string;
+  /** Reason code. Absent on rows loaded before the detail column existed. */
+  detail?: string | null;
 };
 
 export type ReturnTermRow = {
@@ -66,18 +71,56 @@ export type ReturnAnalytics = {
     differentCompany: number;
     usedQuote: number;
   };
-  funnel: {
-    quotePage: number;
-    quoteAllTicked: number;
-    quoteCopyReply: number;
-    reportOfficialLink: number;
-    reportShare: number;
-  };
+  funnel: QuoteFunnelCounts;
+  /** Fail steps in range, allow-listed reason codes only. */
+  failReasons: QuoteFailReason[];
   truncated: boolean;
   searchAnon: "ready" | "pending";
   usageEvents: "ready" | "pending";
+  /** `detail` column not migrated yet. Fail reasons stay empty. */
+  usageDetail: "ready" | "pending";
   readError: boolean;
 };
+
+export const FUNNEL_KEY = {
+  quote_page: "quotePage",
+  quote_upload_open: "quoteUploadOpen",
+  quote_upload_unavailable: "quoteUploadUnavailable",
+  quote_file_pick: "quoteFilePick",
+  quote_extract_start: "quoteExtractStart",
+  quote_extract_ok: "quoteExtractOk",
+  quote_extract_fail: "quoteExtractFail",
+  quote_otp_start: "quoteOtpStart",
+  quote_otp_success: "quoteOtpSuccess",
+  quote_otp_fail: "quoteOtpFail",
+  quote_analyze_start: "quoteAnalyzeStart",
+  quote_analyze_ok: "quoteAnalyzeOk",
+  quote_analyze_fail: "quoteAnalyzeFail",
+  quote_all_ticked: "quoteAllTicked",
+  quote_copy_reply: "quoteCopyReply",
+  report_official_link: "reportOfficialLink",
+  report_share: "reportShare",
+} as const satisfies Record<UsageEventType, string>;
+
+export type QuoteFunnelCounts = Record<(typeof FUNNEL_KEY)[UsageEventType], number>;
+
+const FAIL_EVENT_TYPES = [
+  "quote_extract_fail",
+  "quote_otp_fail",
+  "quote_analyze_fail",
+] as const;
+
+export type QuoteFailReason = {
+  eventType: (typeof FAIL_EVENT_TYPES)[number];
+  detail: UsageDetailCode;
+  count: number;
+};
+
+function zeroFunnel(): QuoteFunnelCounts {
+  const funnel = {} as QuoteFunnelCounts;
+  for (const key of Object.values(FUNNEL_KEY)) funnel[key] = 0;
+  return funnel;
+}
 
 export function emptyReturnAnalytics(
   partial: Partial<ReturnAnalytics> = {},
@@ -95,16 +138,12 @@ export function emptyReturnAnalytics(
       differentCompany: 0,
       usedQuote: 0,
     },
-    funnel: {
-      quotePage: 0,
-      quoteAllTicked: 0,
-      quoteCopyReply: 0,
-      reportOfficialLink: 0,
-      reportShare: 0,
-    },
+    funnel: zeroFunnel(),
+    failReasons: [],
     truncated: false,
     searchAnon: "ready",
     usageEvents: "ready",
+    usageDetail: "ready",
     readError: false,
     ...partial,
   };
@@ -142,13 +181,21 @@ function isUsageEventType(value: string): value is UsageEventType {
   return (USAGE_EVENT_TYPES as readonly string[]).includes(value);
 }
 
-const FUNNEL_KEY = {
-  quote_page: "quotePage",
-  quote_all_ticked: "quoteAllTicked",
-  quote_copy_reply: "quoteCopyReply",
-  report_official_link: "reportOfficialLink",
-  report_share: "reportShare",
-} as const;
+function isFailEventType(
+  value: UsageEventType,
+): value is (typeof FAIL_EVENT_TYPES)[number] {
+  return (FAIL_EVENT_TYPES as readonly string[]).includes(value);
+}
+
+function addFailReason(result: ReturnAnalytics, row: ReturnUsageRow): void {
+  if (!isUsageEventType(row.eventType) || !isFailEventType(row.eventType)) return;
+  const detail = isUsageDetailCode(row.detail) ? row.detail : "unknown";
+  const existing = result.failReasons.find(
+    (item) => item.eventType === row.eventType && item.detail === detail,
+  );
+  if (existing) existing.count += 1;
+  else result.failReasons.push({ eventType: row.eventType, detail, count: 1 });
+}
 
 type Visit = {
   at: number;
@@ -215,7 +262,10 @@ export function aggregateReturnAnalytics(
     const at = eventMs(row.createdAt);
     if (at == null) continue;
     // A 90-day purge nulls anon_id and keeps the row, so the funnel count stays.
-    if (inRange(at)) result.funnel[FUNNEL_KEY[row.eventType]] += 1;
+    if (inRange(at)) {
+      result.funnel[FUNNEL_KEY[row.eventType]] += 1;
+      addFailReason(result, row);
+    }
     if (!row.anonId) continue;
     presence.push({ anonId: row.anonId, at });
     if (row.eventType === "quote_page") {
@@ -286,6 +336,12 @@ export function aggregateReturnAnalytics(
     differentCompany: differentCompany.size,
     usedQuote: usedQuote.size,
   };
+  result.failReasons.sort(
+    (a, b) =>
+      b.count - a.count ||
+      a.eventType.localeCompare(b.eventType) ||
+      a.detail.localeCompare(b.detail),
+  );
   return result;
 }
 
@@ -327,6 +383,7 @@ export async function fetchReturnAnalytics(
   let truncated = false;
   let searchAnon: ReturnAnalytics["searchAnon"] = "ready";
   let usageEvents: ReturnAnalytics["usageEvents"] = "ready";
+  let usageDetail: ReturnAnalytics["usageDetail"] = "ready";
 
   const searchPage = await pageTable<{
     anon_id: string | null;
@@ -368,31 +425,42 @@ export async function fetchReturnAnalytics(
     }
   }
 
-  const usagePage = await pageTable<{
-    anon_id: string | null;
-    event_type: string;
-    fingerprint: string | null;
-    created_at: string;
-  }>(async (offset) => {
-    const usageSince = new Date(
-      now.getTime() - USAGE_EVENTS_LOOKBACK_DAYS * DAY_MS,
-    ).toISOString();
-    const { data, error } = await supabase
-      .from("usage_events")
-      .select("anon_id, event_type, fingerprint, created_at")
-      .gte("created_at", usageSince)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1);
-    return {
-      data: data as {
-        anon_id: string | null;
-        event_type: string;
-        fingerprint: string | null;
-        created_at: string;
-      }[] | null,
-      error,
-    };
-  });
+  const usageClient = supabase;
+  async function loadUsage(columns: string) {
+    return pageTable<{
+      anon_id: string | null;
+      event_type: string;
+      fingerprint: string | null;
+      detail?: string | null;
+      created_at: string;
+    }>(async (offset) => {
+      const usageSince = new Date(
+        now.getTime() - USAGE_EVENTS_LOOKBACK_DAYS * DAY_MS,
+      ).toISOString();
+      const { data, error } = await usageClient
+        .from("usage_events")
+        .select(columns)
+        .gte("created_at", usageSince)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+      return {
+        data: data as {
+          anon_id: string | null;
+          event_type: string;
+          fingerprint: string | null;
+          detail?: string | null;
+          created_at: string;
+        }[] | null,
+        error,
+      };
+    });
+  }
+
+  let usagePage = await loadUsage("anon_id, event_type, fingerprint, detail, created_at");
+  if (usagePage.error && isMissingUsageDetailColumn(usagePage.error)) {
+    usageDetail = "pending";
+    usagePage = await loadUsage("anon_id, event_type, fingerprint, created_at");
+  }
 
   const usage: ReturnUsageRow[] = [];
   if (usagePage.error) {
@@ -414,6 +482,7 @@ export async function fetchReturnAnalytics(
         eventType: row.event_type,
         fingerprint: row.fingerprint,
         createdAt: row.created_at,
+        detail: typeof row.detail === "string" ? row.detail : null,
       });
     }
   }
@@ -454,6 +523,7 @@ export async function fetchReturnAnalytics(
   aggregate.truncated = truncated;
   aggregate.searchAnon = searchAnon;
   aggregate.usageEvents = usageEvents;
+  aggregate.usageDetail = usageDetail;
   aggregate.readError = readError;
   return aggregate;
   } catch {
