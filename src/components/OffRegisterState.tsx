@@ -60,7 +60,7 @@ export function OffRegisterState({ report }: { report: RiskReport }) {
         <Info className="mt-1 size-[1.125rem] shrink-0 text-primary/75" aria-hidden />
         {MWC_MISS_NOTE_HEADING_ZH}
       </h2>
-      <div className={`${reportBodyTextClass} mt-3 space-y-2`} role="note">
+      <div className={`${reportBodyTextClass} mt-3 space-y-2`}>
         <p>{OFF_REGISTER_BODY_ZH}</p>
         <p>{OFF_REGISTER_NOT_A_GRADE_ZH}</p>
         <p>{offRegisterCrLeadZh(report)}</p>
