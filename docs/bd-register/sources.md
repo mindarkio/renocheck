@@ -72,9 +72,9 @@
 | **查詢參數** | `query[0][key1]` + `query[0][key2]` + `query[0][key3]` + `format=json` |
 | **按編號** | `key1=Brn`, `key2=equal`, `key3=<值>` |
 | **按名稱** | `key1=Comp_name`, `key2=begins_with`, `key3=<前綴>`（**僅前綴**，唔支援 contains） |
-| **無結果** | HTTP **400**，JSON `{"status":400,"message":"No result found."}` |
+| **無結果** | HTTP **400**。JSON `{"status":400,"message":"No result found."}`，或 2026-11-06 起同一靜態 HTML 殼（body 含 `Invalid Request` 與 `400_ZH.html`）。客戶端只把這個殼當 no result。5xx、timeout、其他 HTML 仍係 error，**唔**當成 not-found。 |
 | **Auth** | 無 |
-| **Timeout（產品）** | 單次 lookup 總預算 25s（`CR_LOOKUP_BUDGET_MS`，`cr-registry-lookup.ts`）；同網搜並行，見 `search-pipeline.ts` Promise.all；CR degraded 報告只 cache 10 分鐘（PR D） |
+| **Timeout（產品）** | 單次 lookup 總預算 25s（`CR_LOOKUP_BUDGET_MS`）。每次上游嘗試上限 16s；timeout、HTTP 408/500/502/503/504、網絡錯誤最多再試 1 次（既有 ≤1 req/s 節流即 backoff）。預算剩不足 8s，或父 signal 已中止，就唔再試。真 no-result 唔重試。CR degraded 報告只 cache 10 分鐘。 |
 | **Throttle（產品）** | 每個 serverless instance ≤1 req/s（非全域；`throttle.ts` 串行化）。接受理由：DATA.GOV.HK 無全域配額文件，instance 級節流避免單一冷啟動打爆上游。 |
 | **條款** | [DATA.GOV.HK 使用條款及細則](https://data.gov.hk/tc/terms-and-conditions) — **容許商業用途**（須標示來源） |
 
@@ -94,4 +94,4 @@
 
 ### Rate limit
 
-官網無明文 quota；2026-10-18 連續 5 次 BR lookup 均 HTTP 200。產品仍以 ≤1 req/s + 10 分鐘 in-memory cache（只存已 map 嘅 schema 欄位，**唔** cache 地址或 API 原始 row）為上限。
+官網無明文 quota；2026-10-18 連續 5 次 BR lookup 均 HTTP 200。產品仍以 ≤1 req/s + 10 分鐘 in-memory cache（只存已 map 嘅 schema 欄位，**唔** cache 地址或 API 原始 row；error／timeout 唔入 cache）為上限。2026-11-06 實測：對得上嘅 `begins_with`／`Brn equal` 仍係 HTTP 200 JSON；零行改為上面嘅 HTML 400 殼（舊 JSON `No result found` 客戶端繼續認）。HTML 400 若當成 `invalid_json`，會記作 breaker failure，連續三次就令之後 60s 嘅 lookup 直接 `circuit_open`。

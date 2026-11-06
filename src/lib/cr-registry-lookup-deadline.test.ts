@@ -113,6 +113,7 @@ describe("lookupCompaniesRegistryForSearch CR logs (A3)", () => {
     const payload = JSON.parse(String(crLine));
     expect(payload.fetch_count).toBeGreaterThanOrEqual(1);
     expect(payload.http_status).toBe(400);
+    expect(payload.not_found).toBe(true);
     expect(typeof payload.elapsed_ms).toBe("number");
     expect(payload.cache_hit).toBe(false);
     expect(String(crLine)).not.toContain("合成測試");
@@ -151,6 +152,7 @@ describe("lookupCompaniesRegistryForSearch CR logs (A3)", () => {
       .find((line) => String(line).includes('"event":"cr_lookup_failed"'));
     const payload = JSON.parse(String(failLine));
     expect(payload.reason).toBe("timeout");
+    expect(payload.upstream_reason).toBe("timeout");
     expect(payload.http_status).toBeNull();
     expect(payload.fetch_count).toBeGreaterThanOrEqual(1);
   });
@@ -171,5 +173,92 @@ describe("lookupCompaniesRegistryForSearch CR logs (A3)", () => {
     const second = JSON.parse(String(lines[lines.length - 1]));
     expect(second.cache_hit).toBe(true);
     expect(second.fetch_count).toBe(0);
+  });
+});
+
+const HTML_NO_RESULT =
+  '<!DOCTYPE html><html lang="en"><body>400 Error Invalid Request <a href="./400_ZH.html"></a></body></html>';
+
+describe("lookupCompaniesRegistryForSearch CR status classification", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    clearCrRegistryCacheForTests();
+    resetCrApiThrottleForTests();
+    resetCrCircuitBreakerForTests();
+    vi.restoreAllMocks();
+  });
+
+  it("HTML 400 shell → not-found, cached, and not lookupStatus error", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      headers: { get: () => null },
+      text: async () => HTML_NO_RESULT,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const label = "合成測試有限公司";
+    const input = companyNameOnlySearchInput(label);
+    const first = await lookupCompaniesRegistryForSearch(input, label, null);
+    expect(first.lookupStatus).toBe("ok");
+    expect(first.matched).toBe(false);
+    expect(first.hints).toContain("not_found_in_active_list");
+    const callsAfterFirst = fetchMock.mock.calls.length;
+    expect(callsAfterFirst).toBeGreaterThan(0);
+
+    const second = await lookupCompaniesRegistryForSearch(input, label, null);
+    expect(second.lookupStatus).toBe("ok");
+    expect(second.hints).toContain("not_found_in_active_list");
+    expect(fetchMock).toHaveBeenCalledTimes(callsAfterFirst);
+  });
+
+  it("HTML 400 shell for a punctuated prefix → inconclusive, never not-found", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      headers: { get: () => null },
+      text: async () => HTML_NO_RESULT,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const label = "ZZQ & SYNTH LIMITED";
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    expect(official.lookupStatus).toBe("ok");
+    expect(official.matched).toBe(false);
+    expect(official.hints).not.toContain("not_found_in_active_list");
+  });
+
+  it("exhausted HTTP 500 → lookupStatus error, never not-found", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      headers: { get: () => null },
+      text: async () => "err",
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const label = "合成測試有限公司";
+    const pending = lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    await vi.advanceTimersByTimeAsync(2_000);
+    const official = await pending;
+    expect(official.lookupStatus).toBe("error");
+    expect(official.hints).not.toContain("not_found_in_active_list");
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    const failLine = warnSpy.mock.calls
+      .map((c) => c[0])
+      .find((line) => String(line).includes('"event":"cr_lookup_failed"'));
+    const payload = JSON.parse(String(failLine));
+    expect(payload.reason).toBe("error");
+    expect(payload.upstream_reason).toBe("http_500");
+    expect(String(failLine)).not.toContain(label);
   });
 });

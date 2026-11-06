@@ -74,6 +74,51 @@ function variantCharForms(value: string): string[] {
   return out;
 }
 
+const FULLWIDTH_DIGIT_OFFSET = 0xfee0;
+
+/** ASCII digits → ０–９. Register names keep this width; ILIKE does not NFKC. */
+function toFullwidthDigits(value: string): string {
+  return value.replace(/[0-9]/g, (digit) =>
+    String.fromCharCode(digit.charCodeAt(0) + FULLWIDTH_DIGIT_OFFSET),
+  );
+}
+
+/**
+ * Drop spaces that sit between two digits, or between a digit and a Han
+ * character (`創建 2 1` / `創建２ １工程`). A Latin word space (`21 LTD`) stays.
+ */
+function collapseOddDigitSpaces(value: string): string {
+  const joinedDigits = value.replace(/([0-9])[ \t\u3000]+(?=[0-9])/gu, "$1");
+  return joinedDigits
+    .replace(/(\p{Script=Han})[ \t\u3000]+(?=[0-9])/gu, "$1")
+    .replace(/([0-9])[ \t\u3000]+(?=\p{Script=Han})/gu, "$1");
+}
+
+/**
+ * Fold only fullwidth digits (０–９) and fullwidth Latin (Ａ–Ｚ／ａ–ｚ) to ASCII.
+ * Do **not** run full-string NFKC: that would also map Kangxi radicals (⼀→一),
+ * circled digits (①→1), compatibility ideographs, ligatures, and halfwidth
+ * kana — lookalikes that can ILIKE-hit the wrong registered contractor.
+ */
+function foldFullwidthDigitsAndLatin(value: string): string {
+  // NBSP → ordinary space so digit/Han space collapse still runs (NFKC used to do this).
+  const spaced = value.replace(/ /g, " ");
+  return spaced.replace(/[０-９Ａ-Ｚａ-ｚ]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) - FULLWIDTH_DIGIT_OFFSET),
+  );
+}
+
+/**
+ * ASCII / register-width digit forms, plus the same strings with odd digit
+ * spaces removed. Fullwidth digit forms are pushed before the compacted
+ * halfwidth form. The caller's original string is still the first lookup term.
+ */
+function nfkcDigitForms(value: string): string[] {
+  const folded = foldFullwidthDigitsAndLatin(value);
+  const compact = collapseOddDigitSpaces(folded);
+  return [folded, toFullwidthDigits(folded), toFullwidthDigits(compact), compact];
+}
+
 function spacedCompanyForms(value: string): string[] {
   const joinedLimited = value.replace(/有限[ \t\u3000]+公司/gu, "有限公司");
   const collapsed = collapseSpacesBetweenCjk(joinedLimited);
@@ -101,7 +146,11 @@ export function escapeIlikePattern(term: string): string {
     .replace(/\*/g, "_");
 }
 
-/** Variants for mwc_contractors company-name ilike (P2-C3: punctuation / BR mismatch). */
+/**
+ * Variants for mwc_contractors company-name ilike.
+ * Contains / character-variant normalize only — no fuzzy auto-pick.
+ * Fullwidth digit/Latin fold plus spaced-digit forms cover register `２１` vs typed `21`.
+ */
 export function mwcCompanyNameLookupTerms(companyName: string): string[] {
   const raw = decodeHtmlEntities(companyName.trim());
   if (!raw) return [];
@@ -135,6 +184,9 @@ export function mwcCompanyNameLookupTerms(companyName: string): string[] {
     .trim();
   pushSeed(stripped);
   pushSeed(stripped.replace(/[（）()]/gu, "").replace(/\s+/g, " "));
+  for (const seed of [...seeds]) {
+    for (const form of nfkcDigitForms(seed)) pushSeed(form);
+  }
 
   const normalized: string[] = [];
   for (const seed of seeds) {
