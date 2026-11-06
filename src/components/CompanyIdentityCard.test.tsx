@@ -19,6 +19,7 @@ import {
   CR_IDENTITY_NOT_FOUND_ZH,
   CR_IDENTITY_SOURCE_LABEL_ZH,
   CR_LOOKUP_DEGRADED_ZH,
+  CR_LOOKUP_UNAVAILABLE_HEADING_ZH,
   REPORT_TRUST_FORBIDDEN_ZH,
   REPORT_TRUST_NEGATED_ALLOWLIST_ZH,
   crBrNoCompareNoteZh,
@@ -213,6 +214,8 @@ describe("CompanyIdentityCard", () => {
     );
     expect(container.textContent).toContain(CR_CANDIDATE_LIST_HEADING_ZH);
     expect(container.textContent).toContain(CR_CANDIDATE_LIST_EXPLAINER_ZH);
+    expect(container.querySelector("#cr-candidate-list-heading")).not.toBeNull();
+    expect(screen.getByRole("region", { name: CR_CANDIDATE_LIST_HEADING_ZH })).toBeTruthy();
     expect(container.textContent).toContain("其他工程有限公司");
     expect(container.textContent).toContain("OTHER WORKS LIMITED");
     expect(container.textContent).toContain("C9000001");
@@ -249,6 +252,8 @@ describe("CompanyIdentityCard", () => {
       />,
     );
     expect(container.textContent).toContain(CR_LOOKUP_DEGRADED_ZH);
+    expect(screen.getByRole("heading", { name: CR_LOOKUP_UNAVAILABLE_HEADING_ZH })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain(CR_LOOKUP_DEGRADED_ZH);
   });
 
   it("skipped／undefined：null", () => {

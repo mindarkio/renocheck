@@ -222,6 +222,52 @@ export const CR_DATA_ATTRIBUTION_ZH =
 export const CR_LOOKUP_DEGRADED_ZH =
   "公司註冊處開放數據暫時未能查詢；請稍後再試或自行查閱公司註冊處電子服務。";
 
+/** Shown inside the CR card when this run did not return registry data. */
+export const CR_LOOKUP_UNAVAILABLE_HEADING_ZH = "公司註冊處資料今次未齊";
+
+/**
+ * Company-name report with no MWC row (v0.9.19). Draft for Aaron.
+ * The risk band stays; this block is the register fact, not a second grade.
+ */
+export const OFF_REGISTER_BODY_ZH =
+  "今次用你輸入嘅名稱，對唔到屋宇署註冊小型工程承建商名冊上的一間公司。可能係店名或品牌同登記全名唔同，又或者對方唔喺呢份名冊。未有對應紀錄唔代表對方有問題。";
+
+export const OFF_REGISTER_NOT_A_GRADE_ZH =
+  "上面嘅風險參考分檔只講今次公開討論摘要，同名冊有冇登記係兩件事。";
+
+export const OFF_REGISTER_CR_MATCHED_LEAD_ZH =
+  "公司註冊處有對應嘅公司紀錄，詳情喺下面「公司身份（公司註冊處）」。";
+
+export const OFF_REGISTER_CR_CANDIDATES_LEAD_ZH =
+  "公司註冊處有名稱相近、未經核實嘅公司，列喺下面「公司身份（公司註冊處）」。請對完整名稱同商業登記號碼。";
+
+export const OFF_REGISTER_CR_NOT_FOUND_LEAD_ZH =
+  "公司註冊處存續本地公司開放數據亦搵唔到同呢個名稱完全對應嘅紀錄。";
+
+export const OFF_REGISTER_CR_AMBIGUOUS_LEAD_ZH =
+  "公司註冊處有多過一間名稱相近的公司，今次未能確定係邊一間。請睇下面「公司身份」，或者用商業登記號碼再查。";
+
+export const OFF_REGISTER_CR_UNAVAILABLE_LEAD_ZH =
+  "今次公司註冊處資料暫時攞唔到，呢一部分未齊。呢個唔係「查過但冇公司」。請稍後再查，或者自己去公司註冊處電子服務核對。";
+
+export const OFF_REGISTER_CR_NOT_RUN_LEAD_ZH =
+  "今次未有公司註冊處對照結果，所以唔可以話公司註冊處有定冇呢間公司。";
+
+export const OFF_REGISTER_QUOTE_HREF = "/quote";
+
+export const OFF_REGISTER_QUOTE_CTA_ZH = "用報價單或合約上的公司全名再查";
+
+export const OFF_REGISTER_QUOTE_WHY_ZH =
+  "報價單或合約上嘅法定名稱，通常比店名或品牌更容易對到屋宇署名冊。你可以去報價單頁面上載 PDF，或者用上面嘅全名再搜一次。";
+
+export const OFF_REGISTER_CHIP_ZH = "屋宇署名冊未有對應";
+
+export const CR_STATUS_CHIP_MATCHED_ZH = "公司註冊處有紀錄";
+export const CR_STATUS_CHIP_CANDIDATES_ZH = "公司註冊處有相近名稱";
+export const CR_STATUS_CHIP_NOT_FOUND_ZH = "公司註冊處未有對應";
+export const CR_STATUS_CHIP_UNCONFIRMED_ZH = "公司註冊處未能確定";
+export const CR_STATUS_CHIP_UNAVAILABLE_ZH = "公司註冊處今次未齊";
+
 export function crHintIncorporationUnderOneYearZh(incorporationDateIso: string): string {
   return `公司註冊處紀錄顯示成立日期為 ${incorporationDateIso}（查詢時成立未滿一年）。`;
 }
@@ -316,6 +362,23 @@ export function collectReportTrustCopyStrings(): string[] {
     CR_IDENTITY_INCONCLUSIVE_ZH,
     crHintIncorporationUnderOneYearZh("2026-01-01"),
     CR_LOOKUP_DEGRADED_ZH,
+    CR_LOOKUP_UNAVAILABLE_HEADING_ZH,
+    OFF_REGISTER_BODY_ZH,
+    OFF_REGISTER_NOT_A_GRADE_ZH,
+    OFF_REGISTER_CR_MATCHED_LEAD_ZH,
+    OFF_REGISTER_CR_CANDIDATES_LEAD_ZH,
+    OFF_REGISTER_CR_NOT_FOUND_LEAD_ZH,
+    OFF_REGISTER_CR_AMBIGUOUS_LEAD_ZH,
+    OFF_REGISTER_CR_UNAVAILABLE_LEAD_ZH,
+    OFF_REGISTER_CR_NOT_RUN_LEAD_ZH,
+    OFF_REGISTER_QUOTE_CTA_ZH,
+    OFF_REGISTER_QUOTE_WHY_ZH,
+    OFF_REGISTER_CHIP_ZH,
+    CR_STATUS_CHIP_MATCHED_ZH,
+    CR_STATUS_CHIP_CANDIDATES_ZH,
+    CR_STATUS_CHIP_NOT_FOUND_ZH,
+    CR_STATUS_CHIP_UNCONFIRMED_ZH,
+    CR_STATUS_CHIP_UNAVAILABLE_ZH,
     UNVERIFIED_COMPANY_REGISTRATION_EXEMPTED_LINK_LABEL_ZH,
     UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
     LEGAL_EVENT_SOURCE_LINK_LABEL_ZH,

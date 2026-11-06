@@ -1,7 +1,9 @@
+import { CR_CANDIDATE_LIST_HEADING_ZH } from "@/lib/cr-register/candidate-copy";
 import {
   CONTRACT_CHECKLIST_HEADING_WITH_ACTIONABLE_ZH,
   CONTRACT_CHECKLIST_HEADING_ZH,
   CR_IDENTITY_CARD_HEADING_ZH,
+  CR_LOOKUP_UNAVAILABLE_HEADING_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
   NEXT_STEPS_HEADING_ZH,
   NON_LIMITED_NOTICE_HEADING_ZH,
@@ -11,6 +13,7 @@ import {
 } from "@/lib/report-trust-copy-zh";
 import { isReportLegalLookupDegraded } from "@/lib/report-card-legal-degraded-ui";
 import { shouldShowNonLimitedContractorNotice } from "@/lib/non-limited-contractor-notice";
+import { shouldShowOffRegisterState } from "@/lib/off-register-report";
 import {
   shouldShowMwcMissFallbackNote,
   shouldShowMwcMissWithCrFoundNote,
@@ -27,10 +30,22 @@ export function buildReportTocEntries(report: RiskReport): ReportTocEntry[] {
   const actionable = report.signals.actionableClauses ?? [];
   const evidenceCount = report.signals.retrievalEvidence?.length ?? 0;
 
-  if (shouldShowUnverifiedCompanyRegistrationAlert(report)) {
+  const offRegister = shouldShowOffRegisterState(report);
+
+  if (
+    !offRegister &&
+    shouldShowUnverifiedCompanyRegistrationAlert(report)
+  ) {
     entries.push({
       id: "unverified-registration-heading",
       label: UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
+    });
+  }
+
+  if (offRegister) {
+    entries.push({
+      id: "off-register-heading",
+      label: MWC_MISS_NOTE_HEADING_ZH,
     });
   }
 
@@ -41,15 +56,33 @@ export function buildReportTocEntries(report: RiskReport): ReportTocEntry[] {
       label: CR_IDENTITY_CARD_HEADING_ZH,
     });
   }
+  if (cr && (cr.lookupStatus === "error" || cr.lookupStatus === "timeout")) {
+    entries.push({
+      id: "cr-lookup-unavailable-heading",
+      label: CR_LOOKUP_UNAVAILABLE_HEADING_ZH,
+    });
+  }
+  if (
+    cr &&
+    cr.lookupStatus === "ok" &&
+    cr.matched !== true &&
+    !cr.matchAmbiguous &&
+    (cr.candidateNames?.length ?? 0) > 0
+  ) {
+    entries.push({
+      id: "cr-candidate-list-heading",
+      label: CR_CANDIDATE_LIST_HEADING_ZH,
+    });
+  }
 
-  if (shouldShowMwcMissWithCrFoundNote(report)) {
+  if (!offRegister && shouldShowMwcMissWithCrFoundNote(report)) {
     entries.push({
       id: "mwc-miss-note-heading",
       label: MWC_MISS_NOTE_HEADING_ZH,
     });
   }
 
-  if (shouldShowMwcMissFallbackNote(report)) {
+  if (!offRegister && shouldShowMwcMissFallbackNote(report)) {
     entries.push({
       id: "mwc-miss-fallback-heading",
       label: MWC_MISS_NOTE_HEADING_ZH,
