@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { SignInForm } from "@/components/SignInForm";
+import { sendUsageEvent } from "@/lib/usage-events-client";
 import {
   QUOTE_VERIFY_ABANDON_ZH,
   QUOTE_VERIFY_MODAL_BODY_ZH,
@@ -79,6 +80,11 @@ export function QuoteVerifyDialog({
     if (open && verified && !pending) retryRef.current?.focus();
   }, [open, verified, pending]);
 
+  useEffect(() => {
+    if (!open) return;
+    sendUsageEvent("quote_otp_start");
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -133,6 +139,7 @@ export function QuoteVerifyDialog({
             submitLabel={QUOTE_VERIFY_REOPEN_ZH}
             onAbandon={onAbandon}
             abandonLabel={QUOTE_VERIFY_ABANDON_ZH}
+            trackQuoteFunnel
           />
         )}
       </div>

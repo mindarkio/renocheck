@@ -16,6 +16,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 import {
   aggregateReturnAnalytics,
+  emptyReturnAnalytics,
   fetchReturnAnalytics,
   USAGE_EVENTS_LOOKBACK_DAYS,
   type ReturnSearchRow,
@@ -104,12 +105,14 @@ describe("return analytics buckets", () => {
       usedQuote: 1,
     });
     expect(result.funnel).toEqual({
+      ...emptyReturnAnalytics().funnel,
       quotePage: 2,
       quoteAllTicked: 1,
       quoteCopyReply: 1,
       reportOfficialLink: 1,
       reportShare: 1,
     });
+    expect(result.failReasons).toEqual([]);
     expect(JSON.stringify(result)).not.toContain("ZZQ");
     expect(JSON.stringify(result)).not.toContain("示例");
   });
@@ -244,6 +247,52 @@ describe("return analytics edges", () => {
   });
 });
 
+describe("quote funnel fail reasons", () => {
+  const now = new Date("2026-06-17T04:00:00.000Z");
+
+  it("counts allow-listed reasons and does not keep a raw detail", () => {
+    const usage: ReturnUsageRow[] = [
+      {
+        anonId: A,
+        eventType: "quote_analyze_fail",
+        fingerprint: null,
+        detail: "budget",
+        createdAt: "2026-06-12T02:00:00.000Z",
+      },
+      {
+        anonId: A,
+        eventType: "quote_analyze_fail",
+        fingerprint: null,
+        detail: "budget",
+        createdAt: "2026-06-12T03:00:00.000Z",
+      },
+      {
+        anonId: B,
+        eventType: "quote_extract_fail",
+        fingerprint: null,
+        detail: "合成測試工程有限公司",
+        createdAt: "2026-06-12T04:00:00.000Z",
+      },
+      {
+        anonId: A,
+        eventType: "quote_analyze_ok",
+        fingerprint: null,
+        detail: "budget",
+        createdAt: "2026-06-12T05:00:00.000Z",
+      },
+    ];
+    const result = aggregateReturnAnalytics([], usage, [], now, 30);
+    expect(result.funnel.quoteAnalyzeFail).toBe(2);
+    expect(result.funnel.quoteExtractFail).toBe(1);
+    expect(result.funnel.quoteAnalyzeOk).toBe(1);
+    expect(result.failReasons).toEqual([
+      { eventType: "quote_analyze_fail", detail: "budget", count: 2 },
+      { eventType: "quote_extract_fail", detail: "unknown", count: 1 },
+    ]);
+    expect(JSON.stringify(result.failReasons)).not.toContain("合成");
+  });
+});
+
 describe("fetchReturnAnalytics degradation", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "http://127.0.0.1:54321");
@@ -284,6 +333,42 @@ describe("fetchReturnAnalytics degradation", () => {
     expect(result.funnel.quotePage).toBe(0);
     expect(result.intervals.within1Day).toBe(0);
     expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it("keeps quote_page counts when the detail column is not migrated", async () => {
+    let usageReads = 0;
+    admin.from.mockImplementation((table: string) => {
+      if (table === "usage_events") {
+        usageReads += 1;
+        if (usageReads === 1) {
+          return queryResult({
+            data: null,
+            error: {
+              code: "PGRST204",
+              message: "Could not find the 'detail' column of 'usage_events' in the schema cache",
+            },
+          });
+        }
+        return queryResult({
+          data: [
+            {
+              anon_id: A,
+              event_type: "quote_page",
+              fingerprint: null,
+              created_at: new Date().toISOString(),
+            },
+          ],
+          error: null,
+        });
+      }
+      return queryResult({ data: [], error: null });
+    });
+    const result = await fetchReturnAnalytics(7);
+    expect(result.usageDetail).toBe("pending");
+    expect(result.readError).toBe(false);
+    expect(result.usageEvents).toBe("ready");
+    expect(result.funnel.quotePage).toBe(1);
+    expect(result.failReasons).toEqual([]);
   });
 
   it("flags a read error without throwing when the query fails for another reason", async () => {

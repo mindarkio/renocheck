@@ -6,6 +6,7 @@ import {
   QUOTE_ANALYSIS_VERIFY_CTA_ZH,
   QUOTE_COMPANY_CONFIRM_ZH,
   QUOTE_FILE_LABEL_ZH,
+  QUOTE_FAILED_ZH,
   QUOTE_NOT_QUOTATION_ZH,
   QUOTE_VERIFY_ABANDON_ZH,
 } from "@/lib/quote-analysis/copy";
@@ -71,6 +72,7 @@ describe("quote upload r3 edge cases", () => {
     pick(true);
     expect(await screen.findByRole("dialog")).toBeTruthy();
     expect(screen.getByRole("button", { name: "mock-verify" })).toBeTruthy();
+    expect(screen.queryByText(QUOTE_FAILED_ZH)).toBeNull();
     expect(nav.push).not.toHaveBeenCalled();
   });
 

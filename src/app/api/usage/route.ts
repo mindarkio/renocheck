@@ -81,6 +81,7 @@ export async function POST(req: Request) {
     anonId: parsed.data.anonId,
     eventType: parsed.data.eventType,
     fingerprint: parsed.data.fingerprint ?? null,
+    detail: parsed.data.detail ?? null,
   });
 
   return new NextResponse(null, { status: 204 });

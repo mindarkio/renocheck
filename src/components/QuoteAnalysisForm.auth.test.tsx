@@ -17,6 +17,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh: vi.fn() }),
 }));
 
+vi.mock("@/lib/usage-events-client", () => ({
+  sendUsageEvent: vi.fn(),
+}));
+
+import { sendUsageEvent } from "@/lib/usage-events-client";
+
 function pdfFile(): File {
   return new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], "quote.pdf", {
     type: "application/pdf",
@@ -59,6 +65,14 @@ describe("quote upload before login", () => {
     expect(calls.filter((url) => url.includes("/api/quote/analyze"))).toHaveLength(1);
     expect(push).not.toHaveBeenCalled();
     expect(screen.queryByLabelText(LOGIN_CODE_LABEL_ZH)).toBeNull();
+    expect(sessionStorage.getItem(QUOTE_FILE_PENDING_KEY)).toBe("1");
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_file_pick");
+    expect(sendUsageEvent).toHaveBeenCalledWith("quote_extract_ok");
+  });
+
+  it("shows the same submit button when signed out", () => {
+    render(<QuoteAnalysisForm signedIn={false} />);
+    expect(screen.getByRole("button", { name: QUOTE_SUBMIT_ZH })).toBeTruthy();
   });
 
   it("skips the login step when the user is already signed in", () => {

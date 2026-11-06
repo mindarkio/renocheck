@@ -7,6 +7,7 @@ import {
   ContentPageTitle,
 } from "@/components/ContentPage";
 import { JsonLd } from "@/components/JsonLd";
+import { QuoteFunnelBeacon } from "@/components/QuoteFunnelBeacon";
 import { QuoteGuideArticle } from "@/components/QuoteGuideArticle";
 import {
   QUOTE_GUIDE_DATE,
@@ -32,6 +33,7 @@ export const metadata: Metadata = {
 export default function QuotePage() {
   return (
     <ContentPage>
+      <QuoteFunnelBeacon eventType="quote_page" />
       <JsonLd data={buildQuotePageJsonLd(getSiteUrl())} />
       <ContentCard>
         <ContentPageTitle>{QUOTE_PAGE_TITLE_ZH}</ContentPageTitle>

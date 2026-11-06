@@ -5,6 +5,8 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalSto
 import { QuoteCompanyConfirm } from "@/components/QuoteCompanyConfirm";
 import { QuoteReportSkeleton, QuoteVerifyDialog } from "@/components/QuoteVerifyDialog";
 import { holdQuoteCompanyName } from "@/lib/quote-analysis/company-name-handoff";
+import { usageDetailFromError, type UsageDetailCode } from "@/lib/usage-event";
+import { sendUsageEvent } from "@/lib/usage-events-client";
 import {
   QUOTE_ACK_ERROR_ZH,
   QUOTE_ACK_LABEL_ZH,
@@ -77,7 +79,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [extracted, setExtracted] = useState<string | null | undefined>(undefined);
-  const [searchReady, setSearchReady] = useState(false);
+  const [nameConfirmed, setNameConfirmed] = useState(false);
   const [reportItems, setReportItems] = useState<ChecklistItem[] | null>(null);
 
   useEffect(() => {
@@ -93,13 +95,35 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   function rememberFile(next: File | null) {
     fileRef.current = next;
     setFile(next);
-    if (next) writeFlag(QUOTE_FILE_PENDING_KEY);
+    if (next) {
+      writeFlag(QUOTE_FILE_PENDING_KEY);
+      sendUsageEvent("quote_file_pick");
+    }
+  }
+
+  function recordStep(
+    mode: "extract" | "full",
+    outcome: "ok" | "fail",
+    detail?: UsageDetailCode,
+  ) {
+    if (outcome === "ok" && mode === "extract") {
+      sendUsageEvent("quote_extract_ok");
+      return;
+    }
+    if (outcome === "ok") {
+      sendUsageEvent("quote_analyze_ok");
+      return;
+    }
+    sendUsageEvent(mode === "full" ? "quote_analyze_fail" : "quote_extract_fail", {
+      detail: detail ?? "unknown",
+    });
   }
 
   async function postPdf(mode: "extract" | "full") {
     if (!ackRef.current) {
       setError(QUOTE_ACK_ERROR_ZH);
       checkboxRef.current?.focus();
+      recordStep(mode, "fail", "ack");
       return null;
     }
     const chosen = fileRef.current;
@@ -116,6 +140,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
     if (mode === "full") {
       if (confirmedRef.current) data.set("confirmedCompanyName", confirmedRef.current);
     }
+    sendUsageEvent(mode === "full" ? "quote_analyze_start" : "quote_extract_start");
     try {
       const res = await fetch("/api/quote/analyze", {
         method: "POST",
@@ -125,17 +150,27 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
       if (epoch !== flowEpoch.current) return null;
       const body = (await res.json().catch(() => null)) as {
         id?: string;
+        error?: string;
         companyName?: string | null;
         items?: ChecklistItem[];
         message?: string;
       } | null;
       if (!res.ok || !body) {
+        recordStep(mode, "fail", usageDetailFromError(body?.error));
         setError(body?.message ?? QUOTE_FAILED_ZH);
         return null;
       }
+      if (body.id) recordStep("full", "ok");
+      else if (mode === "extract" && !body.error) recordStep("extract", "ok");
+      else if (mode === "full" && "companyName" in body && !body.error && !body.message) {
+        recordStep("full", "fail", "auth_required");
+      } else recordStep(mode, "fail", usageDetailFromError(body.error));
       return body;
     } catch {
-      if (epoch === flowEpoch.current) setError(QUOTE_FAILED_ZH);
+      if (epoch === flowEpoch.current) {
+        recordStep(mode, "fail", "network");
+        setError(QUOTE_FAILED_ZH);
+      }
       return null;
     } finally {
       if (requestAbort.current === abort) requestAbort.current = null;
@@ -156,7 +191,8 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
       showFull(body, true);
       return;
     }
-    clearFlag(QUOTE_FILE_PENDING_KEY);
+    // Keep the reselect flag until the checklist finishes or the visitor abandons.
+    // A reload after the name step otherwise looks like a blank form.
     const name = typeof body.companyName === "string" ? body.companyName : null;
     setExtracted(name);
   }
@@ -167,9 +203,11 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
     if (!body.id) {
       if (!("items" in body) && "companyName" in body && !body.message) {
         // Name-only reply: the session is gone, so the server treated this as logged out.
+        // This is not a failed analysis. The verification dialog is the next step.
         authedRef.current = false;
         setAuthed(false);
         setModalOpen(true);
+        return;
       }
       // A 200 without a row (for example not_quotation) still carries a message.
       setError(body.message ?? QUOTE_FAILED_ZH);
@@ -203,6 +241,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (authedRef.current) await submitFull(true);
+    else await submitExtraction();
   }
 
   function abandonAnalysis() {
@@ -217,7 +256,7 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
     setFile(null);
     setAcknowledged(false);
     setExtracted(undefined);
-    setSearchReady(false);
+    setNameConfirmed(false);
     setReportItems(null);
     setModalOpen(false);
     setError(null);
@@ -306,15 +345,13 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
               {QUOTE_ANALYSING_ZH}
             </p>
           ) : null}
-          {signedIn ? (
-            <button
-              type="submit"
-              disabled={pending}
-              className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
-            >
-              {QUOTE_SUBMIT_ZH}
-            </button>
-          ) : null}
+          <button
+            type="submit"
+            disabled={pending}
+            className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          >
+            {QUOTE_SUBMIT_ZH}
+          </button>
         </form>
       )}
       {showConfirm ? (
@@ -324,11 +361,11 @@ export function QuoteAnalysisForm({ signedIn }: { signedIn: boolean }) {
           deferPersist
           onConfirmed={(companyName) => {
             confirmedRef.current = companyName;
+            setNameConfirmed(true);
           }}
-          onReport={() => setSearchReady(true)}
         />
       ) : null}
-      {showConfirm && searchReady && !reportItems ? (
+      {showConfirm && nameConfirmed && !reportItems ? (
         <section className="mt-8" aria-labelledby={sectionHeadingId}>
           <h2 id={sectionHeadingId} className="text-sm font-semibold text-primary">{QUOTE_ANALYSIS_SECTION_ZH}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{QUOTE_ANALYSIS_LOCKED_ZH}</p>

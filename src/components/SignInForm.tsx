@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { safeNextPath } from "@/lib/request-guards";
+import { usageDetailFromError } from "@/lib/usage-event";
+import { sendUsageEvent } from "@/lib/usage-events-client";
 import {
   LOGIN_CODE_INVALID_ZH,
   LOGIN_CODE_LABEL_ZH,
@@ -22,6 +24,7 @@ export function SignInForm({
   submitLabel = LOGIN_SUBMIT_ZH,
   onAbandon,
   abandonLabel,
+  trackQuoteFunnel = false,
 }: {
   nextPath?: string;
   /** When set, stay on this page instead of following `next`. */
@@ -30,6 +33,8 @@ export function SignInForm({
   submitLabel?: string;
   onAbandon?: () => void;
   abandonLabel?: string;
+  /** Quote upload dialog only. The site login page does not set this. */
+  trackQuoteFunnel?: boolean;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -48,13 +53,20 @@ export function SignInForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const data = (await res.json().catch(() => null)) as { message?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        message?: string;
+        error?: string;
+      } | null;
       if (!res.ok) {
+        if (trackQuoteFunnel) {
+          sendUsageEvent("quote_otp_fail", { detail: usageDetailFromError(data?.error) });
+        }
         setError(data?.message ?? LOGIN_SEND_FAILED_ZH);
         return;
       }
       setMessage(LOGIN_SENT_ZH);
     } catch {
+      if (trackQuoteFunnel) sendUsageEvent("quote_otp_fail", { detail: "network" });
       setError(LOGIN_SEND_FAILED_ZH);
     } finally {
       setPending(null);
@@ -71,11 +83,18 @@ export function SignInForm({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email, token: code }),
       });
-      const data = (await res.json().catch(() => null)) as { message?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        message?: string;
+        error?: string;
+      } | null;
       if (!res.ok) {
+        if (trackQuoteFunnel) {
+          sendUsageEvent("quote_otp_fail", { detail: usageDetailFromError(data?.error) });
+        }
         setError(data?.message ?? LOGIN_CODE_INVALID_ZH);
         return;
       }
+      if (trackQuoteFunnel) sendUsageEvent("quote_otp_success");
       if (onVerified) {
         await onVerified();
         return;
@@ -83,6 +102,7 @@ export function SignInForm({
       router.push(safeNextPath(nextPath));
       router.refresh();
     } catch {
+      if (trackQuoteFunnel) sendUsageEvent("quote_otp_fail", { detail: "network" });
       setError(LOGIN_CODE_INVALID_ZH);
     } finally {
       setPending(null);

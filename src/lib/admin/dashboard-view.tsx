@@ -12,8 +12,11 @@ import {
 } from "@/lib/admin/search-analytics";
 import {
   emptyReturnAnalytics,
+  type QuoteFailReason,
+  type QuoteFunnelCounts,
   type ReturnAnalytics,
 } from "@/lib/admin/return-analytics";
+import type { UsageDetailCode } from "@/lib/usage-event";
 
 const VIEW_TABS: { id: SearchAnalyticsView; label: string }[] = [
   { id: "all", label: "全部" },
@@ -372,19 +375,86 @@ function ReturnAnalyticsSection({ data }: { data: ReturnAnalytics }) {
             </dl>
           </div>
           <div>
-            <h3 className="mb-2 text-sm font-medium text-foreground">使用次數</h3>
+            <h3 className="mb-2 text-sm font-medium text-foreground">報價上載漏斗</h3>
+            <p className="mb-2 break-words text-[13px] text-muted-foreground">
+              清單分析成功先會寫入分析紀錄。讀到公司名稱唔會寫入。
+            </p>
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <CountItem label="報價自查頁" value={data.funnel.quotePage} />
-              <CountItem label="20 項都揀咗" value={data.funnel.quoteAllTicked} />
-              <CountItem label="複製回覆訊息" value={data.funnel.quoteCopyReply} />
+              {FUNNEL_STEPS.map((step) => (
+                <CountItem key={step.key} label={step.label} value={data.funnel[step.key]} />
+              ))}
               <CountItem label="官方連結" value={data.funnel.reportOfficialLink} />
               <CountItem label="分享報告" value={data.funnel.reportShare} />
+              <CountItem label="20 項都揀咗" value={data.funnel.quoteAllTicked} />
+              <CountItem label="複製回覆訊息" value={data.funnel.quoteCopyReply} />
             </dl>
+            <h3 className="mb-2 mt-4 text-sm font-medium text-foreground">失敗原因</h3>
+            {data.usageDetail === "pending" ? (
+              <p className="break-words text-sm text-muted-foreground">
+                失敗原因欄位尚未套用，原因暫時係 0。
+              </p>
+            ) : data.failReasons.length === 0 ? (
+              <p className="text-sm text-muted-foreground">未有失敗紀錄</p>
+            ) : (
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {data.failReasons.map((reason) => (
+                  <CountItem
+                    key={`${reason.eventType}:${reason.detail}`}
+                    label={failReasonLabel(reason)}
+                    value={reason.count}
+                  />
+                ))}
+              </dl>
+            )}
           </div>
         </div>
       )}
     </section>
   );
+}
+
+/** Draft admin labels. Aaron can edit before this is shown as final. */
+const FUNNEL_STEPS: { key: keyof QuoteFunnelCounts; label: string }[] = [
+  { key: "quotePage", label: "報價指南頁" },
+  { key: "quoteUploadOpen", label: "打開上載頁" },
+  { key: "quoteUploadUnavailable", label: "上載頁未開放" },
+  { key: "quoteFilePick", label: "揀咗 PDF" },
+  { key: "quoteExtractStart", label: "開始讀公司名稱" },
+  { key: "quoteExtractOk", label: "讀到公司名稱" },
+  { key: "quoteExtractFail", label: "讀公司名稱失敗" },
+  { key: "quoteOtpStart", label: "開始驗證電郵" },
+  { key: "quoteOtpSuccess", label: "驗證電郵成功" },
+  { key: "quoteOtpFail", label: "驗證電郵失敗" },
+  { key: "quoteAnalyzeStart", label: "開始清單分析" },
+  { key: "quoteAnalyzeOk", label: "清單分析成功" },
+  { key: "quoteAnalyzeFail", label: "清單分析失敗" },
+];
+
+const DETAIL_LABEL_ZH: Record<UsageDetailCode, string> = {
+  ack: "未確認遮蓋",
+  anon_limited: "呢個網絡今日用完",
+  auth_required: "未驗證電郵",
+  budget: "今日名額已滿",
+  forbidden: "來源被拒",
+  invalid_input: "輸入無效",
+  invalid_pdf: "PDF 不合規格",
+  llm_failed: "分析失敗",
+  network: "網絡錯誤",
+  not_quotation: "唔係報價單",
+  quota: "今日次數用完",
+  rate_limited: "太頻繁",
+  unavailable: "未開放",
+  unknown: "其他",
+};
+
+const FAIL_STEP_LABEL: Record<QuoteFailReason["eventType"], string> = {
+  quote_extract_fail: "讀公司名稱",
+  quote_otp_fail: "驗證電郵",
+  quote_analyze_fail: "清單分析",
+};
+
+function failReasonLabel(reason: QuoteFailReason): string {
+  return `${FAIL_STEP_LABEL[reason.eventType]}：${DETAIL_LABEL_ZH[reason.detail]}`;
 }
 
 function CountItem({ label, value }: { label: string; value: number }) {
