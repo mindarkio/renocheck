@@ -87,4 +87,74 @@ describe("mwcCompanyNameLookupTerms", () => {
     expect(terms.length).toBe(MAX_MWC_LOOKUP_TERMS);
     expect(terms[0]).toBe("恒峯綫裏着合成工程有限公司");
   });
+
+  it("emits a fullwidth-digit term for a halfwidth query, original first", () => {
+    const terms = mwcCompanyNameLookupTerms("創建21");
+    expect(terms[0]).toBe("創建21");
+    expect(terms).toContain("創建２１");
+    expect(terms.some((term) => term.includes("%") || term.includes("*"))).toBe(
+      false,
+    );
+  });
+
+  it("folds a fullwidth register-shaped query back to halfwidth digits", () => {
+    const terms = mwcCompanyNameLookupTerms("創建２１顧問有限公司");
+    expect(terms[0]).toBe("創建２１顧問有限公司");
+    expect(terms).toContain("創建21顧問有限公司");
+    expect(terms).toContain("創建21顧問");
+  });
+
+  it("collapses odd spaces around digits and emits both widths", () => {
+    for (const typed of ["創建 21", "創建2 1", "創建 2 1", "創建２ １", "創建　２１"]) {
+      const terms = mwcCompanyNameLookupTerms(typed);
+      expect(terms[0]).toBe(typed);
+      expect(terms).toContain("創建21");
+      expect(terms).toContain("創建２１");
+    }
+    const inside = mwcCompanyNameLookupTerms("創建 21 工程");
+    expect(inside).toContain("創建21工程");
+    expect(inside).toContain("創建２１工程");
+    expect(inside[0]).toBe("創建 21 工程");
+  });
+
+  it("folds fullwidth Latin and still keeps a fullwidth-digit term", () => {
+    const terms = mwcCompanyNameLookupTerms("ＡＢＣ２１工程");
+    expect(terms[0]).toBe("ＡＢＣ２１工程");
+    expect(terms).toContain("ABC21工程");
+    expect(terms).toContain("ABC２１工程");
+  });
+
+  it("does not glue a Latin word space onto a digit", () => {
+    const terms = mwcCompanyNameLookupTerms("OMYL 21 LTD");
+    expect(terms).toContain("OMYL 21 LTD");
+    expect(terms).toContain("OMYL ２１ LTD");
+    expect(terms).not.toContain("OMYL21LTD");
+    expect(terms).not.toContain("OMYL21 LTD");
+    expect(terms).not.toContain("OMYL 21LTD");
+  });
+
+
+  it("collapses NBSP around digits without full-string NFKC", () => {
+    const name = "創建 21";
+    const terms = mwcCompanyNameLookupTerms(name);
+    expect(terms[0]).toBe(name);
+    expect(terms).toContain("創建21");
+    expect(terms).toContain("創建２１");
+  });
+
+  it("does not fold Kangxi radical or circled-digit lookalikes into ASCII company names", () => {
+    const radical = mwcCompanyNameLookupTerms("⼀創工程有限公司");
+    expect(radical[0]).toBe("⼀創工程有限公司");
+    expect(radical.some((term) => term.includes("一"))).toBe(false);
+
+    const circled = mwcCompanyNameLookupTerms("①號工程");
+    expect(circled[0]).toBe("①號工程");
+    expect(circled).not.toContain("1號工程");
+    expect(circled).not.toContain("１號工程");
+
+    const parenDigit = mwcCompanyNameLookupTerms("⑴號工程");
+    expect(
+      parenDigit.some((term) => term.includes("(1)") || term.includes("(１)")),
+    ).toBe(false);
+  });
 });
