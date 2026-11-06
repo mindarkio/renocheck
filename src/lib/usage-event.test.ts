@@ -71,6 +71,7 @@ describe("usage event validation", () => {
     expect(parsed.detail).toBe("budget");
     expect(usageDetailFromError("quote_paused")).toBe("budget");
     expect(usageDetailFromError("quote_unavailable")).toBe("unavailable");
+    expect(usageDetailFromError("invalid_code")).toBe("invalid_input");
     expect(usageDetailFromError("not_a_real_code")).toBe("unknown");
     expect(usageDetailFromError(undefined)).toBe("unknown");
   });
@@ -83,6 +84,7 @@ describe("usage event validation", () => {
     for (const eventType of USAGE_EVENT_TYPES) expect(sql).toContain(`'${eventType}'`);
     for (const detail of USAGE_DETAIL_CODES) {
       expect(detail).toMatch(/^[a-z][a-z0-9_]{0,31}$/);
+      expect(sql).toContain(`'${detail}'`);
     }
   });
 

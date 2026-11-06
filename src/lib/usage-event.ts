@@ -53,6 +53,7 @@ const API_ERROR_TO_DETAIL: Record<string, UsageDetailCode> = {
   anon_limited: "anon_limited",
   auth_required: "auth_required",
   forbidden: "forbidden",
+  invalid_code: "invalid_input",
   invalid_input: "invalid_input",
   invalid_pdf: "invalid_pdf",
   not_quotation: "not_quotation",

@@ -54,7 +54,22 @@ alter table public.usage_events drop constraint if exists usage_events_detail_ch
 
 alter table public.usage_events
   add constraint usage_events_detail_check
-  check (detail is null or detail ~ '^[a-z][a-z0-9_]{0,31}$');
+  check (detail is null or detail in (
+    'ack',
+    'anon_limited',
+    'auth_required',
+    'budget',
+    'forbidden',
+    'invalid_input',
+    'invalid_pdf',
+    'llm_failed',
+    'network',
+    'not_quotation',
+    'quota',
+    'rate_limited',
+    'unavailable',
+    'unknown'
+  ));
 
 comment on column public.usage_events.detail is
   'Short reason code for a failed quote-upload step. Not a name, email, phone, filename, or free text.';
