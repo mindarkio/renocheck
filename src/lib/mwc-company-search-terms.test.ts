@@ -97,7 +97,7 @@ describe("mwcCompanyNameLookupTerms", () => {
     );
   });
 
-  it("NFKC-folds a fullwidth register-shaped query back to halfwidth digits", () => {
+  it("folds a fullwidth register-shaped query back to halfwidth digits", () => {
     const terms = mwcCompanyNameLookupTerms("創建２１顧問有限公司");
     expect(terms[0]).toBe("創建２１顧問有限公司");
     expect(terms).toContain("創建21顧問有限公司");
@@ -117,7 +117,7 @@ describe("mwcCompanyNameLookupTerms", () => {
     expect(inside[0]).toBe("創建 21 工程");
   });
 
-  it("NFKC-folds fullwidth Latin and still keeps a fullwidth-digit term", () => {
+  it("folds fullwidth Latin and still keeps a fullwidth-digit term", () => {
     const terms = mwcCompanyNameLookupTerms("ＡＢＣ２１工程");
     expect(terms[0]).toBe("ＡＢＣ２１工程");
     expect(terms).toContain("ABC21工程");
@@ -131,5 +131,30 @@ describe("mwcCompanyNameLookupTerms", () => {
     expect(terms).not.toContain("OMYL21LTD");
     expect(terms).not.toContain("OMYL21 LTD");
     expect(terms).not.toContain("OMYL 21LTD");
+  });
+
+
+  it("collapses NBSP around digits without full-string NFKC", () => {
+    const name = "創建 21";
+    const terms = mwcCompanyNameLookupTerms(name);
+    expect(terms[0]).toBe(name);
+    expect(terms).toContain("創建21");
+    expect(terms).toContain("創建２１");
+  });
+
+  it("does not fold Kangxi radical or circled-digit lookalikes into ASCII company names", () => {
+    const radical = mwcCompanyNameLookupTerms("⼀創工程有限公司");
+    expect(radical[0]).toBe("⼀創工程有限公司");
+    expect(radical.some((term) => term.includes("一"))).toBe(false);
+
+    const circled = mwcCompanyNameLookupTerms("①號工程");
+    expect(circled[0]).toBe("①號工程");
+    expect(circled).not.toContain("1號工程");
+    expect(circled).not.toContain("１號工程");
+
+    const parenDigit = mwcCompanyNameLookupTerms("⑴號工程");
+    expect(
+      parenDigit.some((term) => term.includes("(1)") || term.includes("(１)")),
+    ).toBe(false);
   });
 });

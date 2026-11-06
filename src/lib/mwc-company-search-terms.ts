@@ -95,15 +95,28 @@ function collapseOddDigitSpaces(value: string): string {
 }
 
 /**
- * NFKC (fullwidth digits and Latin → ASCII), then register-width digits and
- * the same strings with odd digit spaces removed. Fullwidth forms are pushed
- * before the compacted halfwidth form. The caller's original string is still
- * the first lookup term.
+ * Fold only fullwidth digits (０–９) and fullwidth Latin (Ａ–Ｚ／ａ–ｚ) to ASCII.
+ * Do **not** run full-string NFKC: that would also map Kangxi radicals (⼀→一),
+ * circled digits (①→1), compatibility ideographs, ligatures, and halfwidth
+ * kana — lookalikes that can ILIKE-hit the wrong registered contractor.
+ */
+function foldFullwidthDigitsAndLatin(value: string): string {
+  // NBSP → ordinary space so digit/Han space collapse still runs (NFKC used to do this).
+  const spaced = value.replace(/ /g, " ");
+  return spaced.replace(/[０-９Ａ-Ｚａ-ｚ]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) - FULLWIDTH_DIGIT_OFFSET),
+  );
+}
+
+/**
+ * ASCII / register-width digit forms, plus the same strings with odd digit
+ * spaces removed. Fullwidth digit forms are pushed before the compacted
+ * halfwidth form. The caller's original string is still the first lookup term.
  */
 function nfkcDigitForms(value: string): string[] {
-  const nfkc = value.normalize("NFKC");
-  const compact = collapseOddDigitSpaces(nfkc);
-  return [nfkc, toFullwidthDigits(nfkc), toFullwidthDigits(compact), compact];
+  const folded = foldFullwidthDigitsAndLatin(value);
+  const compact = collapseOddDigitSpaces(folded);
+  return [folded, toFullwidthDigits(folded), toFullwidthDigits(compact), compact];
 }
 
 function spacedCompanyForms(value: string): string[] {
@@ -136,7 +149,7 @@ export function escapeIlikePattern(term: string): string {
 /**
  * Variants for mwc_contractors company-name ilike.
  * Contains / character-variant normalize only — no fuzzy auto-pick.
- * NFKC plus fullwidth and spaced-digit forms cover register `２１` vs typed `21`.
+ * Fullwidth digit/Latin fold plus spaced-digit forms cover register `２１` vs typed `21`.
  */
 export function mwcCompanyNameLookupTerms(companyName: string): string[] {
   const raw = decodeHtmlEntities(companyName.trim());
