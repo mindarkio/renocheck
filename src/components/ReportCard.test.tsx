@@ -18,10 +18,21 @@ import {
   CR_DATA_ATTRIBUTION_ZH,
   CR_ESERVICES_URL,
   CR_LOOKUP_DEGRADED_ZH,
+  CR_LOOKUP_UNAVAILABLE_HEADING_ZH,
+  CR_STATUS_CHIP_CANDIDATES_ZH,
+  CR_STATUS_CHIP_UNAVAILABLE_ZH,
   MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH,
   MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH,
   MWC_MISS_NOTE_CR_SIMILAR_ZH,
   MWC_MISS_NOTE_HEADING_ZH,
+  OFF_REGISTER_BODY_ZH,
+  OFF_REGISTER_CHIP_ZH,
+  OFF_REGISTER_CR_AMBIGUOUS_LEAD_ZH,
+  OFF_REGISTER_CR_NOT_FOUND_LEAD_ZH,
+  OFF_REGISTER_CR_UNAVAILABLE_LEAD_ZH,
+  OFF_REGISTER_NOT_A_GRADE_ZH,
+  OFF_REGISTER_QUOTE_CTA_ZH,
+  OFF_REGISTER_QUOTE_HREF,
   UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
   COPY_COMPANY_NAME_BUTTON_ZH,
   DAILY_CAUSE_LIST_LINK_LABEL_ZH,
@@ -177,14 +188,22 @@ describe("ReportCard legal lookup degraded", () => {
 });
 
 describe("ReportCard report trust (PR-BC)", () => {
-  it("CR not_found + MWC miss：alert、attribution、六條簽約提問", () => {
+  it("CR not_found + MWC miss：名冊狀態、報價 CTA、六條簽約提問", () => {
     const { container } = render(<ReportCard report={minimalReport()} />);
     assertClean(container.textContent ?? "");
-    const alert = screen.getByRole("alert");
-    expect(alert.textContent).toContain(
-      UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH,
-    );
-    expect(alert.textContent).toContain(CR_DATA_ATTRIBUTION_ZH);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(UNVERIFIED_COMPANY_REGISTRATION_ALERT_HEADING_ZH)).toBeNull();
+    expect(screen.getByRole("heading", { name: MWC_MISS_NOTE_HEADING_ZH })).toBeTruthy();
+    expect(screen.getByText(OFF_REGISTER_BODY_ZH)).toBeTruthy();
+    expect(screen.getByText(OFF_REGISTER_NOT_A_GRADE_ZH)).toBeTruthy();
+    expect(screen.getByText(OFF_REGISTER_CR_NOT_FOUND_LEAD_ZH)).toBeTruthy();
+    expect(screen.getByText(OFF_REGISTER_CHIP_ZH)).toBeTruthy();
+    expect(
+      screen.queryByText("名冊未匹配或公開資料不足以評估口碑，請自行核實牌照與合約。"),
+    ).toBeNull();
+    expect(container.textContent).toContain(CR_DATA_ATTRIBUTION_ZH);
+    const quote = screen.getByRole("link", { name: OFF_REGISTER_QUOTE_CTA_ZH });
+    expect(quote.getAttribute("href")).toBe(OFF_REGISTER_QUOTE_HREF);
     for (const q of DEFAULT_CONTRACT_CHECKLIST_ZH) {
       expect(screen.getByText(q)).toBeTruthy();
     }
@@ -226,6 +245,8 @@ describe("ReportCard report trust (PR-BC)", () => {
     );
     expect(container.textContent ?? "").toContain(CR_DATA_ATTRIBUTION_ZH);
     expect(container.textContent).toContain("公司身份（公司註冊處）");
+    expect(screen.queryByText(OFF_REGISTER_BODY_ZH)).toBeNull();
+    expect(screen.queryByRole("link", { name: OFF_REGISTER_QUOTE_CTA_ZH })).toBeNull();
   });
 
   it("CR degraded：顯示 degraded 文案、冇 alert", () => {
@@ -246,7 +267,7 @@ describe("ReportCard report trust (PR-BC)", () => {
     ).toHaveLength(1);
   });
 
-  it("CR timeout：degraded + fallback note（L-c）", () => {
+  it("CR timeout：未齊提示，唔當成查過但冇公司（L-c）", () => {
     const { container } = render(
       <ReportCard
         report={minimalReport({
@@ -260,14 +281,50 @@ describe("ReportCard report trust (PR-BC)", () => {
     );
     assertClean(container.textContent ?? "");
     expect(screen.getAllByText(CR_LOOKUP_DEGRADED_ZH)).toHaveLength(1);
+    expect(screen.getByText(CR_LOOKUP_UNAVAILABLE_HEADING_ZH)).toBeTruthy();
+    expect(screen.getByText(CR_STATUS_CHIP_UNAVAILABLE_ZH)).toBeTruthy();
+    expect(screen.getByText(OFF_REGISTER_CR_UNAVAILABLE_LEAD_ZH)).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText(MWC_MISS_NOTE_HEADING_ZH)).toBeTruthy();
     expect(
-      screen.getByText(MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[1]),
-    ).toBeTruthy();
+      screen.queryByText(MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[1]),
+    ).toBeNull();
     expect(
       screen.queryByText(MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH),
     ).toBeNull();
+    expect(
+      screen.getByRole("link", { name: OFF_REGISTER_QUOTE_CTA_ZH }).getAttribute("href"),
+    ).toBe(OFF_REGISTER_QUOTE_HREF);
+  });
+
+  it("CR candidates + MWC miss：相近名稱同報價 CTA 都睇到", () => {
+    render(
+      <ReportCard
+        report={minimalReport({
+          official: {
+            mwcMatched: false,
+            companiesRegistry: crRegistry({
+              matched: false,
+              hints: [],
+              candidateNames: [
+                {
+                  brNo: "C9000001",
+                  nameZh: "其他工程有限公司",
+                  nameEn: "OTHER WORKS LIMITED",
+                },
+              ],
+            }),
+          },
+        })}
+      />,
+    );
+    expect(screen.getByText(CR_STATUS_CHIP_CANDIDATES_ZH)).toBeTruthy();
+    const candidates = screen.getByRole("region", { name: "可能相關的公司" });
+    expect(candidates.textContent).toContain("其他工程有限公司");
+    expect(candidates.textContent).toContain("C9000001");
+    expect(
+      screen.getByRole("link", { name: OFF_REGISTER_QUOTE_CTA_ZH }).getAttribute("href"),
+    ).toBe(OFF_REGISTER_QUOTE_HREF);
   });
 
   it("tier C match shows MWC_MISS_NOTE_CR_SIMILAR_ZH (L-T)", () => {
@@ -306,7 +363,7 @@ describe("ReportCard report trust (PR-BC)", () => {
     );
     assertClean(container.textContent ?? "");
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByText(MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH)).toBeTruthy();
+    expect(screen.getByText(OFF_REGISTER_CR_AMBIGUOUS_LEAD_ZH)).toBeTruthy();
     expect(
       screen.queryByText(MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[1]),
     ).toBeNull();
@@ -336,6 +393,9 @@ describe("ReportCard report trust (PR-BC)", () => {
     assertClean(container.textContent ?? "");
     expect(
       screen.getByText(MWC_MISS_FALLBACK_BODY_PARAGRAPHS_ZH[1]),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("名冊未匹配或公開資料不足以評估口碑，請自行核實牌照與合約。"),
     ).toBeTruthy();
     expect(
       screen.queryByText(MWC_MISS_FALLBACK_CR_INCONCLUSIVE_ZH),

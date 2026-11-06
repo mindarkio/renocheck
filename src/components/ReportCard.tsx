@@ -19,6 +19,7 @@ import { verificationScopeLine } from "@/lib/verification-scope-line";
 import { DailyCauseListSearchForm } from "@/components/DailyCauseListSearchForm";
 import { buildJudiciaryDeepLinks } from "@/lib/judiciary-search-deep-links";
 import { CompanyIdentityCard } from "@/components/CompanyIdentityCard";
+import { OffRegisterState } from "@/components/OffRegisterState";
 import { LegalEventsTable } from "@/components/LegalEventsTable";
 import { buildOfficialVerifyLinks } from "@/lib/official-verify-links";
 import { shouldShowNonLimitedContractorNotice } from "@/lib/non-limited-contractor-notice";
@@ -41,6 +42,7 @@ import {
   REPORT_SCOPE_LIMITS_CLOSING_ZH,
   REPORT_SCOPE_LIMITS_HEADING_ZH,
   CR_DATA_ATTRIBUTION_ZH,
+  OFF_REGISTER_CHIP_ZH,
   THIRD_PARTY_REDACTION_NOTICE_ZH,
   mwcMissFallbackBodyParagraphsZh,
   MWC_MISS_EXEMPT_ENGINEERING_PARAGRAPH_ZH,
@@ -51,6 +53,11 @@ import {
   UNVERIFIED_COMPANY_REGISTRATION_SEE_NEXT_STEPS_ZH,
   mwcMissNoteBodyParagraphsZh,
 } from "@/lib/report-trust-copy-zh";
+import {
+  crStatusChipLabel,
+  shouldEmphasizeCompaniesRegistry,
+  shouldShowOffRegisterState,
+} from "@/lib/off-register-report";
 import {
   shouldShowMwcMissFallbackNote,
   shouldShowMwcMissWithCrFoundNote,
@@ -198,6 +205,12 @@ function licenseStatusChip(report: RiskReport): {
   }
   if (status === "ambiguous") {
     return { label: "政府名冊需再核實", tone: "warning" };
+  }
+  if (
+    report.entity.matchType === "company_name" &&
+    !report.official.mwcMatched
+  ) {
+    return { label: OFF_REGISTER_CHIP_ZH, tone: "muted" };
   }
   return { label: "政府名冊未匹配", tone: "muted" };
 }
@@ -418,10 +431,14 @@ export function ReportCard({
   const contractQuestions = DEFAULT_CONTRACT_CHECKLIST_ZH;
   const actionable = report.signals.actionableClauses ?? [];
   const companiesRegistry = report.official.companiesRegistry;
+  const showOffRegister = shouldShowOffRegisterState(report);
   const showCrRegistrationAlert =
+    !showOffRegister &&
     shouldShowUnverifiedCompanyRegistrationAlert(report);
-  const showMwcMissNote = shouldShowMwcMissWithCrFoundNote(report);
-  const showMwcMissFallbackNote = shouldShowMwcMissFallbackNote(report);
+  const showMwcMissNote =
+    !showOffRegister && shouldShowMwcMissWithCrFoundNote(report);
+  const showMwcMissFallbackNote =
+    !showOffRegister && shouldShowMwcMissFallbackNote(report);
   const mwcMissNoteParagraphs = mwcMissNoteBodyParagraphsZh(
     companiesRegistry?.matchTier,
   );
@@ -457,6 +474,8 @@ export function ReportCard({
   const legalHeroTone = heroLegalChipTone(report, disputeTone);
   const forumHeroChipClass = `${reportHeroChipClass} ${heroChipToneClass(forumHeroTone)}`;
   const legalHeroChipClass = `${reportHeroChipClass} ${heroChipToneClass(legalHeroTone)}`;
+  const crStatusChip = crStatusChipLabel(report);
+  const crStatusChipClass = `${reportHeroChipClass} ${heroChipToneClass("muted")}`;
 
   const legalLookupDegraded = isReportLegalLookupDegraded(report);
   const showFooterNotes = reportCardShowFooterNotes(
@@ -469,7 +488,12 @@ export function ReportCard({
     (report.signals.serpHitCount ?? 0) >= 5 &&
     (report.signals.boundHitCount ?? 0) === 0;
   const showSaturationNote =
-    showSaturationBanner && saturationNote && !bindFailure;
+    showSaturationBanner &&
+    saturationNote &&
+    !bindFailure &&
+    // The off-register section already states the register fact. The unindexed
+    // banner would repeat it as a soft “not enough to grade” warning.
+    !(showOffRegister && saturation === "unindexed");
   const legalEvents = report.official.legalEvents ?? [];
   const showLegalEvents = legalEvents.length > 0;
   const showLegalLookupDegraded = !showLegalEvents && legalLookupDegraded;
@@ -719,6 +743,12 @@ export function ReportCard({
                 {license.label}
               </span>
             )}
+            {crStatusChip ? (
+              <span className={crStatusChipClass}>
+                <Info className="size-3 shrink-0" aria-hidden />
+                {crStatusChip}
+              </span>
+            ) : null}
             <span className={forumHeroChipClass}>
               <MessageSquare className="size-3 shrink-0" aria-hidden />
               {forumHeroChip.label}
@@ -867,7 +897,12 @@ export function ReportCard({
         </p>
       </header>
 
-      <CompanyIdentityCard report={report} />
+      <OffRegisterState report={report} />
+
+      <CompanyIdentityCard
+        report={report}
+        emphasize={shouldEmphasizeCompaniesRegistry(report)}
+      />
 
       {showMwcMissNote ? (
         <ReportBlock

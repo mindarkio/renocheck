@@ -19,6 +19,7 @@ import {
   CR_IDENTITY_NOT_FOUND_ZH,
   CR_IDENTITY_SOURCE_LABEL_ZH,
   CR_LOOKUP_DEGRADED_ZH,
+  CR_LOOKUP_UNAVAILABLE_HEADING_ZH,
   crBrNoCompareNoteZh,
   crHintIncorporationUnderOneYearZh,
 } from "@/lib/report-trust-copy-zh";
@@ -35,8 +36,15 @@ const reportMetaClass = reportMetaTextClass;
 
 function CrCandidateList({ names }: { names: CompaniesRegistryCandidate[] }) {
   return (
-    <div>
-      <h3 className="text-sm font-medium text-foreground">
+    <div
+      className="rounded-lg border border-border bg-background px-3 py-3"
+      role="region"
+      aria-labelledby="cr-candidate-list-heading"
+    >
+      <h3
+        id="cr-candidate-list-heading"
+        className="text-sm font-semibold text-foreground"
+      >
         {CR_CANDIDATE_LIST_HEADING_ZH}
       </h3>
       <p className={`${reportBodyClass} mt-1`}>
@@ -81,7 +89,13 @@ const identityDdClass =
 const identityEnClass =
   "min-w-0 flex-1 text-[13px] leading-[18px] text-foreground/90";
 
-export function CompanyIdentityCard({ report }: { report: RiskReport }) {
+export function CompanyIdentityCard({
+  report,
+  emphasize = false,
+}: {
+  report: RiskReport;
+  emphasize?: boolean;
+}) {
   const cr = report.official.companiesRegistry;
   if (!cr || cr.lookupStatus === "skipped") return null;
 
@@ -95,7 +109,7 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
 
   return (
     <section
-      className={reportBlockClass}
+      className={`${reportBlockClass}${emphasize ? " bg-muted/30" : ""}`}
       aria-labelledby="cr-identity-heading"
     >
       <h2
@@ -182,6 +196,7 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
             <p className={reportBodyClass}>{CR_IDENTITY_AMBIGUOUS_ZH}</p>
             <p className={reportMetaClass}>
               <CrSourceAttribution retrievedAt={cr.retrievedAt} />
+              <span> {CR_DATA_ATTRIBUTION_ZH}</span>
             </p>
           </>
         ) : null}
@@ -201,14 +216,23 @@ export function CompanyIdentityCard({ report }: { report: RiskReport }) {
             )}
             <p className={reportMetaClass}>
               <CrSourceAttribution retrievedAt={cr.retrievedAt} />
+              <span> {CR_DATA_ATTRIBUTION_ZH}</span>
             </p>
           </>
         ) : null}
 
         {cr.lookupStatus === "error" || cr.lookupStatus === "timeout" ? (
-          <p className={`${reportBodyClass} text-muted-foreground`}>
-            {CR_LOOKUP_DEGRADED_ZH}
-          </p>
+          <div role="status">
+            <h3
+              id="cr-lookup-unavailable-heading"
+              className="text-sm font-semibold text-foreground"
+            >
+              {CR_LOOKUP_UNAVAILABLE_HEADING_ZH}
+            </h3>
+            <p className={`${reportBodyClass} mt-1`}>
+              {CR_LOOKUP_DEGRADED_ZH}
+            </p>
+          </div>
         ) : null}
       </div>
     </section>

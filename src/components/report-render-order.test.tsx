@@ -79,6 +79,7 @@ describe("ReportCard section render order", () => {
         "summary-heading",
         "scope-heading",
         "cr-identity-heading",
+        "cr-lookup-unavailable-heading",
         "legal-events-heading",
         "checklist-heading",
         "next-steps-heading",
@@ -90,8 +91,8 @@ describe("ReportCard section render order", () => {
       "MWC_MISS",
       [
         "summary-heading",
+        "off-register-heading",
         "cr-identity-heading",
-        "mwc-miss-note-heading",
         "checklist-heading",
         "next-steps-heading",
         "report-limits-heading",
