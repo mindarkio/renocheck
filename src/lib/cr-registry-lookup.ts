@@ -108,6 +108,7 @@ function crUpstreamReasonCode(message: string): string {
     case "body_status_400":
     case "unexpected_shape":
     case "fetch_failed":
+    case "http_400_html":
     case "exception":
       return message;
     default:
@@ -188,6 +189,8 @@ async function resolveNamePrefixes(
   for (const prefix of primary) {
     const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs, stats);
     if (res.kind === "error") {
+      // Ambiguous HTML 400 for a non-plain prefix: unknown, never not-found.
+      if (res.message === "http_400_html") continue;
       return toDegraded(res.message);
     }
     if (res.kind === "no_result") {
@@ -200,6 +203,7 @@ async function resolveNamePrefixes(
   for (const prefix of allAttempts.slice(0, 4)) {
     const res = await fetchPrefixCached(prefix, prefixCache, deadlineMs, stats);
     if (res.kind === "error") {
+      if (res.message === "http_400_html") continue;
       return toDegraded(res.message);
     }
     if (res.kind === "rows") {

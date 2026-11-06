@@ -19,6 +19,15 @@ const CR_ATTEMPT_TIMEOUT_MS = 16_000;
 const CR_MIN_RETRY_BUDGET_MS = 8_000;
 const CR_MAX_ATTEMPTS = 2;
 const HTML_NO_RESULT_MARKERS = ["Invalid Request", "400_ZH.html"] as const;
+/** Gateway / WAF / CAPTCHA / maintenance wording that must never read as zero rows. */
+const HTML_NOT_A_NO_RESULT_RE =
+  /captcha|support id|request rejected|access denied|too many requests|maintenance/i;
+/**
+ * The HTML 400 shell is also what CR returns for a malformed filter. Only trust
+ * it as zero rows when the query value cannot plausibly be malformed.
+ */
+const PLAIN_BRN_RE = /^[A-Za-z0-9]+$/;
+const PLAIN_COMP_NAME_RE = /^[\p{Script=Han}A-Za-z0-9 ]+$/u;
 
 export type CrLocalSearchResult =
   | { kind: "rows"; rows: CrApiLocalRow[] }
@@ -61,14 +70,26 @@ function parseNoResultMessage(body: unknown, httpStatus: number): boolean {
  * malformed filter, which this client never sends (only `Brn`/`equal` and
  * `Comp_name`/`begins_with`). 5xx, timeouts, and any other HTML stay errors.
  */
-export function isCrHtmlNoResultPage(httpStatus: number, body: string): boolean {
+export function isCrHtmlNoResultPage(
+  httpStatus: number,
+  body: string,
+  contentType?: string | null,
+): boolean {
   if (httpStatus !== 400) return false;
+  if (contentType && !/\bhtml\b/i.test(contentType)) return false;
   if (body.length === 0 || body.length > 20_000) return false;
   const trimmed = body.trimStart();
   if (!trimmed.startsWith("<!") && !trimmed.toLowerCase().startsWith("<html")) {
     return false;
   }
+  if (HTML_NOT_A_NO_RESULT_RE.test(body)) return false;
   return HTML_NO_RESULT_MARKERS.every((marker) => body.includes(marker));
+}
+
+/** Query values that cannot form a malformed filter (see PLAIN_* above). */
+export function isPlainCrQueryValue(key1: string, key3: string): boolean {
+  if (key1 === "Brn") return PLAIN_BRN_RE.test(key3);
+  return PLAIN_COMP_NAME_RE.test(key3);
 }
 
 function isRetryableCrFailure(message: string): boolean {
@@ -85,6 +106,8 @@ type CrFetchAttempt = {
   retryAfter: string | null;
   elapsedMs: number;
   parentAborted: boolean;
+  /** Retryable failure whose breaker accounting waits for the retry decision. */
+  deferred?: boolean;
 };
 
 function attemptTimeoutMs(
@@ -173,8 +196,14 @@ function finishAttempt(
     isRetryableCrFailure(message);
   if (!(deferRetryable && retryable)) {
     settleAttempt(attempt);
+    return attempt;
   }
-  return attempt;
+  return { ...attempt, deferred: true };
+}
+
+/** A deferred failure that will not be retried still has to reach the breaker. */
+function settleDeferred(attempt: CrFetchAttempt | null): void {
+  if (attempt?.deferred) settleAttempt(attempt);
 }
 
 function failureAttempt(
@@ -250,7 +279,17 @@ async function performCrFetch(
         deferRetryable,
       );
     }
-    if (isCrHtmlNoResultPage(res.status, text)) {
+    if (isCrHtmlNoResultPage(res.status, text, res.headers.get("content-type"))) {
+      if (!isPlainCrQueryValue(key1, key3)) {
+        // Same bytes as a malformed filter: unknown, not zero rows. Input-driven,
+        // so it must not move the breaker either way.
+        return finishAttempt(
+          failureAttempt("http_400_html", startedAt, res.status, {
+            countAsFailure: false,
+          }),
+          deferRetryable,
+        );
+      }
       return finishAttempt(
         {
           result: { kind: "no_result" },
@@ -401,9 +440,11 @@ async function fetchLocalSearch(
   let last: CrFetchAttempt | null = null;
   for (let attempt = 0; attempt < CR_MAX_ATTEMPTS; attempt++) {
     if (parent?.aborted) {
+      settleDeferred(last);
       return { kind: "error", message: "timeout" };
     }
     if (isCrCircuitOpen()) {
+      settleDeferred(last);
       return { kind: "error", message: "circuit_open" };
     }
 
@@ -421,6 +462,7 @@ async function fetchLocalSearch(
       { deadlineMs: options?.deadlineMs, signal: parent },
     );
     if (!scheduled.ok) {
+      settleDeferred(last);
       const reason = scheduled.reason === "queue_full" ? "queue_full" : "timeout";
       return { kind: "error", message: reason };
     }
@@ -435,6 +477,7 @@ async function fetchLocalSearch(
         last.parentAborted || Boolean(parent?.aborted),
       );
     if (!retry) {
+      settleDeferred(last);
       return last.result;
     }
   }

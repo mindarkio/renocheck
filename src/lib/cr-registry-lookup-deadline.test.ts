@@ -212,6 +212,26 @@ describe("lookupCompaniesRegistryForSearch CR status classification", () => {
     expect(fetchMock).toHaveBeenCalledTimes(callsAfterFirst);
   });
 
+  it("HTML 400 shell for a punctuated prefix → inconclusive, never not-found", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      headers: { get: () => null },
+      text: async () => HTML_NO_RESULT,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const label = "ZZQ & SYNTH LIMITED";
+    const official = await lookupCompaniesRegistryForSearch(
+      companyNameOnlySearchInput(label),
+      label,
+      null,
+    );
+    expect(official.lookupStatus).toBe("ok");
+    expect(official.matched).toBe(false);
+    expect(official.hints).not.toContain("not_found_in_active_list");
+  });
+
   it("exhausted HTTP 500 → lookupStatus error, never not-found", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn().mockResolvedValue({

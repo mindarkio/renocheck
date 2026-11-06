@@ -4,7 +4,11 @@ import {
   resetCrCircuitBreakerForTests,
 } from "./circuit-breaker";
 import { resetCrApiThrottleForTests } from "./throttle";
-import { isCrHtmlNoResultPage, searchCrLocalByNameBeginsWith } from "./client";
+import {
+  isCrHtmlNoResultPage,
+  isPlainCrQueryValue,
+  searchCrLocalByNameBeginsWith,
+} from "./client";
 
 /** Fake-timer-friendly stand-in for AbortSignal.timeout in tests. */
 function abortSignalAfterMs(ms: number): AbortSignal {
@@ -449,5 +453,73 @@ describe("searchCrLocalByNameBeginsWith", () => {
     await expect(pending).resolves.toEqual({ kind: "error", message: "http_502" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
+  });
+});
+
+describe("CR HTML 400 classifier is fail-closed (r1 review)", () => {
+  const SHELL =
+    '<!DOCTYPE html><html lang="en"><body>400 Error Invalid Request <a href="./400_ZH.html"></a></body></html>';
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    resetCrApiThrottleForTests();
+    resetCrCircuitBreakerForTests();
+  });
+
+  it("needs both markers, an HTML start, the size cap, and no gateway wording", () => {
+    expect(isCrHtmlNoResultPage(400, SHELL)).toBe(true);
+    expect(isCrHtmlNoResultPage(400, SHELL, "text/html; charset=utf-8")).toBe(true);
+    expect(isCrHtmlNoResultPage(400, "<!DOCTYPE html><html>Invalid Request</html>")).toBe(false);
+    expect(isCrHtmlNoResultPage(400, "<!DOCTYPE html><html>400_ZH.html</html>")).toBe(false);
+    expect(isCrHtmlNoResultPage(400, "Invalid Request 400_ZH.html")).toBe(false);
+    expect(
+      isCrHtmlNoResultPage(400, `<!DOCTYPE html>${"x".repeat(20_000)}Invalid Request 400_ZH.html`),
+    ).toBe(false);
+    expect(isCrHtmlNoResultPage(400, SHELL, "application/json")).toBe(false);
+    for (const extra of ["Request Rejected", "Your support ID is 0", "captcha", "Access Denied", "Too Many Requests", "Maintenance"]) {
+      expect(isCrHtmlNoResultPage(400, SHELL.replace("<body>", `<body>${extra} `))).toBe(false);
+    }
+  });
+
+  it("only trusts the shell for query values that cannot be a malformed filter", () => {
+    expect(isPlainCrQueryValue("Comp_name", "合成測試")).toBe(true);
+    expect(isPlainCrQueryValue("Comp_name", "ZZQ SYNTH 2")).toBe(true);
+    expect(isPlainCrQueryValue("Brn", "C0000001")).toBe(true);
+    for (const v of ["ZZQ & SYNTH", "O'ZZQ", "ZZQ (HK)", "Z.Z.Q", "ZZQ-SYNTH", "ZZQ/SYNTH", "ZZQ%", "ZZQ<"]) {
+      expect(isPlainCrQueryValue("Comp_name", v)).toBe(false);
+    }
+  });
+
+  it("HTML 400 shell for a non-plain prefix is an error, not no_result, and leaves the breaker alone", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockFetchResponse({ ok: false, status: 400, body: SHELL }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    for (let i = 0; i < 3; i++) {
+      const pending = searchCrLocalByNameBeginsWith(`ZZQ & SYNTH ${i}`);
+      await vi.advanceTimersByTimeAsync(1_100);
+      await expect(pending).resolves.toEqual({ kind: "error", message: "http_400_html" });
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(isCrCircuitOpen()).toBe(false);
+  });
+
+  it("a retryable failure that is not retried (budget < 8s) still counts toward the breaker", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(
+      mockFetchResponse({ ok: false, status: 503, body: "<html>down</html>" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    for (let i = 0; i < 3; i++) {
+      const pending = searchCrLocalByNameBeginsWith(`合成${i}`, {
+        deadlineMs: Date.now() + 7_000,
+      });
+      await vi.advanceTimersByTimeAsync(1_100);
+      await expect(pending).resolves.toEqual({ kind: "error", message: "http_503" });
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(isCrCircuitOpen()).toBe(true);
   });
 });
