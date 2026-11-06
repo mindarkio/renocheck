@@ -63,7 +63,7 @@ describe("/quote indexing", () => {
   it("describes /quote in llms.txt without claiming automated analysis", () => {
     const text = LLMS_TXT;
     expect(text).toContain(
-      "- /quote — quotation self-check list (missing or vague items only; does not judge price)",
+      "- /quote — guide to what a renovation quotation should state (does not judge price)",
     );
     const quoteLine = text.split("\n").find((line) => line.startsWith("- /quote"));
     expect(quoteLine).toBeDefined();

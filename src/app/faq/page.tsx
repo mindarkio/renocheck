@@ -8,6 +8,7 @@ import {
 } from "@/components/ContentPage";
 import { JsonLd } from "@/components/JsonLd";
 import { FAQ_ITEMS } from "@/lib/faq-content";
+import { QUOTE_PAGE_NAV_LABEL_ZH } from "@/lib/quote-selfcheck";
 import { brandSectionTitleClass } from "@/lib/ui-surfaces";
 
 export const metadata: Metadata = pageMetadata({
@@ -19,7 +20,7 @@ export const metadata: Metadata = pageMetadata({
 
 const NAV_LINKS = [
   { href: "/", label: "返回搜尋" },
-  { href: "/quote", label: "報價自查清單" },
+  { href: "/quote", label: QUOTE_PAGE_NAV_LABEL_ZH },
   { href: "/guides", label: "裝修指南" },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/legal/disclaimer", label: "免責聲明" },

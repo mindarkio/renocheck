@@ -9,9 +9,9 @@ import { SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
 
 const FOOTER_PRIMARY_LINKS = [
   { href: "/guides", label: "裝修指南" },
+  { href: "/quote", label: QUOTE_PAGE_NAV_LABEL_ZH },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/faq", label: "常見問題" },
-  { href: "/quote", label: QUOTE_PAGE_NAV_LABEL_ZH },
   { href: "/about", label: "關於" },
 ] as const;
 

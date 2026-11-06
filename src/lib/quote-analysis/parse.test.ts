@@ -24,6 +24,7 @@ describe("quote analysis parser", () => {
     const parsed = parseQuoteModelObject(
       {
         isQuotation: true,
+        companyName: null,
         items: [{ id: "demolition", status: "clear" }],
       },
       ids,
@@ -47,6 +48,7 @@ describe("quote analysis parser", () => {
     const parsed = parseQuoteModelObject(
       {
         isQuotation: true,
+        companyName: null,
         items: [
           { id: "demolition", status: "vague" },
           { id: "demolition", status: "clear" },
@@ -59,10 +61,45 @@ describe("quote analysis parser", () => {
 
   it("treats an empty non-quote as not a quotation", () => {
     const parsed = parseQuoteModelObject(
-      { isQuotation: false, items: [] },
+      { isQuotation: false, companyName: null, items: [] },
       ids,
     );
     expect(parsed).toEqual({ kind: "not_quotation" });
+  });
+
+  it("strips bidi overrides, isolates, and zero-width characters from the company name", () => {
+    const parsed = parseQuoteModelObject(
+      {
+        isQuotation: true,
+        companyName: "合成\u202e測試\u200b工程\u2066有限\u200f\u061c\u0085\u009b公司\n",
+        items: [],
+      },
+      ids,
+    );
+    expect(parsed.kind).toBe("quotation");
+    if (parsed.kind !== "quotation") return;
+    expect(parsed.companyName).toBe("合成測試工程有限公司");
+  });
+
+  it("returns the company name without putting it on a checklist row", () => {
+    const parsed = parseQuoteModelObject(
+      {
+        isQuotation: true,
+        companyName: "  合成測試工程有限公司  ",
+        items: [{ id: "demolition", status: "clear" }],
+      },
+      ids,
+    );
+    expect(parsed.kind).toBe("quotation");
+    if (parsed.kind !== "quotation") return;
+    expect(parsed.companyName).toBe("合成測試工程有限公司");
+    expect(parsed.items.every((item) => !("companyName" in item))).toBe(true);
+    expect(JSON.stringify(parsed.items)).not.toContain("合成測試工程有限公司");
+    const empty = parseQuoteModelObject(
+      { isQuotation: true, companyName: "   ", items: [] },
+      ids,
+    );
+    expect(empty.kind === "quotation" && empty.companyName).toBe(null);
   });
 
   it("rejects a shape the model was not asked for", () => {
@@ -71,7 +108,7 @@ describe("quote analysis parser", () => {
 
   it("rejects more items than the checklist", () => {
     const full = ids.map((id) => ({ id, status: "missing" as const }));
-    expect(parseQuoteModelObject({ isQuotation: true, items: full }, ids).kind).toBe("quotation");
+    expect(parseQuoteModelObject({ isQuotation: true, companyName: null, items: full }, ids).kind).toBe("quotation");
     expect(
       parseQuoteModelObject(
         {

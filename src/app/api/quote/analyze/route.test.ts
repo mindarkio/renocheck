@@ -5,6 +5,8 @@ import { resetMemoryRateLimitForTests } from "@/lib/memory-rate-limit";
 const mocks = vi.hoisted(() => ({
   getAuthUser: vi.fn(),
   completeQuotePdf: vi.fn(),
+  extractQuoteCompanyName: vi.fn(),
+  runAnonymousQuoteAnalysis: vi.fn(),
   begin: vi.fn(),
   finish: vi.fn(),
 }));
@@ -15,6 +17,11 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/quote-analysis/provider", () => ({
   completeQuotePdf: (bytes: Uint8Array) => mocks.completeQuotePdf(bytes),
+  extractQuoteCompanyName: (bytes: Uint8Array) => mocks.extractQuoteCompanyName(bytes),
+}));
+
+vi.mock("@/lib/quote-analysis/anonymous-run", () => ({
+  runAnonymousQuoteAnalysis: (input: unknown) => mocks.runAnonymousQuoteAnalysis(input),
 }));
 
 vi.mock("@/lib/quote-analysis/store", () => ({
@@ -64,6 +71,8 @@ describe("POST /api/quote/analyze", () => {
     resetMemoryRateLimitForTests();
     mocks.getAuthUser.mockReset();
     mocks.completeQuotePdf.mockReset();
+    mocks.extractQuoteCompanyName.mockReset();
+    mocks.runAnonymousQuoteAnalysis.mockReset();
     mocks.begin.mockReset();
     mocks.finish.mockReset();
     mocks.getAuthUser.mockResolvedValue({ id: USER, email: "person@example.com" });
@@ -72,6 +81,7 @@ describe("POST /api/quote/analyze", () => {
     mocks.completeQuotePdf.mockResolvedValue({
       object: {
         isQuotation: true,
+        companyName: "合成測試工程有限公司",
         items: [{ id: "waterproofing", status: "vague" }],
       },
       inputTokens: 100,
@@ -121,7 +131,8 @@ describe("POST /api/quote/analyze", () => {
     expect(mocks.getAuthUser).not.toHaveBeenCalled();
     enableAzure();
     mocks.getAuthUser.mockResolvedValue(null);
-    expect((await POST(plain())).status).toBe(401);
+    expect((await POST(plain())).status).toBe(415);
+    expect(mocks.runAnonymousQuoteAnalysis).not.toHaveBeenCalled();
   });
 
   it("rejects a declared body over the limit", async () => {
@@ -147,12 +158,18 @@ describe("POST /api/quote/analyze", () => {
     expect(mocks.completeQuotePdf).not.toHaveBeenCalled();
   });
 
-  it("requires a signed-in account", async () => {
+  it("extracts only the company name when the caller is signed out", async () => {
     mocks.getAuthUser.mockResolvedValue(null);
+    mocks.runAnonymousQuoteAnalysis.mockResolvedValue({
+      status: 200,
+      body: { companyName: "合成測試工程有限公司" },
+    });
     const res = await POST(request({ acknowledged: true }));
-    expect(res.status).toBe(401);
-    expect((await res.json()).error).toBe("auth_required");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ companyName: "合成測試工程有限公司" });
     expect(mocks.completeQuotePdf).not.toHaveBeenCalled();
+    expect(mocks.begin).not.toHaveBeenCalled();
+    expect(mocks.runAnonymousQuoteAnalysis).toHaveBeenCalledTimes(1);
   });
 
   it("requires the acknowledgement checkbox", async () => {
@@ -213,6 +230,8 @@ describe("POST /api/quote/analyze", () => {
     expect(stored.items.every((item) => Object.keys(item).sort().join() === "id,status")).toBe(
       true,
     );
+    expect(JSON.stringify(stored.items)).not.toContain("合成測試工程有限公司");
+    expect(body.companyName).toBe("合成測試工程有限公司");
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });

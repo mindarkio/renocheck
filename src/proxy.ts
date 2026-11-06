@@ -67,6 +67,7 @@ export const config = {
     "/admin",
     "/admin/:path*",
     "/account",
+    "/account/:path*",
     "/login",
     "/quote/upload",
     "/quote/analyses/:path*",
