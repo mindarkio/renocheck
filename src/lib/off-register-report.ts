@@ -92,7 +92,6 @@ export function crStatusChipLabel(report: RiskReport): string | null {
     case "ambiguous":
     case "inconclusive":
       return CR_STATUS_CHIP_UNCONFIRMED_ZH;
-    case "unavailable":
     case "not_run":
       return null;
   }
