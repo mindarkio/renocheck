@@ -1,22 +1,29 @@
 /**
- * Q0 quotation self-check (no AI, no upload, no server state).
+ * Quotation checklist definitions for AI analysis, plus the static /quote guide.
  * Checklist ids and reply questions follow docs/plans/PRF-quote-analysis-plan.md §8.1–§8.2.
  * `arithmetic` is intentionally absent.
+ * Guide title, footer label, and article text are proposed and still need owner approval.
  */
 
-/** Visible H1 and nav label. */
-export const QUOTE_PAGE_TITLE_ZH = "報價自查清單";
+/** Visible H1. Proposed. */
+export const QUOTE_PAGE_TITLE_ZH = "裝修報價單應列明的內容";
+
+/** Footer, header, and guides-index label. Shorter than the H1. Proposed. */
+export const QUOTE_PAGE_NAV_LABEL_ZH = "報價內容指南";
 
 /** Document title and social title. Suffix ` · Renocheck` is added by pageMetadata. */
-export const QUOTE_PAGE_META_TITLE_ZH =
-  "裝修報價單自查清單｜報價陷阱 20 項逐項對";
+export const QUOTE_PAGE_META_TITLE_ZH = "裝修報價單應列明什麼｜20 項內容說明";
 
 export const QUOTE_PAGE_DESCRIPTION_ZH =
-  "香港裝修報價單自查清單：對住報價單逐項睇有冇寫齊、寫清楚，並留意常見報價陷阱。唔會評價格係咪合理，亦唔係專業意見。";
+  "說明香港裝修報價單應列明的二十項內容，包括工程範圍、物料、工期、付款及保養。本文不評估價格高低，亦非專業意見。";
 
-/** Single on-page explanation. Not a legal disclaimer. */
+/** Single on-page explanation. Not a legal disclaimer. Proposed. */
 export const QUOTE_PAGE_LEAD_ZH =
-  "呢個工具只幫你對住報價單，睇吓有冇寫齊、寫清楚，唔會評價格係咪合理，亦唔係專業意見。";
+  "一份清楚的裝修報價單，應列明工程範圍、數量、物料、工期、付款安排及不包含的項目。下文逐項說明應寫明的內容。本文不評估價格高低，亦非專業意見。";
+
+export const QUOTE_GUIDE_DATE = "2026-10-28";
+
+export const QUOTE_GUIDE_CTA_ZH = "上載報價單";
 
 export const QUOTE_CHECKLIST_HEADING_ZH = "逐項自查";
 export const QUOTE_REPLY_HEADING_ZH = "回覆訊息";
@@ -249,6 +256,50 @@ export const QUOTE_CHECK_ITEMS = [
 
 export type QuoteCheckItemId = (typeof QUOTE_CHECK_ITEMS)[number]["id"];
 
+/** Formal explanations for the static guide. Item labels stay the checklist definitions. Proposed. */
+export const QUOTE_GUIDE_POINTS: Record<QuoteCheckItemId, string> = {
+  demolition: "應列明拆除的範圍，例如舊地磚、櫃、牆身批盪及門，而不應只寫「拆舊一式」。",
+  debris_disposal: "應列明廢料是否由承辦商運走，以及堆填或運走費用由誰負責。",
+  electrical:
+    "應列明點數、是否更換新線、電箱及斷路器的安排，以及完工後會否由註冊電業承辦商發出 WR1。",
+  plumbing: "應列明喉管物料、施工位置或長度，以及會否進行水壓測試。",
+  waterproofing: "應列明防水層的位置，以及試水時間（例如 24 或 48 小時）。",
+  gas: "如報價包括煤氣工程，應列明由註冊氣體工程承辦商施工。",
+  materials_spec:
+    "應列明主要物料的品牌、型號、尺寸、顏色及等級，例如磚、油漆及塗層數、板材和五金，而不應只寫「優質」或「進口」。",
+  quantities_units: "每一項目應列明數量及單位，例如呎、平方呎、米、件或點，而不應只寫「一式」。",
+  provisional_items: "暫定或按實際計算的項目，應列明單價及上限。",
+  exclusions: "應另列不包含的項目。",
+  timeline: "應列明開工日期、工期或完工日期，以及延誤時的安排。",
+  payment_schedule: "應列明訂金比例、每一期對應已完成的工序，以及尾數留至驗收及執漏之後。",
+  variations: "加單或變更應先以書面確認範圍及價錢，然後方開始施工。",
+  warranty: "應列明保養期的長短，以及保養包括和不包括的項目。",
+  defects_handover: "應列明完工後會一併驗收，以及執漏的期限。",
+  licence_registration:
+    "如涉及小型工程（例如加建間隔牆、冷氣機支架、簷篷），應列明註冊編號或級別；如涉及結構，應列明由誰處理屋宇署申請。",
+  insurance: "應列明有否投購第三者責任保險及僱員補償保險。",
+  site_protection_cleanup: "應列明施工期間如何保護地台、電梯及公眾地方，以及完工後是否清潔。",
+  building_mgmt: "應列明由誰向管理處申請、裝修按金由誰支付，以及開工時間。",
+  quote_identity: "應列明公司全名、商業登記號碼、地址、聯絡方法、報價日期及有效期。",
+};
+
+export const QUOTE_GUIDE_FAQS = [
+  {
+    question: "裝修報價單應列明什麼？",
+    answer:
+      "應列明工程範圍、數量及單位、物料規格、不包含的項目、工期、付款階段、變更機制、保養及驗收安排。本文逐項說明應寫清楚的內容。",
+  },
+  {
+    question: "本文會否評估報價是否合理？",
+    answer: "不會。本文只說明報價單應列明的內容，不評估價格高低，亦非法律、工程或專業意見。",
+  },
+  {
+    question: "如何核對自己的報價單？",
+    answer:
+      "可上載 PDF 報價單。系統會按同一清單檢視內容是否列明清楚。確認公司名稱後，方會進行公司查冊。",
+  },
+] as const;
+
 export type QuoteCheckSelections = Partial<
   Record<QuoteCheckItemId, QuoteCheckStatus>
 >;
@@ -393,8 +444,12 @@ export function buildQuoteReplyMessage(
 export function quoteSelfCheckUserFacingCopy(): readonly string[] {
   return [
     QUOTE_PAGE_TITLE_ZH,
+    QUOTE_PAGE_NAV_LABEL_ZH,
     QUOTE_PAGE_DESCRIPTION_ZH,
     QUOTE_PAGE_LEAD_ZH,
+    QUOTE_GUIDE_CTA_ZH,
+    ...Object.values(QUOTE_GUIDE_POINTS),
+    ...QUOTE_GUIDE_FAQS.flatMap((item) => [item.question, item.answer]),
     QUOTE_CHECKLIST_HEADING_ZH,
     QUOTE_REPLY_HEADING_ZH,
     QUOTE_CONDITIONAL_NOTE_ZH,
@@ -426,32 +481,41 @@ export function quoteSelfCheckUserFacingCopy(): readonly string[] {
 
 export function buildQuotePageJsonLd(siteUrl: string): Record<string, unknown> {
   const pageUrl = `${siteUrl}/quote`;
-  return {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "@id": `${pageUrl}#webpage`,
-    url: pageUrl,
-    name: QUOTE_PAGE_TITLE_ZH,
+  const article = {
+    "@type": "Article",
+    headline: QUOTE_PAGE_TITLE_ZH,
     description: QUOTE_PAGE_DESCRIPTION_ZH,
     inLanguage: "zh-HK",
+    url: pageUrl,
+    mainEntityOfPage: pageUrl,
+    datePublished: QUOTE_GUIDE_DATE,
+    dateModified: QUOTE_GUIDE_DATE,
     isPartOf: {
       "@type": "WebSite",
       "@id": `${siteUrl}/#website`,
       name: "Renocheck 裝修點評",
       url: siteUrl,
     },
-    mainEntity: {
-      "@type": "HowTo",
-      "@id": `${pageUrl}#howto`,
-      name: QUOTE_HOWTO_NAME_ZH,
-      description: QUOTE_PAGE_LEAD_ZH,
-      inLanguage: "zh-HK",
-      step: QUOTE_HOWTO_STEPS_ZH.map((step, index) => ({
-        "@type": "HowToStep",
-        position: index + 1,
-        name: step.name,
-        text: step.text,
-      })),
+    author: { "@type": "Organization", name: "Renocheck", url: `${siteUrl}/` },
+    publisher: {
+      "@type": "Organization",
+      name: "Renocheck",
+      url: `${siteUrl}/`,
     },
+  };
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      article,
+      {
+        "@type": "FAQPage",
+        inLanguage: "zh-HK",
+        mainEntity: QUOTE_GUIDE_FAQS.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: { "@type": "Answer", text: item.answer },
+        })),
+      },
+    ],
   };
 }

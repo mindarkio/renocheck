@@ -6,9 +6,16 @@ import {
   quoteAzureBaseUrl,
   readQuoteAzureEnv,
 } from "@/lib/quote-analysis/config";
-import { quoteAnalysisSystemPrompt } from "@/lib/quote-analysis/prompt";
+import {
+  QUOTE_ANALYSIS_USER_TEXT,
+  QUOTE_EXTRACT_SYSTEM_PROMPT,
+  QUOTE_EXTRACT_USER_TEXT,
+  quoteAnalysisSystemPrompt,
+} from "@/lib/quote-analysis/prompt";
+import { QUOTE_EXTRACT_MAX_OUTPUT_TOKENS } from "@/lib/quote-analysis/config";
 import {
   activeQuoteCheckIds,
+  quoteExtractSchema,
   quoteLlmSchema,
 } from "@/lib/quote-analysis/schema";
 
@@ -119,7 +126,7 @@ export async function completeQuotePdf(
         content: [
           {
             type: "text",
-            text: "請只按清單判斷這份報價單。唔好抄姓名、電話、地址或者戶口。",
+            text: QUOTE_ANALYSIS_USER_TEXT,
           },
           {
             type: "file",
@@ -136,6 +143,52 @@ export async function completeQuotePdf(
     providerOptions: QUOTE_PROVIDER_OPTIONS,
   });
 
+  return usageResult(result);
+}
+
+/** Company name only. No checklist. The whole PDF is sent; there is no page splitter. */
+export async function extractQuoteCompanyName(
+  bytes: Uint8Array,
+  env: Record<string, string | undefined> = process.env,
+): Promise<QuoteModelResult> {
+  const settings = readQuoteAzureEnv(env);
+  if (!settings) throw new Error("quote_llm_unavailable");
+
+  const azure = createAzure({
+    baseURL: quoteAzureBaseUrl(settings.endpoint),
+    apiKey: settings.apiKey,
+    fetch: createGuardedFetch(fetch),
+  });
+  const result = await generateObject({
+    model: azure(settings.deployment),
+    schema: quoteExtractSchema,
+    system: QUOTE_EXTRACT_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: QUOTE_EXTRACT_USER_TEXT },
+          {
+            type: "file",
+            data: bytes,
+            mediaType: "application/pdf",
+            filename: GENERIC_FILENAME,
+          },
+        ],
+      },
+    ],
+    maxRetries: 0,
+    maxOutputTokens: QUOTE_EXTRACT_MAX_OUTPUT_TOKENS,
+    abortSignal: AbortSignal.timeout(20_000),
+    providerOptions: QUOTE_PROVIDER_OPTIONS,
+  });
+  return usageResult(result);
+}
+
+function usageResult(result: {
+  object: unknown;
+  usage: { inputTokens?: number; outputTokens?: number };
+}): QuoteModelResult {
   const inputTokens = result.usage.inputTokens;
   const outputTokens = result.usage.outputTokens;
   return {

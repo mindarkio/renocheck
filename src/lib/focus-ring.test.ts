@@ -102,7 +102,6 @@ describe("focus ring source", () => {
     expect(read("src/components/SiteHeader.tsx")).toMatch(/bg-primary\/95[^`]*\$\{focusOnPrimaryClass\}/);
     expect(childFocusRingClass).toContain("has-[:focus-visible]:ring-2");
     expect(childFocusRingClass).toContain("has-[:focus-visible]:ring-primary");
-    expect(read("src/components/QuoteSelfCheck.tsx")).toContain("${childFocusRingClass}");
   });
 
   it("never uses outline-none on focus rings (forced-colors keeps outline-hidden)", () => {
@@ -136,12 +135,6 @@ describe("focus ring source", () => {
         if (
           relative === "src/components/SearchForm.tsx" &&
           line.includes("inputLanding")
-        ) {
-          return;
-        }
-        if (
-          relative === "src/components/QuoteSelfCheck.tsx" &&
-          (line.includes("focus:outline-none") || line.includes("accent-primary"))
         ) {
           return;
         }

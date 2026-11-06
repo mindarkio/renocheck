@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_VERSION, FOOTER_DISCLAIMER, SITE_DISAMBIGUATION_LINE } from "@/lib/constants";
 import { focusOnPrimaryClass, focusRingOnPrimaryClass } from "@/lib/focus-ring";
-import { QUOTE_PAGE_TITLE_ZH } from "@/lib/quote-selfcheck";
+import { QUOTE_PAGE_NAV_LABEL_ZH } from "@/lib/quote-selfcheck";
 import { SITE_CONTACT_EMAIL } from "@/lib/site-metadata";
 
 const FOOTER_PRIMARY_LINKS = [
   { href: "/guides", label: "裝修指南" },
+  { href: "/quote", label: QUOTE_PAGE_NAV_LABEL_ZH },
   { href: "/how-it-works", label: "點樣運作" },
   { href: "/faq", label: "常見問題" },
-  { href: "/quote", label: QUOTE_PAGE_TITLE_ZH },
   { href: "/about", label: "關於" },
 ] as const;
 

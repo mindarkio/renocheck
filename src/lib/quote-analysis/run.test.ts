@@ -19,7 +19,11 @@ function harness(model?: () => Promise<unknown>) {
   const modelFn = vi.fn(
     model ??
       (async () => ({
-        object: { isQuotation: true, items: [{ id: "demolition", status: "clear" }] },
+        object: {
+          isQuotation: true,
+          companyName: null,
+          items: [{ id: "demolition", status: "clear" }],
+        },
         inputTokens: 1000,
         outputTokens: 100,
       })),
@@ -73,7 +77,7 @@ describe("runQuoteAnalysis", () => {
 
   it("books the reservation when either token count is missing", async () => {
     const one = harness(async () => ({
-      object: { isQuotation: true, items: [] },
+      object: { isQuotation: true, companyName: null, items: [] },
       inputTokens: null,
       outputTokens: 10,
     }));
@@ -81,7 +85,7 @@ describe("runQuoteAnalysis", () => {
     expect(one.finish.mock.calls[0]?.[0].actualMicroUsd).toBeNull();
     resetMemoryRateLimitForTests();
     const none = harness(async () => ({
-      object: { isQuotation: true, items: [] },
+      object: { isQuotation: true, companyName: null, items: [] },
       inputTokens: null,
       outputTokens: null,
     }));
@@ -95,6 +99,33 @@ describe("runQuoteAnalysis", () => {
     const res = await h.run();
     expect(res.status).toBe(503);
     expect(res.body.id).toBeUndefined();
+  });
+
+  it("returns the company name for this response and does not store or log it", async () => {
+    const name = "合成測試工程有限公司";
+    const logs: unknown[] = [];
+    const methods = ["log", "info", "warn", "error", "debug"] as const;
+    for (const method of methods) {
+      vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+        logs.push(args);
+      });
+    }
+    const h = harness(async () => ({
+      object: {
+        isQuotation: true,
+        companyName: name,
+        items: [{ id: "demolition", status: "clear" }],
+      },
+      inputTokens: 1000,
+      outputTokens: 100,
+    }));
+    const res = await h.run();
+    expect(res.status).toBe(200);
+    expect(res.body.companyName).toBe(name);
+    const stored = h.finish.mock.calls[0]?.[0];
+    expect(JSON.stringify(stored)).not.toContain(name);
+    expect(JSON.stringify(stored?.items)).not.toContain("companyName");
+    expect(JSON.stringify(logs)).not.toContain(name);
   });
 
   it("rate limits per address and per account", async () => {

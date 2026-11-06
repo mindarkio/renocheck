@@ -7,10 +7,12 @@ import {
   ContentPageLead,
   ContentPageTitle,
 } from "@/components/ContentPage";
+import { QuoteCompanyConfirm } from "@/components/QuoteCompanyConfirm";
+import { QuoteResultHeading } from "@/components/QuoteResultHeading";
 import { QUOTE_STATUS_OPTIONS } from "@/lib/quote-selfcheck";
 import { isQuoteAnalysisFlagOn } from "@/lib/quote-analysis/config";
 import {
-  QUOTE_BACK_TO_CHECKLIST_ZH,
+  QUOTE_GUIDE_LINK_ZH,
   QUOTE_RESULT_LEAD_ZH,
   QUOTE_RESULT_MISSING_ZH,
   QUOTE_RESULT_ROBOTS,
@@ -70,7 +72,7 @@ export default async function QuoteAnalysisResultPage({ params }: PageProps) {
           <ContentPageLead>{QUOTE_UNAVAILABLE_ZH}</ContentPageLead>
           <p className="mt-6 text-sm">
             <Link href="/quote" className={`inline-flex min-h-11 items-center ${contentLinkClass}`}>
-              {QUOTE_BACK_TO_CHECKLIST_ZH}
+              {QUOTE_GUIDE_LINK_ZH}
             </Link>
           </p>
         </ContentCard>
@@ -81,23 +83,45 @@ export default async function QuoteAnalysisResultPage({ params }: PageProps) {
   const id = rawId.toLowerCase();
   const user = UUID_RE.test(id) ? await getAuthUser() : null;
   const supabase = user ? await createSupabaseServerClient() : null;
-  const loaded = supabase
-    ? await supabase
+  let items: StoredQuoteItem[] | null = null;
+  let extractedFromServer: string | null | undefined;
+  if (supabase) {
+    const withName = await supabase
+      .from("quote_analyses")
+      .select("items, extracted_company_name")
+      .eq("id", id)
+      .maybeSingle();
+    if (!withName.error && withName.data) {
+      items = readItems(withName.data.items);
+      const record = withName.data as { extracted_company_name?: unknown };
+      extractedFromServer =
+        "extracted_company_name" in record
+          ? typeof record.extracted_company_name === "string"
+            ? record.extracted_company_name
+            : null
+          : undefined;
+    } else {
+      const itemsOnly = await supabase
         .from("quote_analyses")
         .select("items")
         .eq("id", id)
-        .maybeSingle()
-    : { data: null };
-  const items = loaded.data ? readItems(loaded.data.items) : null;
+        .maybeSingle();
+      items = itemsOnly.data ? readItems(itemsOnly.data.items) : null;
+      extractedFromServer = undefined;
+    }
+  }
   const mark = new Map(QUOTE_STATUS_OPTIONS.map((option) => [option.id, option.mark]));
 
   return (
     <ContentPage>
       <ContentCard>
-        <ContentPageTitle>{QUOTE_RESULT_TITLE_ZH}</ContentPageTitle>
         {items ? (
           <>
-            <ContentPageLead>{QUOTE_RESULT_LEAD_ZH}</ContentPageLead>
+            <QuoteResultHeading>{QUOTE_RESULT_TITLE_ZH}</QuoteResultHeading>
+            <QuoteCompanyConfirm analysisId={id} extractedFromServer={extractedFromServer} />
+            <div className="mt-10">
+              <ContentPageLead>{QUOTE_RESULT_LEAD_ZH}</ContentPageLead>
+            </div>
             <ol className="mt-6 space-y-4">
               {items.map((item) => (
                 <li key={item.id} className="text-sm leading-relaxed">
@@ -111,11 +135,14 @@ export default async function QuoteAnalysisResultPage({ params }: PageProps) {
             </ol>
           </>
         ) : (
-          <ContentPageLead>{QUOTE_RESULT_MISSING_ZH}</ContentPageLead>
+          <>
+            <ContentPageTitle>{QUOTE_RESULT_TITLE_ZH}</ContentPageTitle>
+            <ContentPageLead>{QUOTE_RESULT_MISSING_ZH}</ContentPageLead>
+          </>
         )}
         <p className="mt-6 text-sm">
           <Link href="/quote" className={`inline-flex min-h-11 items-center ${contentLinkClass}`}>
-            {QUOTE_BACK_TO_CHECKLIST_ZH}
+            {QUOTE_GUIDE_LINK_ZH}
           </Link>
         </p>
       </ContentCard>

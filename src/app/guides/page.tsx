@@ -10,6 +10,12 @@ import { GuideDisclaimer } from "@/components/GuideDisclaimer";
 import { JsonLd } from "@/components/JsonLd";
 import { breadcrumbJsonLd } from "@/lib/breadcrumb-jsonld";
 import { GUIDES } from "@/lib/guides";
+import {
+  QUOTE_GUIDE_DATE,
+  QUOTE_PAGE_DESCRIPTION_ZH,
+  QUOTE_PAGE_NAV_LABEL_ZH,
+  QUOTE_PAGE_TITLE_ZH,
+} from "@/lib/quote-selfcheck";
 import { pageMetadata } from "@/lib/site-metadata";
 import { getSiteUrl } from "@/lib/site-url";
 import { surfaceCardClass } from "@/lib/ui-surfaces";
@@ -37,11 +43,18 @@ export default function GuidesIndexPage() {
         name: "業主裝修指南",
         url: `${base}/guides`,
         inLanguage: "zh-HK",
-        hasPart: GUIDES.map((g) => ({
-          "@type": "Article",
-          headline: g.title,
-          url: `${base}/guides/${g.slug}`,
-        })),
+        hasPart: [
+          {
+            "@type": "Article",
+            headline: QUOTE_PAGE_TITLE_ZH,
+            url: `${base}/quote`,
+          },
+          ...GUIDES.map((g) => ({
+            "@type": "Article",
+            headline: g.title,
+            url: `${base}/guides/${g.slug}`,
+          })),
+        ],
       },
       breadcrumbJsonLd([
         { name: "首頁", path: "/" },
@@ -61,6 +74,31 @@ export default function GuidesIndexPage() {
           </ContentPageLead>
         </header>
         <ul className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+          <li className="min-w-0">
+            <Link
+              href="/quote"
+              className={`${surfaceCardClass} group flex h-full flex-col overflow-hidden transition-shadow hover:shadow-[0_2px_14px_rgba(32,33,36,0.12)]`}
+            >
+              <div className="bg-primary px-3 py-3 text-primary-foreground sm:px-5 sm:py-4">
+                <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full border border-primary-foreground/25 bg-primary-foreground/12 px-2 py-0.5 text-[10px] font-medium sm:px-2.5 sm:text-[11px]">
+                  <BookOpen className="size-3 shrink-0" aria-hidden />
+                  {QUOTE_PAGE_NAV_LABEL_ZH}
+                </span>
+                <h2 className="mt-2 line-clamp-3 break-words text-[13px] font-semibold leading-snug sm:text-base">
+                  {QUOTE_PAGE_TITLE_ZH}
+                </h2>
+              </div>
+              <div className="flex flex-1 flex-col px-3 py-3 sm:px-5 sm:py-4">
+                <p className="line-clamp-3 text-xs leading-[1.65] text-foreground/80 sm:line-clamp-4 sm:text-sm">
+                  {QUOTE_PAGE_DESCRIPTION_ZH}
+                </p>
+                <p className="mt-auto flex items-center gap-1 pt-3 text-[11px] text-muted-foreground sm:text-xs">
+                  <CalendarDays className="size-3 shrink-0" aria-hidden />
+                  <time dateTime={QUOTE_GUIDE_DATE}>{QUOTE_GUIDE_DATE}</time>
+                </p>
+              </div>
+            </Link>
+          </li>
           {GUIDES.map((g) => (
             <li key={g.slug} className="min-w-0">
               <Link

@@ -13,7 +13,7 @@ import {
   LOGIN_LEAD_ZH,
   LOGIN_TITLE_ZH,
   LOGIN_UNAVAILABLE_ZH,
-  QUOTE_BACK_TO_CHECKLIST_ZH,
+  QUOTE_GUIDE_LINK_ZH,
 } from "@/lib/quote-analysis/copy";
 import { safeNextPath } from "@/lib/request-guards";
 import { contentLinkClass } from "@/lib/ui-surfaces";
@@ -55,7 +55,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
         )}
         <p className="mt-6 text-sm">
           <Link href="/quote" className={`inline-flex min-h-11 items-center ${contentLinkClass}`}>
-            {QUOTE_BACK_TO_CHECKLIST_ZH}
+            {QUOTE_GUIDE_LINK_ZH}
           </Link>
         </p>
       </ContentCard>

@@ -92,17 +92,25 @@ RenoCheck cannot delete Microsoft's copy after send. The DRAFT consent says that
 | Data | Period | How it ends |
 |------|--------|-------------|
 | Original quote bytes | Not stored | Dropped when the function returns |
+| Company name on the quote (extracted and confirmed) | Retained with the `quote_analyses` row | 180 days or account deletion, whichever is earlier. Personal data (people's names, phones, addresses, signatures, bank accounts) is not stored. A company search the user confirms is written to `search_cache` and `search_events` like any other search. |
+| Logged-out company-name extraction | Not stored | Before email verification the server sends the PDF only to read the company name. No checklist is produced and no `quote_analyses` row is written. Personal data is not stored. |
+| Company search after the user confirms the name | `search_cache` and `search_events` | The same path as any other company search. The search result is shown before verification and is not gated on an account. |
 | `report_feedback` | **12 months** (locked for feedback) | Daily purge. F1 adds `/api/cron/purge-feedback`. Aaron applies M1 himself |
-| `quote_usage` | Plan default 30 days — not separately locked in the F0 brief | Later purge |
-| `quote_analyses` (anonymised result, no evidence text) | Plan default 180 days | Later purge |
+| `quote_spend_daily` (global daily spend and call counts, no per-user columns; the planned per-attempt `quote_usage` table was not built) | 30 Hong Kong days | Daily purge: `public.purge_quote_analysis_retention()`, called by Vercel Cron at 18:25 UTC via `GET /api/cron/purge-quote-analysis` (`src/lib/quote-analysis/retention-store.ts`) |
+| `quote_analyses` and `quote_analysis_claims` (anonymised result, no evidence text, plus the stored company names) | 180 days, or account deletion if earlier (`on delete cascade`) | The same daily purge deletes analyses and claims older than 180 days |
+| Signed-out name-reading daily counter (`auth_otp_rate_limits`) | Until the next Hong Kong midnight | One row per network per HKT day: an IPv4 address, or an IPv6 /64. The row holds only `HMAC_SHA256(AUTH_RATE_LIMIT_SECRET, "quote-anon:" + day_hkt + ":" + network)`, a hit count, and `reset_at`. Used only to rate-limit the signed-out step. Expired rows are deleted on the next limiter call and by the same daily purge. A hit is taken for each signed-out attempt that passes the PDF checks, before the spend hold and the Azure call, so an attempt that is then paused or fails still counts |
+| Per-minute burst limiter (server memory only) | Not written to the database | Keyed by the raw client IP (`quote-extract:<ip>` signed out, `quote:<ip>` signed in) and by user id (`quote-user:<id>`), 5 calls per 60 seconds, in the function instance's memory (`src/lib/memory-rate-limit.ts`). Expired keys are pruned only once the map holds more than 5,000 keys, so a key can stay until the instance stops. Not logged |
 | `quote_consent_daily` (counts only, no device hash) | Plan default 2 years (D30) | Later |
 | Payment rows | No card data. Expiry of a credit is an open product decision (D13, proposal 30 days) | Airwallex holds payer data under its policy |
+
+A quote that is uploaded while signed out and then verified goes to Azure twice. The first request only reads the company name and is not stored. After email verification the same PDF is sent again for the full checklist, which is the stored `quote_analyses` row.
 
 ## 8. US$1 cap and quota hashing
 
 - App-side cap **US$1 per HKT day** for quote analysis (D36). Free use stops at US$0.80; US$0.20 remains for paid credits (D36b). Pause copy and resume are in [`quote-provider-paused.md`](../runbooks/quote-provider-paused.md).
 - The cap limits how many quote files are sent to Azure. It does not limit company-report Gemini spend.
-- Device id `rc_did` is a random 128-bit cookie (`HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=1 year`). The database stores only `HMAC_SHA256(QUOTE_HASH_SECRET, rc_did)`. For quota, the IP hash is `HMAC(QUOTE_HASH_SECRET, ip + day_hkt)` so it changes daily (plan §5.1). The secret is absent → the route fails closed. Agents check presence only, never the value.
+- Device id `rc_did` is a random 128-bit cookie (`HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=1 year`). The database stores only `HMAC_SHA256(QUOTE_HASH_SECRET, rc_did)`, for one feedback vote per device. If `QUOTE_HASH_SECRET` is absent, `/api/feedback` fails closed (503).
+- Quote quota does not use `QUOTE_HASH_SECRET`. Signed-in use is counted per account in `quote_analysis_claims`. The signed-out name-reading step is counted per network per HKT day in `auth_otp_rate_limits`, keyed by `HMAC_SHA256(AUTH_RATE_LIMIT_SECRET, "quote-anon:" + day_hkt + ":" + network)` (IPv4 address or IPv6 /64), so the bucket changes daily (see the retention table in §7). If `AUTH_RATE_LIMIT_SECRET` is absent or shorter than 32 characters, that step fails closed (503). Agents check presence only, never the value.
 - Hashes are for the quota and for one vote per device. They are not used to build a public profile.
 
 ## 9. Feedback (Art 6(1)(f))

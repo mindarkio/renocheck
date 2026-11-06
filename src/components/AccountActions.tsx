@@ -15,7 +15,7 @@ import {
 const fieldClass =
   "mt-1 w-full min-h-11 rounded-lg border border-border bg-background px-3 text-base text-foreground";
 
-export function AccountActions() {
+export function AccountActions({ part = "all" }: { part?: "all" | "session" | "danger" }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [typed, setTyped] = useState("");
@@ -64,16 +64,18 @@ export function AccountActions() {
     }
   }
 
-  return (
-    <div className="mt-6 space-y-8">
-      <button
-        type="button"
-        onClick={signOut}
-        disabled={pending !== null}
-        className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium disabled:opacity-60"
-      >
-        {ACCOUNT_SIGN_OUT_ZH}
-      </button>
+  const signOutButton = (
+    <button
+      type="button"
+      onClick={signOut}
+      disabled={pending !== null}
+      className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium disabled:opacity-60"
+    >
+      {ACCOUNT_SIGN_OUT_ZH}
+    </button>
+  );
+
+  const deleteForm = (
       <form onSubmit={deleteAccount} className="space-y-3">
         <p id="delete-account-hint" className="text-sm leading-relaxed text-muted-foreground">
           {ACCOUNT_DELETE_HINT_ZH}
@@ -109,11 +111,19 @@ export function AccountActions() {
         <button
           type="submit"
           disabled={pending !== null || !confirmed}
-          className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-60"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-medium text-[var(--brand-coral-emphasis)] disabled:opacity-60"
         >
           {ACCOUNT_DELETE_BUTTON_ZH}
         </button>
       </form>
+  );
+
+  if (part === "session") return <div className="mt-6">{signOutButton}</div>;
+  if (part === "danger") return <div className="mt-4">{deleteForm}</div>;
+  return (
+    <div className="mt-6 space-y-8">
+      {signOutButton}
+      {deleteForm}
     </div>
   );
 }

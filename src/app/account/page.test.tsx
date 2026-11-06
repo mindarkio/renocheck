@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACCOUNT_DELETE_CLOSED_ZH } from "@/lib/quote-analysis/copy";
+import {
+  ACCOUNT_DELETE_CLOSED_ZH,
+  ACCOUNT_DELETE_HEADING_ZH,
+  ACCOUNT_UPLOAD_ACTION_ZH,
+} from "@/lib/quote-analysis/copy";
 
 vi.mock("next/server", () => ({
   connection: vi.fn(async () => {}),
@@ -15,12 +19,14 @@ vi.mock("@/lib/supabase/server", () => ({
   getAuthUser: vi.fn(async () => null),
 }));
 
+import { getAuthUser } from "@/lib/supabase/server";
 import AccountPage from "./page";
 
 describe("account page when signed out", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllEnvs();
+    vi.mocked(getAuthUser).mockResolvedValue(null);
   });
 
   it("gives the email deletion path while login is closed", async () => {
@@ -36,5 +42,32 @@ describe("account page when signed out", () => {
     render(await AccountPage());
     expect(document.body.textContent).not.toContain(ACCOUNT_DELETE_CLOSED_ZH);
     expect(document.querySelector("a[href='/login?next=/account']")).toBeTruthy();
+  });
+
+  it("shows the upload action and not the delete form when signed in", async () => {
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "1");
+    vi.stubEnv("AZURE_OPENAI_ENDPOINT", "https://quote.example.invalid");
+    vi.stubEnv("AZURE_OPENAI_API_KEY", "test-not-a-key");
+    vi.stubEnv("AZURE_OPENAI_DEPLOYMENT", "quote-dep");
+    vi.mocked(getAuthUser).mockResolvedValue({
+      id: "11111111-1111-4111-8111-111111111111",
+      email: "person@example.com",
+    });
+    render(await AccountPage());
+    const upload = screen.getByRole("link", { name: ACCOUNT_UPLOAD_ACTION_ZH });
+    expect(upload.getAttribute("href")).toBe("/quote/upload");
+    expect(screen.queryByRole("heading", { name: ACCOUNT_DELETE_HEADING_ZH })).toBeNull();
+    expect(screen.queryByLabelText("請輸入「刪除」確認。")).toBeNull();
+  });
+
+  it("hides the upload action when analysis is not configured", async () => {
+    vi.stubEnv("QUOTE_ANALYSIS_ENABLED", "0");
+    vi.mocked(getAuthUser).mockResolvedValue({
+      id: "11111111-1111-4111-8111-111111111111",
+      email: "person@example.com",
+    });
+    render(await AccountPage());
+    expect(screen.queryByRole("link", { name: ACCOUNT_UPLOAD_ACTION_ZH })).toBeNull();
+    expect(screen.queryByRole("heading", { name: ACCOUNT_DELETE_HEADING_ZH })).toBeNull();
   });
 });
