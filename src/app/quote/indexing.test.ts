@@ -4,7 +4,6 @@ import { LLMS_TXT } from "@/lib/llms-txt";
 import sitemap from "@/app/sitemap";
 import { metadata } from "@/app/quote/page";
 import {
-  QUOTE_GUIDE_DATE,
   QUOTE_PAGE_DESCRIPTION_ZH,
   QUOTE_PAGE_META_TITLE_ZH,
   QUOTE_PAGE_NAV_LABEL_ZH,
@@ -14,12 +13,15 @@ import { getSiteUrl } from "@/lib/site-url";
 
 describe("/quote indexing", () => {
   it("exports index, follow metadata with a canonical quote URL", () => {
-    expect(QUOTE_PAGE_TITLE_ZH).toBe("裝修報價單應列明的內容");
-    expect(QUOTE_PAGE_NAV_LABEL_ZH).toBe("報價內容指南");
-    expect(QUOTE_PAGE_META_TITLE_ZH).toBe("裝修報價單應列明什麼｜20 項內容說明");
+    expect(QUOTE_PAGE_TITLE_ZH).toBe("裝修報價單自查清單");
+    expect(QUOTE_PAGE_NAV_LABEL_ZH).toBe("報價自查清單");
+    expect(QUOTE_PAGE_META_TITLE_ZH).toBe(
+      "裝修報價單自查清單｜20 項逐項對清楚",
+    );
     expect(metadata.title).toBe(QUOTE_PAGE_META_TITLE_ZH);
     expect(metadata.description).toBe(QUOTE_PAGE_DESCRIPTION_ZH);
     expect(metadata.description).toContain("報價單");
+    expect(metadata.description).toContain("範圍、物料、工期、付款、保養");
     expect(metadata.description).not.toContain("報價陷阱");
     const ogTitle =
       metadata.openGraph && "title" in metadata.openGraph
@@ -38,7 +40,7 @@ describe("/quote indexing", () => {
 
   it("lists /quote in the sitemap and does not disallow it", () => {
     const entry = sitemap().find((item) => item.url === `${getSiteUrl()}/quote`);
-    expect(entry?.lastModified).toBe(QUOTE_GUIDE_DATE);
+    expect(entry?.lastModified).toBe("2026-11-06");
     expect(entry?.url.endsWith("/quote")).toBe(true);
 
     const rules = robots().rules;

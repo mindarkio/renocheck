@@ -5,17 +5,18 @@
  * Guide title, footer label, and article text are proposed and still need owner approval.
  */
 
-/** Visible H1. Proposed. */
-export const QUOTE_PAGE_TITLE_ZH = "裝修報價單應列明的內容";
+/** Visible H1 on /quote. JSON-LD headline uses the same string. */
+export const QUOTE_PAGE_TITLE_ZH = "裝修報價單自查清單";
 
-/** Footer, header, and guides-index label. Shorter than the H1. Proposed. */
-export const QUOTE_PAGE_NAV_LABEL_ZH = "報價內容指南";
+/** Header and footer label. Unchanged short name; not the document title. */
+export const QUOTE_PAGE_NAV_LABEL_ZH = "報價自查清單";
 
 /** Document title and social title. Suffix ` · Renocheck` is added by pageMetadata. */
-export const QUOTE_PAGE_META_TITLE_ZH = "裝修報價單應列明什麼｜20 項內容說明";
+export const QUOTE_PAGE_META_TITLE_ZH =
+  "裝修報價單自查清單｜20 項逐項對清楚";
 
 export const QUOTE_PAGE_DESCRIPTION_ZH =
-  "說明香港裝修報價單應列明的二十項內容，包括工程範圍、物料、工期、付款及保養。本文不評估價格高低，亦非專業意見。";
+  "香港裝修報價單自查清單：對住報價單逐項睇有冇寫齊、寫清楚（範圍、物料、工期、付款、保養等）。唔會評價格係咪合理，亦唔係專業意見。";
 
 /** Single on-page explanation. Not a legal disclaimer. Proposed. */
 export const QUOTE_PAGE_LEAD_ZH =

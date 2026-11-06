@@ -176,6 +176,7 @@ describe("quote page JSON-LD", () => {
     expect(article?.headline).toBe(QUOTE_PAGE_TITLE_ZH);
     expect(article?.url).toBe("https://renocheck.homes/quote");
     expect(article?.description).toContain("報價單");
+    expect(article?.description).toContain("範圍、物料、工期、付款、保養");
     expect(String(article?.description)).not.toContain("報價陷阱");
     expect(faq?.["@type"]).toBe("FAQPage");
     expect(faq?.mainEntity).toHaveLength(3);

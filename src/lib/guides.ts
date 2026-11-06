@@ -1,6 +1,8 @@
 /**
  * Homeowner guides (/guides/*). Every fact here must trace to an official source in `sources`.
  * Last fact-check: 2026-10-16. Guides added 2026-10-23 were checked the same day.
+ * how-to-read-renovation-quotation copy revised 2026-11-06 (Aaron-approved SEO).
+ * The company-name / BR / quote-date bullet follows the /quote checklist; the estimate-versus-quote section restates the Consumer Council article.
  */
 
 export type GuideSection = {
@@ -119,6 +121,8 @@ const LD_EC_GUIDE: GuideSource = {
 
 const PUBLISHED = "2026-10-16";
 const PUBLISHED_SEO = "2026-10-23";
+/** Approved SEO copy revision for how-to-read-renovation-quotation. */
+const QUOTATION_GUIDE_MODIFIED = "2026-11-06";
 
 export const GUIDES: Guide[] = [
   {
@@ -358,12 +362,12 @@ export const GUIDES: Guide[] = [
   },
   {
     slug: "how-to-read-renovation-quotation",
-    title: "裝修報價點睇？報價單要列明嘅重點",
+    title: "裝修報價單點睇？要列明數量、單價同隱藏收費",
     category: "報價",
     description:
-      "消委會及專業學會建議的裝修報價單重點：數量、單價、分項合計、連工包料、包生仔定實量實度、後加工程收費、隱藏條款及貨比三家。",
+      "香港裝修報價單點睇指南：數量、單價、分項合計、連工包料、包生仔定實量實度、後加工程同隱藏條款；對完可用報價自查清單逐項核對。",
     answer:
-      "一份清晰嘅裝修報價單，要列明每個項目嘅數量、單價、分項合計同總數，並註明係咪連工包料；只得分項合計嘅只係估價。亦要留意報價係「包生仔」定「實量實度」、後加工程點收費、有冇隱藏收費或免責條款，並貨比三家。",
+      "裝修報價單要列明每個項目嘅數量、單價、分項合計同總數，並註明係咪連工包料；只得分項合計嘅只係估價。亦要留意報價係「包生仔」定「實量實度」、後加工程點收費、有冇隱藏收費或免責條款，並貨比三家。",
     sections: [
       {
         heading: "報價單要有",
@@ -373,6 +377,7 @@ export const GUIDES: Guide[] = [
           "每個項目的計算方式。",
           "後加工程項目如何收費。",
           "有否罰款或免責條款、需另外收費的項目。",
+          "公司全名、商業登記、報價日期／有效期。",
         ],
       },
       {
@@ -385,12 +390,37 @@ export const GUIDES: Guide[] = [
         heading: "比較報價",
         paragraphs: [
           "先確立工程目標、範圍同預算，再向幾間公司索取同一範圍嘅報價比較。揀定之後，可以查吓該公司嘅屋宇署註冊同公開討論作參考。",
+          "同一範圍點樣比較三份報價，見 [裝修報價要幾耐](/guides/renovation-quote-timing-compare-three)。對完可以用 [報價自查清單](/quote) 逐項核對。",
         ],
+      },
+      {
+        heading: "報價單同估價差在邊",
+        paragraphs: [
+          "香港樓宇檢驗學會指出，如果只提供分項合計、冇數量同單價，這只是估算，價錢有待商榷。",
+          "寫明數量、單價同分項合計的，先至係可以逐項對的報價單。",
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: "裝修報價單一定要有咩？",
+        answer:
+          "裝修報價單要列明每項數量、單價、分項合計同總數，並註明係咪連工包料，以及公司全名、商業登記、報價日期／有效期。可以開報價自查清單逐項核對。",
+      },
+      {
+        question: "點樣先唔好中隱藏收費？",
+        answer:
+          "睇清楚有冇另外收費、罰款或免責條款，後加工程點計，以及係「包生仔」定「實量實度」。寫得含糊或者冇提及的項目，用報價自查清單逐項核對再問對方。",
+      },
+      {
+        question: "對完報價可以點做？",
+        answer:
+          "同一範圍可以再比較其他報價的數量、單價同包唔包料。未寫齊的項目，用報價自查清單逐項核對，再請對方出更新報價。",
       },
     ],
     sources: [CC_QUOTATION, CC_RENO_PRESS],
     datePublished: PUBLISHED,
-    dateModified: PUBLISHED,
+    dateModified: QUOTATION_GUIDE_MODIFIED,
   },
   {
     slug: "renovation-contract-clauses-hong-kong",

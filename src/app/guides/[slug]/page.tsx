@@ -48,6 +48,26 @@ export async function generateMetadata({
 
 const INLINE_LINK = /\[([^\]]+)\]\((\/(?!\/)[^)\s]*)\)/g;
 
+/** FAQ JSON-LD reuses the answer string. Linking this phrase must not change that text. */
+const QUOTE_CHECKLIST_LABEL = "報價自查清單";
+
+function GuideFaqAnswer({ text }: { text: string }) {
+  if (!text.includes(QUOTE_CHECKLIST_LABEL)) return text;
+  const parts = text.split(QUOTE_CHECKLIST_LABEL);
+  return (
+    <>
+      {parts.map((part, index) => (
+        <span key={index}>
+          {part}
+          {index < parts.length - 1 ? (
+            <Link href="/quote">{QUOTE_CHECKLIST_LABEL}</Link>
+          ) : null}
+        </span>
+      ))}
+    </>
+  );
+}
+
 function GuideRichText({ text }: { text: string }) {
   const nodes: ReactNode[] = [];
   const re = new RegExp(INLINE_LINK.source, "g");
@@ -155,7 +175,9 @@ export default async function GuidePage({ params }: PageProps) {
                 {guide.faqs.map((item) => (
                   <div key={item.question}>
                     <dt className="font-medium text-foreground">{item.question}</dt>
-                    <dd className="mt-1">{item.answer}</dd>
+                    <dd className="mt-1">
+                      <GuideFaqAnswer text={item.answer} />
+                    </dd>
                   </div>
                 ))}
               </dl>
